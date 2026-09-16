@@ -1,0 +1,362 @@
+const Tournament = require('../models/Tournament');
+const Team = require('../models/Team');
+const Match = require('../models/Match');
+
+// Helper to slugify tournament name
+const slugify = (text) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-');
+};
+
+// @desc    Get all tournaments
+// @route   GET /api/tournaments
+// @access  Public
+exports.getTournaments = async (req, res, next) => {
+  try {
+    const { status, game, search, sort } = req.query;
+    let query = {};
+
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    if (game && game !== 'all') {
+      query.game = game;
+    }
+
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+
+    let sortOption = { startDate: 1 };
+    if (sort === 'prize') sortOption = { 'prizePool.total': -1 };
+    if (sort === 'newest') sortOption = { createdAt: -1 };
+
+    const tournaments = await Tournament.find(query)
+      .populate('registeredTeams.team', 'name tag logo')
+      .populate('createdBy', 'name username')
+      .sort(sortOption);
+
+    res.status(200).json({
+      success: true,
+      count: tournaments.length,
+      tournaments,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get single tournament by ID or slug
+// @route   GET /api/tournaments/:id
+// @access  Public
+exports.getTournamentById = async (req, res, next) => {
+  try {
+    let tournament;
+    if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      tournament = await Tournament.findById(req.params.id)
+        .populate({
+          path: 'registeredTeams.team',
+          populate: { path: 'captain members.user', select: 'name username avatar' },
+        })
+        .populate('createdBy', 'name username');
+    } else {
+      tournament = await Tournament.findOne({ slug: req.params.id })
+        .populate({
+          path: 'registeredTeams.team',
+          populate: { path: 'captain members.user', select: 'name username avatar' },
+        })
+        .populate('createdBy', 'name username');
+    }
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    // Also fetch matches for this tournament
+    const matches = await Match.find({ tournament: tournament._id })
+      .populate('teamA', 'name tag logo')
+      .populate('teamB', 'name tag logo')
+      .populate('winner', 'name tag logo')
+      .sort({ roundIndex: 1, matchNumber: 1 });
+
+    res.status(200).json({
+      success: true,
+      tournament,
+      matches,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create new tournament
+// @route   POST /api/tournaments
+// @access  Private (Admin / Organizer)
+exports.createTournament = async (req, res, next) => {
+  try {
+    const {
+      name,
+      game,
+      banner,
+      description,
+      rules,
+      format,
+      prizePool,
+      entryFee,
+      maxTeams,
+      registrationDeadline,
+      startDate,
+      endDate,
+      organizer,
+      streamUrl,
+    } = req.body;
+
+    if (!name || !game || !banner || !description || !registrationDeadline || !startDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required tournament fields',
+      });
+    }
+
+    const slug = `${slugify(name)}-${Date.now().toString().slice(-4)}`;
+
+    const tournament = await Tournament.create({
+      name,
+      slug,
+      game,
+      banner,
+      description,
+      rules: rules || undefined,
+      format: format || 'Single Elimination',
+      prizePool: prizePool || { total: 10000, currency: 'INR (₹)' },
+      entryFee: entryFee || 0,
+      maxTeams: maxTeams || 16,
+      registrationDeadline,
+      startDate,
+      endDate,
+      organizer: organizer || 'UEM Gaming Club',
+      streamUrl: streamUrl || 'https://twitch.tv',
+      createdBy: req.user.id,
+    });
+
+    res.status(201).json({
+      success: true,
+      tournament,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update tournament
+// @route   PUT /api/tournaments/:id
+// @access  Private (Admin / Organizer)
+exports.updateTournament = async (req, res, next) => {
+  try {
+    let tournament = await Tournament.findById(req.params.id);
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    tournament = await Tournament.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    res.status(200).json({
+      success: true,
+      tournament,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete tournament
+// @route   DELETE /api/tournaments/:id
+// @access  Private (Admin)
+exports.deleteTournament = async (req, res, next) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    // Delete associated matches
+    await Match.deleteMany({ tournament: tournament._id });
+    await tournament.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: 'Tournament and associated matches deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Register a team for tournament
+// @route   POST /api/tournaments/:id/register
+// @access  Private
+exports.registerTeam = async (req, res, next) => {
+  try {
+    const { teamId } = req.body;
+    const tournament = await Tournament.findById(req.params.id);
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    if (!teamId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select a team to register',
+      });
+    }
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found',
+      });
+    }
+
+    // Must be captain or admin
+    if (team.captain.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the team captain or an admin can register the team',
+      });
+    }
+
+    // Check registration deadline
+    if (new Date() > new Date(tournament.registrationDeadline)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration deadline has passed for this tournament',
+      });
+    }
+
+    // Check if tournament is full
+    if (tournament.registeredTeams.length >= tournament.maxTeams) {
+      return res.status(400).json({
+        success: false,
+        message: 'This tournament has reached the maximum number of teams',
+      });
+    }
+
+    // Check if team already registered
+    const alreadyRegistered = tournament.registeredTeams.some(
+      (reg) => reg.team.toString() === team._id.toString()
+    );
+
+    if (alreadyRegistered) {
+      return res.status(400).json({
+        success: false,
+        message: 'This team is already registered for this tournament',
+      });
+    }
+
+    tournament.registeredTeams.push({
+      team: team._id,
+      registeredAt: new Date(),
+    });
+
+    await tournament.save();
+
+    res.status(200).json({
+      success: true,
+      message: `${team.name} successfully registered for ${tournament.name}!`,
+      tournament,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Generate bracket & matches for tournament
+// @route   POST /api/tournaments/:id/generate-bracket
+// @access  Private (Admin / Organizer)
+exports.generateBracket = async (req, res, next) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id).populate('registeredTeams.team');
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    const teams = tournament.registeredTeams.map((r) => r.team).filter(Boolean);
+
+    if (teams.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Need at least 2 registered teams to generate brackets',
+      });
+    }
+
+    // Clear existing matches
+    await Match.deleteMany({ tournament: tournament._id });
+
+    // Build single-elimination bracket rounds
+    const matchesToCreate = [];
+    const count = teams.length;
+
+    // Determine round name for initial matches
+    let roundName = 'Round 1';
+    if (count <= 2) roundName = 'Grand Final';
+    else if (count <= 4) roundName = 'Semi Finals';
+    else if (count <= 8) roundName = 'Quarter Finals';
+
+    let matchNumber = 1;
+    for (let i = 0; i < count; i += 2) {
+      if (i + 1 < count) {
+        matchesToCreate.push({
+          tournament: tournament._id,
+          round: roundName,
+          roundIndex: 1,
+          matchNumber: matchNumber++,
+          teamA: teams[i]._id,
+          teamB: teams[i + 1]._id,
+          status: 'scheduled',
+          scheduledAt: new Date(tournament.startDate.getTime() + (matchNumber - 1) * 3600000),
+        });
+      }
+    }
+
+    const createdMatches = await Match.insertMany(matchesToCreate);
+    tournament.status = 'live';
+    await tournament.save();
+
+    res.status(201).json({
+      success: true,
+      message: `Generated ${createdMatches.length} bracket matches`,
+      matches: createdMatches,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
