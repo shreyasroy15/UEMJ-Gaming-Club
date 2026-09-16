@@ -84,7 +84,7 @@ const AdminUsers = () => {
             USER ACCOUNTS & ROLES
           </h1>
           <p className="text-xs text-slate-400">
-            Audit registered players, promote organizers, and supervise collegiate memberships.
+            Audit registered players and supervise collegiate memberships.
           </p>
         </div>
 
@@ -143,8 +143,6 @@ const AdminUsers = () => {
                         className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold border ${
                           u.role === 'admin'
                             ? 'bg-fuchsia-950 text-fuchsia-400 border-fuchsia-800'
-                            : u.role === 'organizer'
-                            ? 'bg-indigo-950 text-indigo-400 border-indigo-800'
                             : 'bg-slate-950 text-cyan-400 border-slate-800'
                         }`}
                       >
@@ -197,7 +195,6 @@ const AdminUsers = () => {
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white"
             >
               <option value="student">student (Standard Player)</option>
-              <option value="organizer">organizer (Tournament Coordinator)</option>
               <option value="admin">admin (Full Superuser Privileges)</option>
             </select>
           </div>

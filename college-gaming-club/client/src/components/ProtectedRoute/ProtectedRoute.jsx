@@ -21,29 +21,6 @@ export const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-export const OrganizerRoute = ({ children }) => {
-  const { isAuthenticated, isStaff, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  if (!isStaff) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
-};
-
 export const AdminRoute = ({ children }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   const location = useLocation();

@@ -79,7 +79,7 @@ const tournamentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['upcoming', 'live', 'completed', 'cancelled'],
+      enum: ['upcoming', 'registration-open', 'ongoing', 'live', 'completed', 'cancelled'],
       default: 'upcoming',
     },
     createdBy: {

@@ -100,7 +100,7 @@ exports.getTournamentById = async (req, res, next) => {
 
 // @desc    Create new tournament
 // @route   POST /api/tournaments
-// @access  Private (Admin / Organizer)
+// @access  Private (Admin)
 exports.createTournament = async (req, res, next) => {
   try {
     const {
@@ -116,6 +116,7 @@ exports.createTournament = async (req, res, next) => {
       registrationDeadline,
       startDate,
       endDate,
+      status,
       organizer,
       streamUrl,
     } = req.body;
@@ -143,6 +144,7 @@ exports.createTournament = async (req, res, next) => {
       registrationDeadline,
       startDate,
       endDate,
+      status: status || 'upcoming',
       organizer: organizer || 'UEM Gaming Club',
       streamUrl: streamUrl || 'https://twitch.tv',
       createdBy: req.user.id,
@@ -159,7 +161,7 @@ exports.createTournament = async (req, res, next) => {
 
 // @desc    Update tournament
 // @route   PUT /api/tournaments/:id
-// @access  Private (Admin / Organizer)
+// @access  Private (Admin)
 exports.updateTournament = async (req, res, next) => {
   try {
     let tournament = await Tournament.findById(req.params.id);
@@ -217,7 +219,7 @@ exports.deleteTournament = async (req, res, next) => {
 // @access  Private
 exports.registerTeam = async (req, res, next) => {
   try {
-    const { teamId } = req.body;
+    const { teamId, teamName, inGameName, tag } = req.body;
     const tournament = await Tournament.findById(req.params.id);
 
     if (!tournament) {
@@ -227,26 +229,19 @@ exports.registerTeam = async (req, res, next) => {
       });
     }
 
-    if (!teamId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please select a team to register',
-      });
-    }
-
-    const team = await Team.findById(teamId);
-    if (!team) {
-      return res.status(404).json({
-        success: false,
-        message: 'Team not found',
-      });
-    }
-
-    // Must be captain or admin
-    if (team.captain.toString() !== req.user.id && req.user.role !== 'admin') {
+    // Rule 6: Only authenticated students or admin can register
+    if (req.user.role !== 'student' && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Only the team captain or an admin can register the team',
+        message: 'Only authenticated college students can register for tournaments',
+      });
+    }
+
+    // Check tournament status
+    if (tournament.status === 'completed' || tournament.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration is closed for this tournament',
       });
     }
 
@@ -266,15 +261,65 @@ exports.registerTeam = async (req, res, next) => {
       });
     }
 
-    // Check if team already registered
-    const alreadyRegistered = tournament.registeredTeams.some(
-      (reg) => reg.team.toString() === team._id.toString()
+    let team;
+    if (teamId) {
+      team = await Team.findById(teamId);
+      if (!team) {
+        return res.status(404).json({
+          success: false,
+          message: 'Team not found',
+        });
+      }
+
+      // Must be captain or admin
+      if (team.captain.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Only the team captain or an admin can register the team',
+        });
+      }
+    } else if (teamName) {
+      // Find existing team or create new squad for student
+      team = await Team.findOne({ name: { $regex: `^${teamName.trim()}$`, $options: 'i' } });
+      if (!team) {
+        team = await Team.create({
+          name: teamName.trim(),
+          tag: (tag || teamName.substring(0, 4)).toUpperCase().trim(),
+          game: tournament.game,
+          captain: req.user.id,
+          members: [
+            {
+              user: req.user.id,
+              role: 'captain',
+              inGameName: inGameName || req.user.username,
+            },
+          ],
+        });
+        await User.findByIdAndUpdate(req.user.id, {
+          $addToSet: { teams: team._id },
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select an existing team or provide a team name',
+      });
+    }
+
+    // Rule 8: Check if team or user is already registered in this tournament
+    const userTeams = await Team.find({
+      $or: [{ captain: req.user.id }, { 'members.user': req.user.id }],
+    }).select('_id');
+    const userTeamIds = userTeams.map((t) => t._id.toString());
+
+    const alreadyRegistered = tournament.registeredTeams.some((reg) =>
+      reg.team && (reg.team.toString() === team._id.toString() || userTeamIds.includes(reg.team.toString()))
     );
 
     if (alreadyRegistered) {
       return res.status(400).json({
         success: false,
-        message: 'This team is already registered for this tournament',
+        message: 'You are already registered for this tournament',
       });
     }
 
@@ -285,10 +330,15 @@ exports.registerTeam = async (req, res, next) => {
 
     await tournament.save();
 
+    const registrationId = `REG-${tournament._id.toString().slice(-4).toUpperCase()}-${team._id.toString().slice(-4).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+
     res.status(200).json({
       success: true,
       message: `${team.name} successfully registered for ${tournament.name}!`,
-      tournament,
+      registrationId,
+      tournament: tournament.name,
+      team: team.name,
+      tournamentData: tournament,
     });
   } catch (error) {
     next(error);
@@ -297,7 +347,7 @@ exports.registerTeam = async (req, res, next) => {
 
 // @desc    Generate bracket & matches for tournament
 // @route   POST /api/tournaments/:id/generate-bracket
-// @access  Private (Admin / Organizer)
+// @access  Private (Admin)
 exports.generateBracket = async (req, res, next) => {
   try {
     const tournament = await Tournament.findById(req.params.id).populate('registeredTeams.team');

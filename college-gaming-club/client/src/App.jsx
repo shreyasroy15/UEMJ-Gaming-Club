@@ -30,7 +30,6 @@ import MyTournaments from './pages/MyTournaments';
 import MyTeams from './pages/MyTeams';
 import NotFound from './pages/NotFound';
 import Dashboard from './pages/Dashboard';
-import OrganizerDashboard from './pages/organizer/OrganizerDashboard';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -44,7 +43,7 @@ import AdminGallery from './pages/admin/Gallery';
 import AdminUsers from './pages/admin/Users';
 
 // Route Guards
-import { ProtectedRoute, OrganizerRoute, AdminRoute } from './components/ProtectedRoute/ProtectedRoute';
+import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute/ProtectedRoute';
 
 function App() {
   return (
@@ -61,6 +60,7 @@ function App() {
               <Route path="teams" element={<Teams />} />
               <Route path="teams/:id" element={<TeamDetails />} />
               <Route path="leaderboard" element={<Leaderboard />} />
+              <Route path="points-table" element={<Leaderboard />} />
               <Route path="events" element={<Events />} />
               <Route path="gallery" element={<Gallery />} />
               <Route path="news" element={<News />} />
@@ -71,21 +71,13 @@ function App() {
               <Route path="forgot-password" element={<ForgotPassword />} />
               <Route path="reset-password" element={<ResetPassword />} />
 
-              {/* Protected Student & Organizer Routes */}
+              {/* Protected Student Routes */}
               <Route
                 path="dashboard"
                 element={
                   <ProtectedRoute>
                     <Dashboard />
                   </ProtectedRoute>
-                }
-              />
-              <Route
-                path="organizer"
-                element={
-                  <OrganizerRoute>
-                    <OrganizerDashboard />
-                  </OrganizerRoute>
                 }
               />
               <Route

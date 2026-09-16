@@ -7,11 +7,9 @@ import {
   X,
   Gamepad2,
   Trophy,
-  Users,
   Sparkles,
   Shield,
   LogOut,
-  User,
   ChevronDown,
   LayoutDashboard,
   Flame,
@@ -31,20 +29,12 @@ const Navbar = () => {
   const navLinks = [
     { label: 'Home', href: '/' },
     { label: 'Tournaments', href: '/tournaments' },
-    { label: 'Games', href: '/games' },
-    { label: 'Teams', href: '/teams' },
-    { label: 'Leaderboard', href: '/leaderboard' },
-    { label: 'Events', href: '/events' },
+    { label: 'Points Table', href: '/points-table' },
     { label: 'Gallery', href: '/gallery' },
     { label: 'About', href: '/about' },
   ];
 
-  const dashboardPath =
-    user?.role === 'admin'
-      ? '/admin'
-      : user?.role === 'organizer'
-      ? '/organizer'
-      : '/dashboard';
+  const dashboardPath = user?.role === 'admin' ? '/admin' : '/dashboard';
 
   const handleLogout = () => {
     logout();
@@ -201,63 +191,24 @@ const Navbar = () => {
                             <p className="text-xs font-bold text-white truncate">{user.email}</p>
                           </div>
 
-                          <div className="py-1.5 space-y-0.5">
-                            <Link
-                              to={dashboardPath}
-                              onClick={() => setProfileDropdownOpen(false)}
-                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-cyan-300 rounded-xl hover:bg-cyan-950/50 transition-colors"
-                            >
-                              <LayoutDashboard className="w-4 h-4 text-cyan-400 shrink-0" />
-                              {user.role === 'admin'
-                                ? 'Admin Control Room'
-                                : user.role === 'organizer'
-                                ? 'Organizer Hub'
-                                : 'Player Dashboard'}
-                            </Link>
-
-                            <Link
-                              to="/profile"
-                              onClick={() => setProfileDropdownOpen(false)}
-                              className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
-                            >
-                              <User className="w-4 h-4 text-slate-400 shrink-0" /> Player Profile
-                            </Link>
-
-                            <Link
-                              to="/my-tournaments"
-                              onClick={() => setProfileDropdownOpen(false)}
-                              className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
-                            >
-                              <Trophy className="w-4 h-4 text-amber-400 shrink-0" /> My Tournaments
-                            </Link>
-
-                            <Link
-                              to="/my-teams"
-                              onClick={() => setProfileDropdownOpen(false)}
-                              className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-300 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
-                            >
-                              <Users className="w-4 h-4 text-indigo-400 shrink-0" /> My Teams
-                            </Link>
-
-                            {user.role === 'organizer' && (
-                              <Link
-                                to="/organizer"
-                                onClick={() => setProfileDropdownOpen(false)}
-                                className="flex items-center gap-2.5 px-3 py-2 text-xs text-amber-400 bg-amber-950/20 hover:bg-amber-900/30 rounded-xl transition-colors font-medium"
-                              >
-                                <Flame className="w-4 h-4 text-amber-400 shrink-0" /> Organizer Suite
-                              </Link>
-                            )}
-
+                          <div className="py-1.5 space-y-1">
                             {user.role === 'admin' && (
                               <Link
                                 to="/admin"
                                 onClick={() => setProfileDropdownOpen(false)}
-                                className="flex items-center gap-2.5 px-3 py-2 text-xs text-fuchsia-400 bg-fuchsia-950/20 hover:bg-fuchsia-900/30 rounded-xl transition-colors font-medium"
+                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-fuchsia-300 bg-fuchsia-950/40 hover:bg-fuchsia-900/50 border border-fuchsia-500/30 rounded-xl transition-colors"
                               >
-                                <Shield className="w-4 h-4 text-fuchsia-400 shrink-0" /> Admin Dashboard
+                                <Shield className="w-4 h-4 text-fuchsia-400 shrink-0" /> Admin Panel
                               </Link>
                             )}
+
+                            <Link
+                              to="/dashboard"
+                              onClick={() => setProfileDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-cyan-300 hover:bg-cyan-950/50 rounded-xl transition-colors"
+                            >
+                              <LayoutDashboard className="w-4 h-4 text-cyan-400 shrink-0" /> Player Dashboard
+                            </Link>
                           </div>
 
                           <div className="pt-1 border-t border-white/10">
@@ -355,52 +306,23 @@ const Navbar = () => {
                       </span>
                     </div>
 
-                    <Link
-                      to={dashboardPath}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm text-cyan-300 bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/40 font-bold transition-colors"
-                    >
-                      <LayoutDashboard className="w-4 h-4 text-cyan-400" />
-                      {user.role === 'admin'
-                        ? 'Open Admin Suite'
-                        : user.role === 'organizer'
-                        ? 'Open Organizer Hub'
-                        : 'Open Player Dashboard'}
-                    </Link>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <Link
-                        to="/profile"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl bg-white/5 border border-white/8 text-[11px] font-semibold text-slate-300 hover:text-white"
-                      >
-                        <User className="w-3.5 h-3.5 text-cyan-400" /> Profile
-                      </Link>
-                      <Link
-                        to="/my-tournaments"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl bg-white/5 border border-white/8 text-[11px] font-semibold text-slate-300 hover:text-white"
-                      >
-                        <Trophy className="w-3.5 h-3.5 text-amber-400" /> Tournaments
-                      </Link>
-                      <Link
-                        to="/my-teams"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl bg-white/5 border border-white/8 text-[11px] font-semibold text-slate-300 hover:text-white"
-                      >
-                        <Users className="w-3.5 h-3.5 text-indigo-400" /> Teams
-                      </Link>
-                    </div>
-
-                    {isStaff && (
+                    {user.role === 'admin' && (
                       <Link
                         to="/admin"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold text-fuchsia-300 bg-fuchsia-950/40 border border-fuchsia-500/40"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold text-fuchsia-300 bg-fuchsia-950/50 hover:bg-fuchsia-900/60 border border-fuchsia-500/40 transition-colors"
                       >
-                        <Shield className="w-4 h-4" /> Admin Management Suite
+                        <Shield className="w-4 h-4 text-fuchsia-400" /> Open Admin Panel
                       </Link>
                     )}
+
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm text-cyan-300 bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/40 font-bold transition-colors"
+                    >
+                      <LayoutDashboard className="w-4 h-4 text-cyan-400" /> Open Player Dashboard
+                    </Link>
 
                     <button
                       onClick={() => {

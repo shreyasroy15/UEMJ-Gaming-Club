@@ -146,7 +146,7 @@ const seedData = async () => {
         username: 'apex_shreyas',
         email: 'shreyas@uemjgaming.club',
         password: studentPassword,
-        role: 'organizer',
+        role: 'student',
         college: 'UEM Jaipur - Dept of CSE',
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
         bio: 'Duelist main in Valorant. CS veteran & tournament referee.',

@@ -22,6 +22,9 @@ import {
   ExternalLink,
   ChevronRight,
   Settings,
+  ShieldAlert,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 
 const TournamentDetails = () => {
@@ -36,7 +39,12 @@ const TournamentDetails = () => {
 
   // Registration Modal
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [userTeams, setUserTeams] = useState([]);
+  const [registrationMode, setRegistrationMode] = useState('existing');
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamTag, setNewTeamTag] = useState('');
+  const [inGameName, setInGameName] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [registering, setRegistering] = useState(false);
 
@@ -68,35 +76,74 @@ const TournamentDetails = () => {
     }
   };
 
+  const isUserRegistered =
+    isAuthenticated &&
+    user &&
+    tournament?.registeredTeams?.some(
+      (r) =>
+        r.team &&
+        userTeams.some(
+          (myT) => myT._id.toString() === (r.team._id || r.team).toString()
+        )
+    );
+
   const handleOpenRegister = () => {
     if (!isAuthenticated) {
-      addToast('Please login to register a team', 'info');
+      setAuthModalOpen(true);
       return;
     }
+    if (user.role !== 'student' && user.role !== 'admin') {
+      addToast('Only authenticated college students can register for tournaments', 'error');
+      return;
+    }
+    if (isUserRegistered) {
+      addToast('You are already registered for this tournament', 'info');
+      return;
+    }
+    setInGameName(user.username || '');
+    setNewTeamName('');
+    setNewTeamTag('');
     setRegisterModalOpen(true);
     API.get('/teams')
       .then((res) => {
         const myTeams = (res.data.teams || []).filter(
-          (t) => (t.captain?._id || t.captain) === user._id
+          (t) =>
+            (t.captain?._id || t.captain) === user._id ||
+            t.members?.some((m) => (m.user?._id || m.user) === user._id)
         );
         setUserTeams(myTeams);
-        if (myTeams.length > 0) setSelectedTeamId(myTeams[0]._id);
+        if (myTeams.length > 0) {
+          setSelectedTeamId(myTeams[0]._id);
+          setRegistrationMode('existing');
+        } else {
+          setRegistrationMode('new');
+        }
       })
       .catch((e) => console.error(e));
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedTeamId) {
-      addToast('Please select your team', 'error');
-      return;
+    const payload = {};
+    if (registrationMode === 'existing') {
+      if (!selectedTeamId) {
+        addToast('Please select your team', 'error');
+        return;
+      }
+      payload.teamId = selectedTeamId;
+    } else {
+      if (!newTeamName.trim()) {
+        addToast('Please enter a team name', 'error');
+        return;
+      }
+      payload.teamName = newTeamName.trim();
+      payload.inGameName = inGameName.trim() || user.username;
+      payload.tag = newTeamTag.trim() || undefined;
     }
 
     try {
       setRegistering(true);
-      const res = await API.post(`/tournaments/${tournament._id}/register`, {
-        teamId: selectedTeamId,
-      });
+      const res = await API.post(`/tournaments/${tournament._id}/register`, payload);
 
       if (res.data.success) {
         addToast(res.data.message || 'Team registered successfully!', 'success');
@@ -149,7 +196,7 @@ const TournamentDetails = () => {
   if (!tournament) return <EmptyState title="Tournament Not Found" description="The requested tournament does not exist." />;
 
   const isRegistrationOpen =
-    tournament.status === 'upcoming' &&
+    (tournament.status === 'upcoming' || tournament.status === 'registration-open') &&
     new Date() < new Date(tournament.registrationDeadline) &&
     tournament.registeredTeams?.length < tournament.maxTeams;
 
@@ -163,10 +210,10 @@ const TournamentDetails = () => {
   ];
 
   return (
-    <div className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8">
+    <div className="py-6 sm:py-10 px-3.5 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6 sm:space-y-8">
       {/* Tournament Banner Header */}
-      <div className="relative rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl">
-        <div className="relative h-64 sm:h-80 w-full overflow-hidden">
+      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl">
+        <div className="relative h-48 sm:h-72 md:h-80 w-full overflow-hidden">
           <img
             src={tournament.banner}
             alt={tournament.name}
@@ -176,33 +223,41 @@ const TournamentDetails = () => {
         </div>
 
         {/* Content over banner */}
-        <div className="p-4 sm:p-8 -mt-16 sm:-mt-24 relative z-10 flex flex-col lg:flex-row items-start lg:items-end justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
+        <div className="p-4 sm:p-6 md:p-8 -mt-12 sm:-mt-24 relative z-10 flex flex-col lg:flex-row items-start lg:items-end justify-between gap-5 sm:gap-6">
+          <div className="space-y-2 max-w-2xl min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider bg-cyan-950/90 text-cyan-400 border border-cyan-500/40">
+              <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-cyan-950/90 text-cyan-400 border border-cyan-500/40">
                 {tournament.game}
               </span>
               <span
-                className={`px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider border ${
-                  tournament.status === 'live'
+                className={`px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider border ${
+                  tournament.status === 'live' || tournament.status === 'ongoing'
                     ? 'bg-rose-950 text-rose-400 border-rose-500 animate-pulse'
+                    : tournament.status === 'completed'
+                    ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                    : tournament.status === 'cancelled'
+                    ? 'bg-red-950 text-red-400 border-red-800'
                     : 'bg-slate-900 text-slate-300 border-slate-700'
                 }`}
               >
-                {tournament.status === 'live' ? '● LIVE ARENA' : tournament.status}
+                {tournament.status === 'live' || tournament.status === 'ongoing'
+                  ? '● LIVE ARENA'
+                  : tournament.status === 'cancelled'
+                  ? 'Cancelled'
+                  : tournament.status}
               </span>
-              <span className="text-[11px] sm:text-xs text-slate-400">
+              <span className="text-[10px] sm:text-xs text-slate-400">
                 Organized by <strong>{tournament.organizer || 'UEM Gaming Club'}</strong>
               </span>
             </div>
 
-            <h1 className="text-2xl min-[420px]:text-3xl sm:text-5xl font-black text-white font-mono leading-tight break-words">
+            <h1 className="text-xl min-[420px]:text-2xl sm:text-4xl md:text-5xl font-black text-white font-mono leading-tight break-words">
               {tournament.name}
             </h1>
           </div>
 
           {/* Action Button & Live Stream */}
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
             {tournament.streamUrl && tournament.status === 'live' && (
               <a
                 href={tournament.streamUrl}
@@ -210,18 +265,22 @@ const TournamentDetails = () => {
                 rel="noreferrer"
                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30 transition-all"
               >
-                <Video className="w-4 h-4" /> Watch Live Stream
+                <Video className="w-4 h-4 shrink-0" /> Watch Live Stream
               </a>
             )}
 
-            {isRegistrationOpen && (
+            {isUserRegistered ? (
+              <span className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-bold text-xs uppercase tracking-wider text-center">
+                ✓ You Are Registered
+              </span>
+            ) : isRegistrationOpen ? (
               <button
                 onClick={handleOpenRegister}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all"
+                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all cursor-pointer text-center"
               >
                 Register Team
               </button>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -229,23 +288,23 @@ const TournamentDetails = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-slate-900 bg-slate-950/80 divide-y sm:divide-y-0 sm:divide-x divide-slate-900 text-center py-2 sm:py-4">
           <div className="p-2 sm:p-0">
             <span className="block text-[10px] text-slate-500 uppercase font-bold">Prize Pool</span>
-            <span className="text-sm sm:text-base font-black text-amber-400 font-mono">
+            <span className="text-xs sm:text-base font-black text-amber-400 font-mono">
               {tournament.prizePool?.currency || '₹'} {tournament.prizePool?.total?.toLocaleString()}
             </span>
           </div>
           <div className="p-2 sm:p-0">
             <span className="block text-[10px] text-slate-500 uppercase font-bold">Format</span>
-            <span className="text-sm sm:text-base font-bold text-white font-mono">{tournament.format}</span>
+            <span className="text-xs sm:text-base font-bold text-white font-mono truncate">{tournament.format}</span>
           </div>
           <div className="p-2 sm:p-0">
             <span className="block text-[10px] text-slate-500 uppercase font-bold">Registration</span>
-            <span className="text-sm sm:text-base font-bold text-cyan-400 font-mono">
+            <span className="text-xs sm:text-base font-bold text-cyan-400 font-mono">
               {tournament.registeredTeams?.length || 0} / {tournament.maxTeams} Teams
             </span>
           </div>
           <div className="p-2 sm:p-0">
             <span className="block text-[10px] text-slate-500 uppercase font-bold">Entry Fee</span>
-            <span className="text-sm sm:text-base font-bold text-emerald-400 font-mono">
+            <span className="text-xs sm:text-base font-bold text-emerald-400 font-mono">
               {tournament.entryFee === 0 ? 'Free Entry' : `₹${tournament.entryFee}`}
             </span>
           </div>
@@ -253,12 +312,12 @@ const TournamentDetails = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-800 space-x-2 overflow-x-auto">
+      <div className="flex border-b border-slate-800 space-x-2 overflow-x-auto scrollbar-none pb-0.5">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`py-3 px-5 text-sm font-bold uppercase tracking-wider border-b-2 font-mono transition-all whitespace-nowrap ${
+            className={`py-2.5 sm:py-3 px-3.5 sm:px-5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 font-mono transition-all whitespace-nowrap shrink-0 ${
               activeTab === tab.id
                 ? 'border-cyan-400 text-cyan-400 bg-cyan-950/20'
                 : 'border-transparent text-slate-400 hover:text-white hover:border-slate-700'
@@ -726,6 +785,43 @@ const TournamentDetails = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Visitor Auth Modal */}
+      <Modal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        title="Sign In Required"
+      >
+        <div className="p-4 text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-950/80 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto">
+            <ShieldAlert className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white font-mono">
+              Authentication Required
+            </h3>
+            <p className="text-xs text-slate-300 mt-1">
+              Please sign in or create an account to register for a tournament.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800">
+            <Link
+              to="/login"
+              state={{ from: `/tournaments/${id}` }}
+              className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors flex items-center justify-center gap-1.5"
+            >
+              <LogIn className="w-4 h-4" /> Sign In
+            </Link>
+            <Link
+              to="/register"
+              className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 transition-all flex items-center justify-center gap-1.5"
+            >
+              <UserPlus className="w-4 h-4" /> Sign Up
+            </Link>
+          </div>
+        </div>
       </Modal>
     </div>
   );

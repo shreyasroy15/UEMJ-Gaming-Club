@@ -8,9 +8,9 @@ const MainLayout = () => {
   const isHome = location.pathname === '/';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#080a10] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen flex flex-col bg-[#080a10] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 overflow-x-hidden">
       <Navbar />
-      <main className={`flex-grow ${isHome ? '' : 'pt-20 sm:pt-24'}`}>
+      <main className="flex-grow pt-20 sm:pt-24">
         <Outlet />
       </main>
       <Footer />

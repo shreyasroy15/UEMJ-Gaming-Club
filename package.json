@@ -6,7 +6,8 @@
     "install:all": "npm install --prefix college-gaming-club/client && npm install --prefix college-gaming-club/server",
     "build": "npm run build --prefix college-gaming-club/client",
     "client": "npm run dev --prefix college-gaming-club/client",
-    "server": "npm run dev --prefix college-gaming-club/server"
+    "server": "npm run dev --prefix college-gaming-club/server",
+    "seed": "npm run seed --prefix college-gaming-club/server"
   },
   "dependencies": {
     "animate.css": "^4.1.1",

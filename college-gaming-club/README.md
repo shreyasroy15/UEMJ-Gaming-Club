@@ -35,7 +35,7 @@ A production-ready full-stack esports tournament and community portal built for 
 - **Campus Events**: Create LAN events, workshops, and set maximum seating capacity.
 - **News Bulletins**: Publish and pin critical tournament announcements.
 - **Media Manager**: Upload photos to the community gallery with category tagging.
-- **User Administration**: Promote users to `organizer` or `admin`, or manage accounts.
+- **User Administration**: Promote users to `admin`, or manage accounts.
 
 ---
 
@@ -99,7 +99,7 @@ college-gaming-club/
     ├── controllers/            # Auth, Tournament, Team, Match, User controllers
     ├── middleware/
     │   ├── authMiddleware.js   # JWT authentication
-    │   ├── adminMiddleware.js  # Role verification (admin/organizer)
+    │   ├── adminMiddleware.js  # Role verification (admin)
     │   └── errorMiddleware.js  # Global error handling
     ├── models/                 # User, Team, Tournament, Match, Game, Event, Announcement, Gallery
     ├── routes/                 # Express REST API routes
@@ -197,7 +197,7 @@ The seed script provides pre-configured testing accounts:
 | Role | Email | Password | Username |
 |---|---|---|---|
 | **Club Admin** | `admin@uemjgaming.club` | `admin123` | `admin` |
-| **Organizer / Captain** | `shreyas@uemjgaming.club` | `password123` | `apex_shreyas` |
+| **Student Player (Captain)** | `shreyas@uemjgaming.club` | `password123` | `apex_shreyas` |
 | **Student Player** | `rohit@uemjgaming.club` | `password123` | `ghost_rohit` |
 
 > 💡 **Quick Login**: The login page includes quick auto-fill buttons for both the **👑 Admin Account** and **🎯 Student Player** for rapid evaluation.

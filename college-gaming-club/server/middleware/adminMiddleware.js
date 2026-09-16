@@ -11,6 +11,6 @@ const authorize = (...roles) => {
 };
 
 const adminOnly = authorize('admin');
-const staffOnly = authorize('admin', 'organizer');
+const staffOnly = authorize('admin');
 
 module.exports = { authorize, adminOnly, staffOnly };

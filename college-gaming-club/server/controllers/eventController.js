@@ -102,7 +102,7 @@ exports.registerForEvent = async (req, res, next) => {
 
 // @desc    Create event
 // @route   POST /api/events
-// @access  Private (Admin / Organizer)
+// @access  Private (Admin)
 exports.createEvent = async (req, res, next) => {
   try {
     const event = await Event.create(req.body);
@@ -118,7 +118,7 @@ exports.createEvent = async (req, res, next) => {
 
 // @desc    Update event
 // @route   PUT /api/events/:id
-// @access  Private (Admin / Organizer)
+// @access  Private (Admin)
 exports.updateEvent = async (req, res, next) => {
   try {
     let event = await Event.findById(req.params.id);

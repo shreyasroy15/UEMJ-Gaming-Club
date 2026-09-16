@@ -16,9 +16,14 @@ const AdminTournaments = () => {
   // Create / Edit modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTournament, setEditingTournament] = useState(null);
+  const [viewTeamsModalOpen, setViewTeamsModalOpen] = useState(false);
+  const [viewingTournament, setViewingTournament] = useState(null);
+  const [registeredTeamsList, setRegisteredTeamsList] = useState([]);
+  const [viewTeamsLoading, setViewTeamsLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
-    game: 'Valorant',
+    game: 'BGMI',
     banner: '',
     description: '',
     format: 'Single Elimination',
@@ -30,6 +35,12 @@ const AdminTournaments = () => {
     status: 'upcoming',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  const bannerPresets = [
+    { label: 'BGMI', url: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80' },
+    { label: 'Free Fire', url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80' },
+    { label: 'Valorant', url: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1200&q=80' },
+  ];
 
   useEffect(() => {
     fetchData();
@@ -56,16 +67,16 @@ const AdminTournaments = () => {
     setEditingTournament(null);
     setFormData({
       name: '',
-      game: games[0]?.name || 'Valorant',
+      game: 'BGMI',
       banner: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
-      description: 'Competitive varsity gaming tournament.',
+      description: 'Official university esports championship tournament.',
       format: 'Single Elimination',
       prizeTotal: 15000,
       entryFee: 0,
       maxTeams: 16,
       registrationDeadline: new Date(Date.now() + 7 * 24 * 3600000).toISOString().slice(0, 16),
       startDate: new Date(Date.now() + 10 * 24 * 3600000).toISOString().slice(0, 16),
-      status: 'upcoming',
+      status: 'registration-open',
     });
     setModalOpen(true);
   };
@@ -148,6 +159,23 @@ const AdminTournaments = () => {
     }
   };
 
+  // View Registered Teams Handler
+  const handleViewTeams = async (t) => {
+    setViewingTournament(t);
+    setViewTeamsModalOpen(true);
+    setViewTeamsLoading(true);
+    try {
+      const res = await API.get(`/tournaments/${t._id}`);
+      const regTeams = res.data.tournament?.registeredTeams || [];
+      setRegisteredTeamsList(regTeams);
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to load registered teams', 'error');
+    } finally {
+      setViewTeamsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top bar */}
@@ -181,7 +209,7 @@ const AdminTournaments = () => {
       ) : (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full min-w-[700px] text-left text-xs text-slate-300">
               <thead className="bg-slate-950/80 uppercase font-mono text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="p-4">Tournament Name</th>
@@ -224,10 +252,12 @@ const AdminTournaments = () => {
                     <td className="p-4">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          t.status === 'live'
+                          t.status === 'live' || t.status === 'ongoing'
                             ? 'bg-rose-950 text-rose-400 border border-rose-800'
                             : t.status === 'completed'
                             ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                            : t.status === 'cancelled'
+                            ? 'bg-red-950/80 text-red-400 border border-red-800'
                             : 'bg-slate-900 text-cyan-400 border border-slate-800'
                         }`}
                       >
@@ -237,23 +267,30 @@ const AdminTournaments = () => {
 
                     <td className="p-4 text-right space-x-2">
                       <button
+                        onClick={() => handleViewTeams(t)}
+                        title="View Registered Teams"
+                        className="p-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition-colors cursor-pointer"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                      </button>
+                      <button
                         onClick={() => handleGenerateBracket(t._id, t.name)}
                         title="Generate Elimination Brackets"
-                        className="p-1.5 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 transition-colors"
+                        className="p-1.5 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 transition-colors cursor-pointer"
                       >
                         <GitBranch className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleOpenEdit(t)}
                         title="Edit Tournament"
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(t._id, t.name)}
                         title="Delete Tournament"
-                        className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-rose-400 border border-rose-900 transition-colors"
+                        className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-rose-400 border border-rose-900 transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -392,9 +429,24 @@ const AdminTournaments = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Banner URL
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-300 uppercase">
+                Banner Image URL *
+              </label>
+              <span className="text-[10px] text-slate-400">Quick Presets:</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {bannerPresets.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, banner: p.url, game: p.label })}
+                  className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono text-cyan-300 cursor-pointer"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
             <input
               type="url"
               required
@@ -419,15 +471,16 @@ const AdminTournaments = () => {
 
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Status
+              Tournament Status *
             </label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white"
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white font-mono"
             >
               <option value="upcoming">Upcoming</option>
-              <option value="live">Live</option>
+              <option value="registration-open">Registration Open</option>
+              <option value="ongoing">Ongoing (Running Now)</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -450,6 +503,70 @@ const AdminTournaments = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* View Registered Teams Modal */}
+      <Modal
+        isOpen={viewTeamsModalOpen}
+        onClose={() => setViewTeamsModalOpen(false)}
+        title={`Registered Teams: ${viewingTournament?.name || ''}`}
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono">
+            <span className="text-slate-400">Total Teams Registered:</span>
+            <span className="font-bold text-cyan-400">
+              {registeredTeamsList.length} / {viewingTournament?.maxTeams || 16}
+            </span>
+          </div>
+
+          {viewTeamsLoading ? (
+            <Loading message="Loading registered teams..." />
+          ) : registeredTeamsList.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400 space-y-1">
+              <p>No teams have registered for this tournament yet.</p>
+            </div>
+          ) : (
+            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+              {registeredTeamsList.map((reg, idx) => {
+                const team = reg.team;
+                return (
+                  <div
+                    key={reg._id || idx}
+                    className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 font-mono font-bold flex items-center justify-center text-[10px]">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <div className="font-bold text-white font-mono">
+                          {team?.name || 'Registered Squad'} {team?.tag && `[${team.tag}]`}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Captain: {team?.captain?.name || team?.captain?.username || 'Student Captain'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right text-[10px] font-mono text-slate-400">
+                      <div>{reg.registeredAt ? new Date(reg.registeredAt).toLocaleDateString() : 'N/A'}</div>
+                      <span className="text-emerald-400 font-semibold">Confirmed</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-3 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={() => setViewTeamsModalOpen(false)}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

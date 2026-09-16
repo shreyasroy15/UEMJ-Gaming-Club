@@ -2,17 +2,28 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, Calendar, Users, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
 
-const TournamentCard = ({ tournament, onRegisterClick }) => {
+const TournamentCard = ({ tournament, onRegisterClick, isRegistered = false }) => {
   const isRegistrationOpen =
-    tournament.status === 'upcoming' &&
+    (tournament.status === 'upcoming' || tournament.status === 'registration-open') &&
     new Date() < new Date(tournament.registrationDeadline) &&
-    tournament.registeredTeams?.length < tournament.maxTeams;
+    (tournament.registeredTeams?.length || 0) < tournament.maxTeams;
 
   const statusColors = {
     upcoming: 'bg-cyan-950/80 text-cyan-400 border-cyan-500/40',
+    'registration-open': 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40',
+    ongoing: 'bg-rose-950/80 text-rose-400 border-rose-500/40 animate-pulse',
     live: 'bg-rose-950/80 text-rose-400 border-rose-500/40 animate-pulse',
-    completed: 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40',
-    cancelled: 'bg-slate-800 text-slate-400 border-slate-700',
+    completed: 'bg-slate-800 text-slate-400 border-slate-700',
+    cancelled: 'bg-red-950/80 text-red-400 border-red-800',
+  };
+
+  const getStatusLabel = (status) => {
+    if (status === 'live' || status === 'ongoing') return '● LIVE NOW';
+    if (status === 'registration-open') return 'Registration Open';
+    if (status === 'upcoming') return 'Upcoming';
+    if (status === 'completed') return 'Completed';
+    if (status === 'cancelled') return 'Cancelled';
+    return status;
   };
 
   return (
@@ -27,14 +38,19 @@ const TournamentCard = ({ tournament, onRegisterClick }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-black/60" />
 
         {/* Status Badge */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex items-center gap-2">
           <span
             className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border backdrop-blur-md ${
               statusColors[tournament.status] || statusColors.upcoming
             }`}
           >
-            {tournament.status === 'live' ? '● LIVE NOW' : tournament.status}
+            {getStatusLabel(tournament.status)}
           </span>
+          {isRegistered && (
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 backdrop-blur-md">
+              ✓ Registered
+            </span>
+          )}
         </div>
 
         {/* Game Tag */}
@@ -93,14 +109,18 @@ const TournamentCard = ({ tournament, onRegisterClick }) => {
             View Details <ArrowRight className="w-3.5 h-3.5" />
           </Link>
 
-          {isRegistrationOpen && onRegisterClick && (
+          {isRegistered ? (
+            <span className="py-2.5 px-4 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-xs font-bold text-emerald-300 text-center">
+              Registered
+            </span>
+          ) : isRegistrationOpen && onRegisterClick ? (
             <button
               onClick={() => onRegisterClick(tournament)}
-              className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white transition-all shadow-md shadow-cyan-500/20"
+              className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white transition-all shadow-md shadow-cyan-500/20 cursor-pointer"
             >
               Register
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

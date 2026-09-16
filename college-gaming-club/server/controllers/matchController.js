@@ -61,7 +61,7 @@ exports.getMatchById = async (req, res, next) => {
 
 // @desc    Create match
 // @route   POST /api/matches
-// @access  Private (Admin / Organizer)
+// @access  Private (Admin)
 exports.createMatch = async (req, res, next) => {
   try {
     const match = await Match.create(req.body);
@@ -82,7 +82,7 @@ exports.createMatch = async (req, res, next) => {
 
 // @desc    Update match (scores, winner, status)
 // @route   PUT /api/matches/:id
-// @access  Private (Admin / Organizer)
+// @access  Private (Admin)
 exports.updateMatch = async (req, res, next) => {
   try {
     let match = await Match.findById(req.params.id);
