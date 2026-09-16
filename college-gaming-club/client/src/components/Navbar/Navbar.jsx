@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import GooeyNav from '../GooeyNav/GooeyNav';
 import {
   Menu,
   X,
@@ -107,7 +108,7 @@ const Navbar = () => {
     <>
       {/* Floating Pill Capsule Header */}
       <header className="fixed top-3 sm:top-5 left-0 right-0 z-50 px-3 sm:px-6 pointer-events-none transition-all duration-300">
-        <div className="max-w-6xl mx-auto flex flex-col items-center">
+        <div className="max-w-7xl mx-auto flex flex-col items-center">
           {/* Main Pill Navbar Container */}
           <nav
             aria-label="Main Navigation"
@@ -147,23 +148,17 @@ const Navbar = () => {
                 </div>
               </Link>
 
-              {/* Desktop Nav Links (Horizontal Pill Links) */}
-              <div className="hidden min-[1100px]:flex items-center gap-1 xl:gap-1.5">
-                {navLinks.map((item) => (
-                  <NavLink
-                    key={item.href}
-                    to={item.href}
-                    className={({ isActive }) =>
-                      `relative px-3 py-1.5 rounded-full text-xs xl:text-[13px] font-semibold tracking-wide transition-all duration-200 whitespace-nowrap select-none ${
-                        isActive
-                          ? 'text-white bg-white/12 shadow-[0_0_14px_rgba(255,255,255,0.1)] border border-white/15 backdrop-blur-md'
-                          : 'text-slate-300 hover:text-white hover:bg-white/6 hover:border hover:border-white/10'
-                      }`
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
+              {/* Desktop Nav Links (Signature GooeyNav) */}
+              <div className="hidden min-[1100px]:flex items-center">
+                <GooeyNav
+                  items={navLinks}
+                  animationTime={500}
+                  particleCount={12}
+                  particleDistances={[70, 8]}
+                  particleR={70}
+                  timeVariance={250}
+                  colors={[1, 2, 3, 4]}
+                />
               </div>
 
               {/* Right Side Action / CTA Pill Button */}
