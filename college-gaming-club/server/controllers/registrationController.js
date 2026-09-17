@@ -152,7 +152,7 @@ exports.createTeamRegistration = async (req, res, next) => {
       });
     }
 
-    const { teamName, teamTag, teamLogo, teamResponses } = req.body;
+    const { teamName, teamType, teamTag, teamLogo, teamResponses } = req.body;
 
     if (!teamName || !teamName.trim()) {
       return res.status(400).json({
@@ -170,9 +170,16 @@ exports.createTeamRegistration = async (req, res, next) => {
     if (duplicateTeam) {
       return res.status(400).json({
         success: false,
-        message: 'A team with this name has already registered for this tournament',
+        message: 'Team name already taken.',
       });
     }
+
+    const allowedTeamTypes = ['UEM Student Team', 'Outside Team', 'Mixed Team'];
+    const resolvedTeamType = allowedTeamTypes.includes(teamType) ? teamType : 'UEM Student Team';
+    const finalTeamResponses = {
+      ...(teamResponses || {}),
+      team_type: resolvedTeamType,
+    };
 
     const teamCode = await generateUniqueCode(tournament.game);
 
@@ -183,12 +190,13 @@ exports.createTeamRegistration = async (req, res, next) => {
     const registration = await TournamentRegistration.create({
       tournament: tournament._id,
       teamName: teamName.trim(),
+      teamType: resolvedTeamType,
       teamTag: (teamTag || teamName.substring(0, 4)).toUpperCase().trim(),
       teamLogo: teamLogo || undefined,
       teamCode,
       captain: req.user.id,
       leader: req.user.id,
-      teamResponses: teamResponses || {},
+      teamResponses: finalTeamResponses,
       identityProof: {
         url: '',
         status: 'pending',
@@ -219,6 +227,12 @@ exports.createTeamRegistration = async (req, res, next) => {
       teamCode,
     });
   } catch (error) {
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.teamName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team name already taken.',
+      });
+    }
     next(error);
   }
 };
@@ -367,8 +381,16 @@ exports.getRegistrationWorkspace = async (req, res, next) => {
     // Identify user's role in this registration
     const isLeader = (registration.leader?._id || registration.captain?._id || registration.captain).toString() === req.user.id;
     const currentSlot = registration.players.find(
-      (p) => p.user._id.toString() === req.user.id
+      (p) => p.user && (p.user._id ? p.user._id.toString() : p.user.toString()) === req.user.id
     );
+
+    // Enforce authorization: user must belong to this team or be an admin
+    if (!currentSlot && !isLeader && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied to this team workspace',
+      });
+    }
 
     // Completion and order evaluation
     const tournament = registration.tournament;
@@ -1040,11 +1062,8 @@ exports.deregisterFromTournament = async (req, res, next) => {
       if (remainingPlayers.length === 0) {
         // Team has no other members -> automatically delete the team
         await TournamentRegistration.findByIdAndDelete(registration._id);
-        // Also cancel any pending invitations for this team
-        await TournamentInvitation.updateMany(
-          { registration: registration._id, status: 'pending' },
-          { status: 'cancelled' }
-        );
+        // Clean up all invitations for this team completely
+        await TournamentInvitation.deleteMany({ registration: registration._id });
 
         // Also clean up tournament registeredTeams if present
         await Tournament.findByIdAndUpdate(tournamentId, {

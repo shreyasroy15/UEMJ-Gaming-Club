@@ -49,11 +49,18 @@ const tournamentRegistrationSchema = new mongoose.Schema(
       required: [true, 'Team name is required'],
       trim: true,
     },
+    teamType: {
+      type: String,
+      enum: ['UEM Student Team', 'Outside Team', 'Mixed Team'],
+      default: 'UEM Student Team',
+      required: true,
+    },
     teamTag: {
       type: String,
       trim: true,
       uppercase: true,
       maxlength: 6,
+      required: false,
     },
     teamLogo: {
       type: String,

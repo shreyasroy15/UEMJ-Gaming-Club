@@ -40,16 +40,12 @@ const TournamentDetails = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
 
-  // Registration Modal
+  // Registration Modal (Team Name + Team Type ONLY)
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [userTeams, setUserTeams] = useState([]);
-  const [registrationMode, setRegistrationMode] = useState('existing');
   const [newTeamName, setNewTeamName] = useState('');
-  const [newTeamTag, setNewTeamTag] = useState('');
-  const [inGameName, setInGameName] = useState('');
-  const [selectedTeamId, setSelectedTeamId] = useState('');
-  const [registering, setRegistering] = useState(false);
+  const [newTeamType, setNewTeamType] = useState('UEM Student Team');
+  const [creatingTeam, setCreatingTeam] = useState(false);
 
   // Match score update modal for staff/admin
   const [editMatchModal, setEditMatchModal] = useState(null);
@@ -88,13 +84,16 @@ const TournamentDetails = () => {
               const matched = (myRegs.data.registrations || []).find(
                 (r) => (r.tournament?._id || r.tournament) === (tRes.data.tournament._id || id)
               );
-              if (matched) {
-                setUserSquad(matched);
-              }
+              setUserSquad(matched || null);
+            } else {
+              setUserSquad(null);
             }
           } catch (e) {
             console.error(e);
+            setUserSquad(null);
           }
+        } else {
+          setUserSquad(null);
         }
       }
     } catch (err) {
@@ -105,16 +104,7 @@ const TournamentDetails = () => {
     }
   };
 
-  const isUserRegistered =
-    isAuthenticated &&
-    user &&
-    tournament?.registeredTeams?.some(
-      (r) =>
-        r.team &&
-        userTeams.some(
-          (myT) => myT._id.toString() === (r.team._id || r.team).toString()
-        )
-    );
+  const isUserRegistered = Boolean(isAuthenticated && user && userSquad);
 
   const handleOpenRegister = () => {
     if (!isAuthenticated) {
@@ -129,60 +119,35 @@ const TournamentDetails = () => {
       addToast('You are already registered for this tournament', 'info');
       return;
     }
-    setInGameName(user.username || '');
     setNewTeamName('');
-    setNewTeamTag('');
+    setNewTeamType('UEM Student Team');
     setRegisterModalOpen(true);
-    API.get('/teams')
-      .then((res) => {
-        const myTeams = (res.data.teams || []).filter(
-          (t) =>
-            (t.captain?._id || t.captain) === user._id ||
-            t.members?.some((m) => (m.user?._id || m.user) === user._id)
-        );
-        setUserTeams(myTeams);
-        if (myTeams.length > 0) {
-          setSelectedTeamId(myTeams[0]._id);
-          setRegistrationMode('existing');
-        } else {
-          setRegistrationMode('new');
-        }
-      })
-      .catch((e) => console.error(e));
   };
 
-  const handleRegisterSubmit = async (e) => {
+  const handleCreateTeamSubmit = async (e) => {
     e.preventDefault();
-    const payload = {};
-    if (registrationMode === 'existing') {
-      if (!selectedTeamId) {
-        addToast('Please select your team', 'error');
-        return;
-      }
-      payload.teamId = selectedTeamId;
-    } else {
-      if (!newTeamName.trim()) {
-        addToast('Please enter a team name', 'error');
-        return;
-      }
-      payload.teamName = newTeamName.trim();
-      payload.inGameName = inGameName.trim() || user.username;
-      payload.tag = newTeamTag.trim() || undefined;
+    if (!newTeamName.trim()) {
+      addToast('Please enter a team name', 'error');
+      return;
     }
 
     try {
-      setRegistering(true);
-      const res = await API.post(`/tournaments/${tournament._id}/register`, payload);
+      setCreatingTeam(true);
+      const res = await API.post(`/tournaments/${tournament._id}/registrations/create-team`, {
+        teamName: newTeamName.trim(),
+        teamType: newTeamType,
+      });
 
       if (res.data.success) {
-        addToast(res.data.message || 'Team registered successfully!', 'success');
+        addToast(res.data.message || 'Squad created successfully!', 'success');
         setRegisterModalOpen(false);
-        fetchTournamentDetails();
+        setUserSquad(res.data.registration);
+        navigate(`/tournaments/${tournament._id}/register`);
       }
     } catch (err) {
-      addToast(err.response?.data?.message || 'Registration failed', 'error');
+      addToast(err.response?.data?.message || 'Failed to create team', 'error');
     } finally {
-      setRegistering(false);
+      setCreatingTeam(false);
     }
   };
 
@@ -315,29 +280,33 @@ const TournamentDetails = () => {
               </a>
             )}
 
-            {userSquad ? (
+            {isUserRegistered ? (
               <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <span className="px-3.5 py-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-emerald-500/10">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> REGISTERED
+                </span>
                 <Link
                   to={`/tournaments/${tournament._id}/register`}
                   className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider text-center shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all"
                 >
-                  <CheckCircle2 className="w-4 h-4 text-white" /> View Your Squad ({userSquad.teamName})
+                  View Your Squad ({userSquad.teamName})
                 </Link>
                 <button
                   type="button"
                   onClick={() => setDeregisterModalOpen(true)}
                   className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-600/50 text-rose-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  De-register
+                  DE-REGISTER
                 </button>
               </div>
             ) : isRegistrationOpen ? (
-              <Link
-                to={`/tournaments/${tournament._id}/register`}
+              <button
+                type="button"
+                onClick={handleOpenRegister}
                 className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
               >
-                <Users className="w-4 h-4" /> Register Squad
-              </Link>
+                <Users className="w-4 h-4" /> REGISTER
+              </button>
             ) : null}
           </div>
         </div>
@@ -736,68 +705,58 @@ const TournamentDetails = () => {
         )}
       </div>
 
-      {/* Registration Modal */}
+      {/* Simple Tournament Registration Modal (Team Name + Team Type ONLY) */}
       <Modal
         isOpen={registerModalOpen}
         onClose={() => setRegisterModalOpen(false)}
         title={`Register for ${tournament.name}`}
       >
-        <form onSubmit={handleRegisterSubmit} className="space-y-4">
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1.5">
-            <p className="text-slate-300"><strong>Game:</strong> {tournament.game}</p>
-            <p className="text-slate-300"><strong>Format:</strong> {tournament.format}</p>
-            <p className="text-slate-300">
-              <strong>Entry Fee:</strong> {tournament.entryFee === 0 ? 'Free' : `₹${tournament.entryFee}`}
-            </p>
+        <form onSubmit={handleCreateTeamSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-mono font-bold text-slate-300 mb-1.5">
+              Team Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              placeholder="e.g. Team Alpha"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono"
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              Select Your Team (You must be Captain)
+            <label className="block text-xs font-mono font-bold text-slate-300 mb-1.5">
+              Team Type *
             </label>
-            {userTeams.length === 0 ? (
-              <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs text-amber-200 space-y-2">
-                <p>You haven't created any team yet.</p>
-                <Link
-                  to="/teams"
-                  onClick={() => setRegisterModalOpen(false)}
-                  className="inline-block font-bold text-cyan-400 underline"
-                >
-                  Create a Team first
-                </Link>
-              </div>
-            ) : (
-              <select
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
-              >
-                {userTeams.map((team) => (
-                  <option key={team._id} value={team._id}>
-                    {team.name} ({team.game}) - [{team.members?.length || 1} members]
-                  </option>
-                ))}
-              </select>
-            )}
+            <select
+              value={newTeamType}
+              onChange={(e) => setNewTeamType(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono"
+            >
+              <option value="UEM Student Team">UEM Student Team</option>
+              <option value="Outside Team">Outside Team</option>
+              <option value="Mixed Team">Mixed Team</option>
+            </select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
             <button
               type="button"
+              disabled={creatingTeam}
               onClick={() => setRegisterModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
             >
               Cancel
             </button>
-            {userTeams.length > 0 && (
-              <button
-                type="submit"
-                disabled={registering}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 disabled:opacity-50"
-              >
-                {registering ? 'Registering...' : 'Confirm Registration'}
-              </button>
-            )}
+            <button
+              type="submit"
+              disabled={creatingTeam}
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 disabled:opacity-50 transition-all cursor-pointer"
+            >
+              {creatingTeam ? 'Creating Team...' : 'Create Team'}
+            </button>
           </div>
         </form>
       </Modal>

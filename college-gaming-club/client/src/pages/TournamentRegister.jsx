@@ -50,9 +50,7 @@ const TournamentRegister = () => {
 
   // Create Team state
   const [teamName, setTeamName] = useState('');
-  const [teamTag, setTeamTag] = useState('');
-  const [teamLogo, setTeamLogo] = useState('');
-  const [teamResponses, setTeamResponses] = useState({});
+  const [teamType, setTeamType] = useState('UEM Student Team');
   const [creating, setCreating] = useState(false);
 
   // Join Team state
@@ -174,9 +172,7 @@ const TournamentRegister = () => {
       setCreating(true);
       const res = await API.post(`/tournaments/${id}/registrations/create-team`, {
         teamName: teamName.trim(),
-        teamTag: teamTag.trim() || undefined,
-        teamLogo: teamLogo || undefined,
-        teamResponses,
+        teamType,
       });
 
       if (res.data.success) {
@@ -266,18 +262,19 @@ const TournamentRegister = () => {
     }
   };
 
-  // 5. Handle Leave Squad
+  // 5. Handle Leave / Deregister Squad
   const handleLeaveSquad = async () => {
-    if (!window.confirm('Are you sure you want to leave this squad?')) return;
+    if (!window.confirm('Are you sure you want to deregister from this tournament squad?')) return;
 
     try {
-      const res = await API.post(`/registrations/${activeRegistration._id}/leave`);
+      const res = await API.post(`/tournaments/${id}/deregister`);
       if (res.data.success) {
-        addToast('You have left the squad', 'success');
+        addToast(res.data.message || 'You have deregistered from the tournament', 'success');
         setActiveRegistration(null);
+        navigate(`/tournaments/${id}`);
       }
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to leave squad', 'error');
+      addToast(err.response?.data?.message || 'Failed to deregister', 'error');
     }
   };
 
@@ -429,13 +426,10 @@ const TournamentRegister = () => {
               </div>
 
               <h1 className="text-2xl sm:text-4xl font-black text-white font-mono">
-                {activeRegistration.teamName}{' '}
-                {activeRegistration.teamTag && (
-                  <span className="text-indigo-400 text-xl font-normal">[{activeRegistration.teamTag}]</span>
-                )}
+                {activeRegistration.teamName}
               </h1>
               <p className="text-xs text-slate-300">
-                Captain: <strong>{activeRegistration.captain?.name}</strong> • Competing in{' '}
+                Team Type: <span className="font-semibold text-cyan-400">{activeRegistration.teamType || 'UEM Student Team'}</span> • Captain: <strong>{activeRegistration.captain?.name}</strong> • Competing in{' '}
                 <strong>{tournament.name}</strong>
               </p>
             </div>
@@ -540,15 +534,13 @@ const TournamentRegister = () => {
                 </button>
               )}
             </div>
-            {!isCaptain && (
-              <button
-                type="button"
-                onClick={handleLeaveSquad}
-                className="text-xs text-rose-400 hover:underline flex items-center gap-1 font-mono"
-              >
-                <LogOut className="w-3 h-3" /> Leave Squad
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleLeaveSquad}
+              className="text-xs text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 font-mono cursor-pointer"
+            >
+              <LogOut className="w-3 h-3" /> De-register from Tournament
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1076,7 +1068,7 @@ const TournamentRegister = () => {
         </button>
       </div>
 
-      {/* 1. CREATE SQUAD FORM (First show ONLY Team Name -> Create Team) */}
+      {/* 1. CREATE SQUAD FORM (Contains ONLY Team Name + Team Type) */}
       {mode === 'create' ? (
         <form onSubmit={handleCreateTeam} className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
           <div>
@@ -1084,7 +1076,7 @@ const TournamentRegister = () => {
               <Shield className="w-5 h-5 text-cyan-400" /> Create Team
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Enter your team name to generate your squad and unique Team Code. You will automatically become the Team Leader.
+              Enter your team name and select your team type to register. You will automatically become the Team Leader.
             </p>
           </div>
 
@@ -1102,13 +1094,35 @@ const TournamentRegister = () => {
                 className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-400 font-mono"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono font-bold text-slate-300">
+                Team Type *
+              </label>
+              <select
+                value={teamType}
+                onChange={(e) => setTeamType(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-400 font-mono"
+              >
+                <option value="UEM Student Team">UEM Student Team</option>
+                <option value="Outside Team">Outside Team</option>
+                <option value="Mixed Team">Mixed Team</option>
+              </select>
+            </div>
           </div>
 
-          <div className="pt-2">
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800/80">
+            <button
+              type="button"
+              onClick={() => navigate(`/tournaments/${id}`)}
+              className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
             <button
               type="submit"
               disabled={creating}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 disabled:opacity-50 cursor-pointer"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 disabled:opacity-50 cursor-pointer transition-all"
             >
               {creating ? 'Creating Team...' : 'Create Team'}
             </button>
