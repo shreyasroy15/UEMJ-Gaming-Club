@@ -10,6 +10,7 @@ const {
   generateBracket,
 } = require('../controllers/tournamentController');
 const { protect } = require('../middleware/authMiddleware');
+const { staffOnly, adminOnly } = require('../middleware/adminMiddleware');
 const formRoutes = require('./formRoutes');
 const {
   createTeamRegistration,
