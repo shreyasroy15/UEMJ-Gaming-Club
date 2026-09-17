@@ -10,7 +10,20 @@ const {
   generateBracket,
 } = require('../controllers/tournamentController');
 const { protect } = require('../middleware/authMiddleware');
-const { staffOnly, adminOnly } = require('../middleware/adminMiddleware');
+const formRoutes = require('./formRoutes');
+const {
+  createTeamRegistration,
+  getPublicTeams,
+  getAdminRegistrations,
+} = require('../controllers/registrationController');
+
+// Nested form routes: /api/tournaments/:id/form
+router.use('/:id/form', formRoutes);
+
+// Tournament registration endpoints
+router.post('/:id/registrations/create-team', protect, createTeamRegistration);
+router.get('/:id/public-teams', getPublicTeams);
+router.get('/:id/admin-registrations', protect, staffOnly, getAdminRegistrations);
 
 router
   .route('/')

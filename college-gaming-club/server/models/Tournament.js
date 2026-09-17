@@ -54,6 +54,26 @@ const tournamentSchema = new mongoose.Schema(
       type: Number,
       default: 16,
     },
+    minTeamSize: {
+      type: Number,
+      default: 4,
+    },
+    maxTeamSize: {
+      type: Number,
+      default: 5,
+    },
+    allowSubstitutes: {
+      type: Boolean,
+      default: true,
+    },
+    maxSubstitutes: {
+      type: Number,
+      default: 1,
+    },
+    registrationForm: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TournamentForm',
+    },
     registeredTeams: [
       {
         team: {

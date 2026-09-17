@@ -3,8 +3,26 @@ import API from '../../services/api';
 import Loading from '../../components/Loading/Loading';
 import EmptyState from '../../components/EmptyState/EmptyState';
 import Modal from '../../components/Modal/Modal';
+import CloudinaryUpload from '../../components/Upload/CloudinaryUpload';
 import { useToast } from '../../context/ToastContext';
-import { Trophy, Plus, Edit, Trash2, GitBranch, Calendar, Users, ExternalLink } from 'lucide-react';
+import {
+  Trophy,
+  Plus,
+  Edit,
+  Trash2,
+  GitBranch,
+  Calendar,
+  Users,
+  ExternalLink,
+  FileCode,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  Lock,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const AdminTournaments = () => {
@@ -16,10 +34,15 @@ const AdminTournaments = () => {
   // Create / Edit modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTournament, setEditingTournament] = useState(null);
+
+  // View & Verify Registered Teams state
   const [viewTeamsModalOpen, setViewTeamsModalOpen] = useState(false);
   const [viewingTournament, setViewingTournament] = useState(null);
-  const [registeredTeamsList, setRegisteredTeamsList] = useState([]);
+  const [adminRegistrations, setAdminRegistrations] = useState([]);
   const [viewTeamsLoading, setViewTeamsLoading] = useState(false);
+  const [teamStatusFilter, setTeamStatusFilter] = useState('all');
+  const [expandedTeamId, setExpandedTeamId] = useState(null);
+  const [verifyingId, setVerifyingId] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -30,6 +53,10 @@ const AdminTournaments = () => {
     prizeTotal: 10000,
     entryFee: 0,
     maxTeams: 16,
+    minTeamSize: 4,
+    maxTeamSize: 5,
+    allowSubstitutes: true,
+    maxSubstitutes: 1,
     registrationDeadline: '',
     startDate: '',
     status: 'upcoming',
@@ -74,6 +101,10 @@ const AdminTournaments = () => {
       prizeTotal: 15000,
       entryFee: 0,
       maxTeams: 16,
+      minTeamSize: 4,
+      maxTeamSize: 5,
+      allowSubstitutes: true,
+      maxSubstitutes: 1,
       registrationDeadline: new Date(Date.now() + 7 * 24 * 3600000).toISOString().slice(0, 16),
       startDate: new Date(Date.now() + 10 * 24 * 3600000).toISOString().slice(0, 16),
       status: 'registration-open',
@@ -92,6 +123,10 @@ const AdminTournaments = () => {
       prizeTotal: tournament.prizePool?.total || 10000,
       entryFee: tournament.entryFee || 0,
       maxTeams: tournament.maxTeams || 16,
+      minTeamSize: tournament.minTeamSize || 4,
+      maxTeamSize: tournament.maxTeamSize || 5,
+      allowSubstitutes: tournament.allowSubstitutes !== false,
+      maxSubstitutes: tournament.maxSubstitutes || 1,
       registrationDeadline: new Date(tournament.registrationDeadline).toISOString().slice(0, 16),
       startDate: new Date(tournament.startDate).toISOString().slice(0, 16),
       status: tournament.status || 'upcoming',
@@ -109,6 +144,9 @@ const AdminTournaments = () => {
           total: Number(formData.prizeTotal),
           currency: 'INR (₹)',
         },
+        minTeamSize: Number(formData.minTeamSize) || 4,
+        maxTeamSize: Number(formData.maxTeamSize) || 5,
+        maxSubstitutes: Number(formData.maxSubstitutes) || 1,
       };
 
       if (editingTournament) {
@@ -159,15 +197,16 @@ const AdminTournaments = () => {
     }
   };
 
-  // View Registered Teams Handler
+  // View Registered Teams & Documents Handler
   const handleViewTeams = async (t) => {
     setViewingTournament(t);
     setViewTeamsModalOpen(true);
     setViewTeamsLoading(true);
+    setTeamStatusFilter('all');
+    setExpandedTeamId(null);
     try {
-      const res = await API.get(`/tournaments/${t._id}`);
-      const regTeams = res.data.tournament?.registeredTeams || [];
-      setRegisteredTeamsList(regTeams);
+      const res = await API.get(`/tournaments/${t._id}/admin-registrations`);
+      setAdminRegistrations(res.data.registrations || []);
     } catch (err) {
       console.error(err);
       addToast('Failed to load registered teams', 'error');
@@ -175,6 +214,39 @@ const AdminTournaments = () => {
       setViewTeamsLoading(false);
     }
   };
+
+  // Verify / Reject Team Registration
+  const handleVerifyRegistration = async (regId, status) => {
+    let note = '';
+    if (status === 'rejected') {
+      note = prompt('Please enter the reason for rejection (e.g. Invalid Student ID card):') || '';
+      if (!note) return;
+    }
+
+    try {
+      setVerifyingId(regId);
+      const res = await API.put(`/registrations/${regId}/verify`, {
+        status,
+        verificationNotes: note,
+      });
+
+      if (res.data.success) {
+        addToast(`Team status updated to ${status.toUpperCase()}!`, 'success');
+        // Refresh list
+        const refreshed = await API.get(`/tournaments/${viewingTournament._id}/admin-registrations`);
+        setAdminRegistrations(refreshed.data.registrations || []);
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Verification update failed', 'error');
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const filteredRegistrations = adminRegistrations.filter((r) => {
+    if (teamStatusFilter === 'all') return true;
+    return r.status === teamStatusFilter;
+  });
 
   return (
     <div className="space-y-6">
@@ -185,13 +257,13 @@ const AdminTournaments = () => {
             TOURNAMENT MANAGEMENT
           </h1>
           <p className="text-xs text-slate-400">
-            Create tournaments, configure prize pools, manage registrations, and generate playoff brackets.
+            Create tournaments, configure squad sizes, customize registration forms, and verify player rosters.
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-fuchsia-600/20"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-fuchsia-600/20 cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Create Tournament
         </button>
@@ -209,12 +281,12 @@ const AdminTournaments = () => {
       ) : (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left text-xs text-slate-300">
+            <table className="w-full min-w-[750px] text-left text-xs text-slate-300">
               <thead className="bg-slate-950/80 uppercase font-mono text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="p-4">Tournament Name</th>
                   <th className="p-4">Game</th>
-                  <th className="p-4">Format</th>
+                  <th className="p-4">Roster Size</th>
                   <th className="p-4 text-center">Teams Registered</th>
                   <th className="p-4">Prize Pool</th>
                   <th className="p-4">Status</th>
@@ -234,12 +306,14 @@ const AdminTournaments = () => {
                     </td>
 
                     <td className="p-4">
-                      <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300">
+                      <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono font-bold">
                         {t.game}
                       </span>
                     </td>
 
-                    <td className="p-4 text-slate-400 font-mono">{t.format}</td>
+                    <td className="p-4 text-slate-300 font-mono">
+                      {t.minTeamSize || 4} Starters {t.allowSubstitutes !== false ? `+ ${t.maxSubstitutes || 1} Sub` : ''}
+                    </td>
 
                     <td className="p-4 text-center font-mono font-semibold">
                       <span className="text-cyan-400">{t.registeredTeams?.length || 0}</span> / {t.maxTeams}
@@ -265,14 +339,26 @@ const AdminTournaments = () => {
                       </span>
                     </td>
 
-                    <td className="p-4 text-right space-x-2">
+                    <td className="p-4 text-right space-x-1.5">
+                      {/* Form Builder Button */}
+                      <Link
+                        to={`/admin/tournaments/${t._id}/form`}
+                        title="Edit Dynamic Registration Form"
+                        className="p-1.5 rounded-lg bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-800/60 transition-colors inline-block align-middle cursor-pointer"
+                      >
+                        <FileCode className="w-3.5 h-3.5" />
+                      </Link>
+
+                      {/* View & Verify Teams */}
                       <button
                         onClick={() => handleViewTeams(t)}
-                        title="View Registered Teams"
+                        title="View Registered Teams & Verify Documents"
                         className="p-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition-colors cursor-pointer"
                       >
                         <Users className="w-3.5 h-3.5" />
                       </button>
+
+                      {/* Generate Bracket */}
                       <button
                         onClick={() => handleGenerateBracket(t._id, t.name)}
                         title="Generate Elimination Brackets"
@@ -280,6 +366,8 @@ const AdminTournaments = () => {
                       >
                         <GitBranch className="w-3.5 h-3.5" />
                       </button>
+
+                      {/* Edit */}
                       <button
                         onClick={() => handleOpenEdit(t)}
                         title="Edit Tournament"
@@ -287,6 +375,8 @@ const AdminTournaments = () => {
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
+
+                      {/* Delete */}
                       <button
                         onClick={() => handleDelete(t._id, t.name)}
                         title="Delete Tournament"
@@ -320,13 +410,14 @@ const AdminTournaments = () => {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+              placeholder="e.g. UEM Jaipur Tech Fest 2026 – BGMI"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-                Game Title *
+                Esports Game *
               </label>
               <select
                 value={formData.game}
@@ -355,6 +446,70 @@ const AdminTournaments = () => {
                 <option value="Round Robin">Round Robin</option>
                 <option value="Swiss">Swiss</option>
               </select>
+            </div>
+          </div>
+
+          {/* Roster Configuration */}
+          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <h4 className="text-xs font-mono font-bold text-cyan-400 uppercase">
+              Roster & Team Size Rules
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Required Starters
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={formData.minTeamSize}
+                  onChange={(e) => setFormData({ ...formData, minTeamSize: Number(e.target.value) })}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Max Roster Size
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={formData.maxTeamSize}
+                  onChange={(e) => setFormData({ ...formData, maxTeamSize: Number(e.target.value) })}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Allow Substitute
+                </label>
+                <select
+                  value={formData.allowSubstitutes ? 'yes' : 'no'}
+                  onChange={(e) => setFormData({ ...formData, allowSubstitutes: e.target.value === 'yes' })}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white"
+                >
+                  <option value="yes">Yes (1 sub)</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Max Substitutes
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="3"
+                  value={formData.maxSubstitutes}
+                  onChange={(e) => setFormData({ ...formData, maxSubstitutes: Number(e.target.value) })}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white font-mono"
+                />
+              </div>
             </div>
           </div>
 
@@ -428,12 +583,13 @@ const AdminTournaments = () => {
             </div>
           </div>
 
-          <div>
+          {/* Cloudinary Banner Upload */}
+          <div className="space-y-2">
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-slate-300 uppercase">
-                Banner Image URL *
+                Tournament Banner Image *
               </label>
-              <span className="text-[10px] text-slate-400">Quick Presets:</span>
+              <span className="text-[10px] text-slate-400">Presets:</span>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {bannerPresets.map((p) => (
@@ -447,12 +603,12 @@ const AdminTournaments = () => {
                 </button>
               ))}
             </div>
-            <input
-              type="url"
-              required
+            <CloudinaryUpload
               value={formData.banner}
-              onChange={(e) => setFormData({ ...formData, banner: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500"
+              onChange={(url) => setFormData({ ...formData, banner: url })}
+              label="Upload Custom Banner via Cloudinary"
+              helpText="Upload wide 16:9 banner (JPG, PNG, WEBP)"
+              type="public"
             />
           </div>
 
@@ -461,36 +617,18 @@ const AdminTournaments = () => {
               Description
             </label>
             <textarea
-              rows="3"
-              required
+              rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Tournament Status *
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white font-mono"
-            >
-              <option value="upcoming">Upcoming</option>
-              <option value="registration-open">Registration Open</option>
-              <option value="ongoing">Ongoing (Running Now)</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
             >
               Cancel
             </button>
@@ -505,52 +643,224 @@ const AdminTournaments = () => {
         </form>
       </Modal>
 
-      {/* View Registered Teams Modal */}
+      {/* View & Verify Registered Teams Console Modal */}
       <Modal
         isOpen={viewTeamsModalOpen}
         onClose={() => setViewTeamsModalOpen(false)}
-        title={`Registered Teams: ${viewingTournament?.name || ''}`}
+        title={`Registered Teams & Roster Verification: ${viewingTournament?.name || ''}`}
       >
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono">
-            <span className="text-slate-400">Total Teams Registered:</span>
-            <span className="font-bold text-cyan-400">
-              {registeredTeamsList.length} / {viewingTournament?.maxTeams || 16}
-            </span>
+        <div className="space-y-4 max-w-3xl">
+          {/* Top Info Bar with Quick Link to Form Builder */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono">
+            <div>
+              <span className="text-slate-400">Total Teams:</span>{' '}
+              <span className="font-bold text-cyan-400">{adminRegistrations.length}</span> / {viewingTournament?.maxTeams || 16}
+            </div>
+            {viewingTournament && (
+              <Link
+                to={`/admin/tournaments/${viewingTournament._id}/form`}
+                className="text-amber-400 hover:underline flex items-center gap-1"
+              >
+                <FileCode className="w-3.5 h-3.5" /> Edit Registration Form Schema
+              </Link>
+            )}
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono font-bold overflow-x-auto">
+            {['all', 'incomplete', 'complete', 'verified', 'rejected'].map((st) => (
+              <button
+                key={st}
+                onClick={() => setTeamStatusFilter(st)}
+                className={`px-3 py-1 rounded-lg uppercase transition-all ${
+                  teamStatusFilter === st
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {st}
+              </button>
+            ))}
           </div>
 
           {viewTeamsLoading ? (
-            <Loading message="Loading registered teams..." />
-          ) : registeredTeamsList.length === 0 ? (
+            <Loading message="Loading registered teams and player documents..." />
+          ) : filteredRegistrations.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400 space-y-1">
-              <p>No teams have registered for this tournament yet.</p>
+              <p>No registered teams found matching status filter "{teamStatusFilter}".</p>
             </div>
           ) : (
-            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
-              {registeredTeamsList.map((reg, idx) => {
-                const team = reg.team;
+            <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+              {filteredRegistrations.map((reg, idx) => {
+                const isExpanded = expandedTeamId === reg._id;
+                const isComplete = reg.status === 'complete' || reg.status === 'verified';
+
                 return (
                   <div
                     key={reg._id || idx}
-                    className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
+                    className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden text-xs"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 font-mono font-bold flex items-center justify-center text-[10px]">
-                        {idx + 1}
+                    {/* Team summary header */}
+                    <div className="p-3.5 flex flex-wrap items-center justify-between gap-3 bg-slate-900/60">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 font-mono font-bold flex items-center justify-center text-[10px]">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div className="font-bold text-white font-mono flex items-center gap-2">
+                            <span>{reg.teamName}</span>
+                            {reg.teamTag && <span className="text-indigo-400 text-[11px]">[{reg.teamTag}]</span>}
+                            <span className="text-[10px] text-cyan-400 font-mono px-1.5 py-0.2 rounded bg-cyan-950">
+                              {reg.teamCode}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            Captain: <strong>{reg.captain?.name}</strong> • Players: {reg.players?.length}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-bold text-white font-mono">
-                          {team?.name || 'Registered Squad'} {team?.tag && `[${team.tag}]`}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          Captain: {team?.captain?.name || team?.captain?.username || 'Student Captain'}
-                        </div>
+
+                      {/* Status & Action buttons */}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                            reg.status === 'verified'
+                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-600'
+                              : reg.status === 'complete'
+                              ? 'bg-cyan-950 text-cyan-300 border border-cyan-600'
+                              : reg.status === 'rejected'
+                              ? 'bg-rose-950 text-rose-300 border border-rose-600'
+                              : 'bg-amber-950 text-amber-300 border border-amber-600'
+                          }`}
+                        >
+                          {reg.status}
+                        </span>
+
+                        {/* Quick Verify / Reject Actions */}
+                        {reg.status !== 'verified' && (
+                          <button
+                            type="button"
+                            disabled={verifyingId === reg._id}
+                            onClick={() => handleVerifyRegistration(reg._id, 'verified')}
+                            className="p-1.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800"
+                            title="Verify and Approve Team"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {reg.status !== 'rejected' && (
+                          <button
+                            type="button"
+                            disabled={verifyingId === reg._id}
+                            onClick={() => handleVerifyRegistration(reg._id, 'rejected')}
+                            className="p-1.5 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800"
+                            title="Reject Registration"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setExpandedTeamId(isExpanded ? null : reg._id)}
+                          className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          title="View Roster Details"
+                        >
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
                       </div>
                     </div>
-                    <div className="text-right text-[10px] font-mono text-slate-400">
-                      <div>{reg.registeredAt ? new Date(reg.registeredAt).toLocaleDateString() : 'N/A'}</div>
-                      <span className="text-emerald-400 font-semibold">Confirmed</span>
-                    </div>
+
+                    {/* Expanded Team & Player Breakdown */}
+                    {isExpanded && (
+                      <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
+                        {reg.verificationNotes && (
+                          <div className="p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/40 text-[11px] text-rose-300">
+                            <strong>Admin Note:</strong> {reg.verificationNotes}
+                          </div>
+                        )}
+
+                        <div>
+                          <h4 className="text-[11px] font-mono font-bold text-slate-400 uppercase mb-2">
+                            Roster Players & Submitted Documents ({reg.players?.length || 0}):
+                          </h4>
+
+                          <div className="space-y-3">
+                            {reg.players?.map((player) => {
+                              const responses = player.responses instanceof Map
+                                ? Object.fromEntries(player.responses)
+                                : player.responses || {};
+
+                              return (
+                                <div
+                                  key={player._id}
+                                  className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-white">
+                                        Slot #{player.slotNumber}: {responses.player_name || player.user?.name}
+                                      </span>
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-indigo-950 text-indigo-300">
+                                        {player.role}
+                                      </span>
+                                    </div>
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${
+                                        player.status === 'completed'
+                                          ? 'text-emerald-400 bg-emerald-950'
+                                          : 'text-amber-400 bg-amber-950'
+                                      }`}
+                                    >
+                                      {player.status}
+                                    </span>
+                                  </div>
+
+                                  {/* Player responses key-values */}
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] text-slate-300 pt-1 border-t border-slate-800/60">
+                                    <div>
+                                      <span className="text-slate-500 block">IGN:</span>
+                                      <span className="font-mono font-bold text-cyan-300">{responses.game_ign || 'N/A'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500 block">UID:</span>
+                                      <span className="font-mono font-bold">{responses.game_uid || 'N/A'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500 block">College:</span>
+                                      <span>{responses.college_name || player.user?.college || 'N/A'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500 block">College ID:</span>
+                                      <span className="font-mono">{responses.college_id || 'N/A'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500 block">Phone / WhatsApp:</span>
+                                      <span className="font-mono">{responses.phone_number || 'N/A'}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-slate-500 block">Student Proof Document:</span>
+                                      {responses.student_id_proof ? (
+                                        <a
+                                          href={responses.student_id_proof}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-cyan-400 underline font-bold flex items-center gap-1"
+                                        >
+                                          <FileText className="w-3 h-3" /> Preview ID Card
+                                        </a>
+                                      ) : (
+                                        <span className="text-rose-400">Not Uploaded</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -563,7 +873,7 @@ const AdminTournaments = () => {
               onClick={() => setViewTeamsModalOpen(false)}
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200"
             >
-              Close
+              Close Console
             </button>
           </div>
         </div>

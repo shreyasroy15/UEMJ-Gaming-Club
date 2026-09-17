@@ -12,6 +12,7 @@ import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/Home';
 import Tournaments from './pages/Tournaments';
 import TournamentDetails from './pages/TournamentDetails';
+import TournamentRegister from './pages/TournamentRegister';
 import Games from './pages/Games';
 import Teams from './pages/Teams';
 import TeamDetails from './pages/TeamDetails';
@@ -34,6 +35,7 @@ import Dashboard from './pages/Dashboard';
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminTournaments from './pages/admin/Tournaments';
+import AdminFormBuilder from './pages/admin/FormBuilder';
 import AdminMatches from './pages/admin/Matches';
 import AdminTeams from './pages/admin/Teams';
 import AdminGames from './pages/admin/Games';
@@ -56,6 +58,7 @@ function App() {
               <Route index element={<Home />} />
               <Route path="tournaments" element={<Tournaments />} />
               <Route path="tournaments/:id" element={<TournamentDetails />} />
+              <Route path="tournaments/:id/register" element={<TournamentRegister />} />
               <Route path="games" element={<Games />} />
               <Route path="teams" element={<Teams />} />
               <Route path="teams/:id" element={<TeamDetails />} />
@@ -120,6 +123,7 @@ function App() {
             >
               <Route index element={<AdminDashboard />} />
               <Route path="tournaments" element={<AdminTournaments />} />
+              <Route path="tournaments/:id/form" element={<AdminFormBuilder />} />
               <Route path="matches" element={<AdminMatches />} />
               <Route path="teams" element={<AdminTeams />} />
               <Route path="games" element={<AdminGames />} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import TournamentBracket from '../components/Leaderboard/TournamentBracket';
 import Loading from '../components/Loading/Loading';
@@ -25,6 +25,7 @@ import {
   ShieldAlert,
   LogIn,
   UserPlus,
+  CheckCircle2,
 } from 'lucide-react';
 
 const TournamentDetails = () => {
@@ -34,6 +35,8 @@ const TournamentDetails = () => {
 
   const [tournament, setTournament] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [publicTeams, setPublicTeams] = useState([]);
+  const [userSquad, setUserSquad] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
 
@@ -58,15 +61,37 @@ const TournamentDetails = () => {
 
   useEffect(() => {
     fetchTournamentDetails();
-  }, [id]);
+  }, [id, user]);
 
   const fetchTournamentDetails = async () => {
     try {
       setLoading(true);
-      const res = await API.get(`/tournaments/${id}`);
-      if (res.data.success) {
-        setTournament(res.data.tournament);
-        setMatches(res.data.matches || []);
+      const [tRes, pRes] = await Promise.all([
+        API.get(`/tournaments/${id}`),
+        API.get(`/tournaments/${id}/public-teams`).catch(() => ({ data: { teams: [] } })),
+      ]);
+
+      if (tRes.data.success) {
+        setTournament(tRes.data.tournament);
+        setMatches(tRes.data.matches || []);
+        setPublicTeams(pRes.data?.teams || []);
+
+        // Check if current user is registered in this tournament
+        if (user) {
+          try {
+            const myRegs = await API.get('/registrations/my-tournaments');
+            if (myRegs.data.success) {
+              const matched = (myRegs.data.registrations || []).find(
+                (r) => (r.tournament?._id || r.tournament) === (tRes.data.tournament._id || id)
+              );
+              if (matched) {
+                setUserSquad(matched);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -269,17 +294,20 @@ const TournamentDetails = () => {
               </a>
             )}
 
-            {isUserRegistered ? (
-              <span className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-bold text-xs uppercase tracking-wider text-center">
-                ✓ You Are Registered
-              </span>
-            ) : isRegistrationOpen ? (
-              <button
-                onClick={handleOpenRegister}
-                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all cursor-pointer text-center"
+            {userSquad ? (
+              <Link
+                to={`/tournaments/${tournament._id}/register`}
+                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider text-center shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all"
               >
-                Register Team
-              </button>
+                <CheckCircle2 className="w-4 h-4 text-white" /> View Your Squad ({userSquad.teamName})
+              </Link>
+            ) : isRegistrationOpen ? (
+              <Link
+                to={`/tournaments/${tournament._id}/register`}
+                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+              >
+                <Users className="w-4 h-4" /> Register Squad
+              </Link>
             ) : null}
           </div>
         </div>
@@ -425,11 +453,60 @@ const TournamentDetails = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-white font-mono">
-                Registered Squads ({tournament.registeredTeams?.length || 0})
+                Registered Squads ({publicTeams.length > 0 ? publicTeams.length : tournament.registeredTeams?.length || 0})
               </h3>
             </div>
 
-            {tournament.registeredTeams?.length === 0 ? (
+            {publicTeams.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {publicTeams.map((team, idx) => (
+                  <div
+                    key={team._id || idx}
+                    className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={team.teamLogo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=150&q=80'}
+                        alt={team.teamName}
+                        className="w-12 h-12 rounded-xl object-cover border border-slate-700 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-white font-mono truncate">{team.teamName}</h4>
+                          {team.teamTag && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-950 text-indigo-300 font-mono">
+                              {team.teamTag}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400 truncate">
+                          Captain: <strong>{team.captain?.name}</strong>
+                        </p>
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase font-mono bg-emerald-950 text-emerald-300 border border-emerald-800/60">
+                          {team.status === 'verified' ? '✓ Verified' : '✓ Registered'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Public Player Roster List */}
+                    <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                      <div className="text-[10px] uppercase font-mono font-bold text-slate-500">Squad Roster:</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {team.players?.map((p, pIdx) => (
+                          <span
+                            key={pIdx}
+                            className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono text-cyan-300 flex items-center gap-1"
+                          >
+                            <span className="text-slate-500 text-[9px]">{p.role === 'captain' ? '👑' : `#${p.slotNumber}`}</span>
+                            {p.ign || p.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : tournament.registeredTeams?.length === 0 ? (
               <EmptyState
                 icon={Users}
                 title="No teams registered yet"
