@@ -88,8 +88,10 @@ const TournamentRegister = () => {
       setLoading(true);
       // 1. Fetch tournament specifications and form
       const formRes = await API.get(`/tournaments/${id}/form`);
+      let fetchedTournament = null;
       if (formRes.data.success) {
-        setTournament(formRes.data.tournament);
+        fetchedTournament = formRes.data.tournament;
+        setTournament(fetchedTournament);
         setForm(formRes.data.form);
       }
 
@@ -97,9 +99,17 @@ const TournamentRegister = () => {
       if (user) {
         const myRegsRes = await API.get('/registrations/my-tournaments');
         if (myRegsRes.data.success) {
-          const matched = (myRegsRes.data.registrations || []).find(
-            (r) => (r.tournament?._id || r.tournament) === id
-          );
+          const tournamentActualId = (fetchedTournament?._id || '').toString();
+          const matched = (myRegsRes.data.registrations || []).find((r) => {
+            const rTid = (r.tournament?._id || r.tournament)?.toString();
+            const rSlug = r.tournament?.slug;
+            return (
+              rTid === id ||
+              (tournamentActualId && rTid === tournamentActualId) ||
+              (rSlug && rSlug === id) ||
+              (fetchedTournament?.slug && rSlug === fetchedTournament.slug)
+            );
+          });
           if (matched) {
             // Load full workspace
             const wsRes = await API.get(`/registrations/${matched._id}`);
@@ -212,11 +222,25 @@ const TournamentRegister = () => {
       if (res.data.success) {
         addToast(res.data.message || 'Joined squad successfully!', 'success');
         setActiveRegistration(res.data.registration);
+        const mySlot = res.data.registration?.players?.find(
+          (p) => (p.user?._id || p.user)?.toString() === (user?._id || user?.id)?.toString()
+        );
+        const existingResponses = mySlot?.responses
+          ? mySlot.responses instanceof Map
+            ? Object.fromEntries(mySlot.responses)
+            : { ...mySlot.responses }
+          : {};
         setPlayerResponses({
           player_name: user?.name || '',
           college_name: user?.college || '',
+          college_id: user?.studentId || '',
+          phone_number: user?.phone || '',
+          ...existingResponses,
         });
         setPlayerModalOpen(true);
+        if (res.data.tournamentSlug && res.data.tournamentSlug !== id && res.data.tournamentId !== id) {
+          navigate(`/tournaments/${res.data.tournamentSlug || res.data.tournamentId}/register`);
+        }
       }
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to join team', 'error');
@@ -385,9 +409,12 @@ const TournamentRegister = () => {
 
   // Active Squad Workspace View
   if (activeRegistration) {
-    const isCaptain = (activeRegistration.captain?._id || activeRegistration.captain) === user?._id;
+    const currentUserId = (user?._id || user?.id)?.toString();
+    const isCaptain =
+      ((activeRegistration.captain?._id || activeRegistration.captain)?.toString() === currentUserId) ||
+      ((activeRegistration.leader?._id || activeRegistration.leader)?.toString() === currentUserId);
     const myPlayerSlot = activeRegistration.players?.find(
-      (p) => (p.user?._id || p.user) === user?._id
+      (p) => (p.user?._id || p.user)?.toString() === currentUserId
     );
 
     const starters = activeRegistration.players?.filter((p) => p.role === 'captain' || p.role === 'starter') || [];
@@ -511,8 +538,23 @@ const TournamentRegister = () => {
 
           <button
             type="button"
-            onClick={() => setPlayerModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+            onClick={() => {
+              const existingResponses = myPlayerSlot?.responses
+                ? myPlayerSlot.responses instanceof Map
+                  ? Object.fromEntries(myPlayerSlot.responses)
+                  : { ...myPlayerSlot.responses }
+                : {};
+              setPlayerResponses((prev) => ({
+                player_name: user?.name || '',
+                college_name: user?.college || '',
+                college_id: user?.studentId || '',
+                phone_number: user?.phone || '',
+                ...existingResponses,
+                ...prev,
+              }));
+              setPlayerModalOpen(true);
+            }}
+            className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
             <Edit3 className="w-3.5 h-3.5" />
             {myPlayerSlot?.status === 'completed' ? 'Update Your Information' : 'Complete Player Form'}
@@ -553,7 +595,7 @@ const TournamentRegister = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Filled Roster Slots */}
             {activeRegistration.players?.map((slot) => {
-              const isMe = (slot.user?._id || slot.user) === user?._id;
+              const isMe = (slot.user?._id || slot.user)?.toString() === currentUserId;
               const isSlotCaptain = slot.role === 'captain' || slot.slotNumber === 1;
               const isSubstitute = slot.role === 'substitute' || slot.slotNumber > minStarters;
 
@@ -613,17 +655,52 @@ const TournamentRegister = () => {
                     </div>
                   </div>
 
-                  {/* Actions for Captain */}
-                  {isCaptain && !isSlotCaptain && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMember(slot.user?._id || slot.user, slot.user?.name)}
-                      className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 transition-colors cursor-pointer"
-                      title="Remove member from squad"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* Actions for current player (Fill / Edit details) */}
+                    {isMe && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const existingResponses = slot.responses
+                            ? slot.responses instanceof Map
+                              ? Object.fromEntries(slot.responses)
+                              : { ...slot.responses }
+                            : {};
+                          setPlayerResponses((prev) => ({
+                            player_name: user?.name || '',
+                            college_name: user?.college || '',
+                            college_id: user?.studentId || '',
+                            phone_number: user?.phone || '',
+                            ...existingResponses,
+                            ...prev,
+                          }));
+                          setPlayerModalOpen(true);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        {slot.status === 'completed' ? 'Edit Details' : 'Fill Details'}
+                      </button>
+                    )}
+
+                    {/* Actions for Captain / Leader */}
+                    {isCaptain && !isSlotCaptain && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRemoveMember(
+                            (slot.user?._id || slot.user)?.toString(),
+                            slot.user?.name || slot.user?.username
+                          )
+                        }
+                        className="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-600/40 text-rose-300 hover:text-white transition-all cursor-pointer flex items-center gap-1 text-[10px] font-mono font-bold"
+                        title="Remove member from squad"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -826,7 +903,7 @@ const TournamentRegister = () => {
         <Modal
           isOpen={playerModalOpen}
           onClose={() => setPlayerModalOpen(false)}
-          title={`Complete Player Verification: ${user.name}`}
+          title={`Complete Player Details: ${user?.name || user?.username || 'Player'}`}
         >
           <form onSubmit={handlePlayerSubmit} className="space-y-4">
             <p className="text-xs text-slate-400 pb-2 border-b border-slate-800">

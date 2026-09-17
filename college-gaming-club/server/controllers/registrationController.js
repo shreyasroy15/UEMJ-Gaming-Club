@@ -23,9 +23,16 @@ const generateUniqueCode = async (game) => {
   return code;
 };
 
-// Helper: check if a player's responses satisfy all required player-level questions
+// Helper: check if a player's responses satisfy all required player-level questions (excluding team-level identity proof)
 const validatePlayerResponses = (questions, responses = {}) => {
-  const playerQuestions = (questions || []).filter((q) => q.scope === 'player' && q.required);
+  const playerQuestions = (questions || []).filter(
+    (q) =>
+      q.scope === 'player' &&
+      q.required &&
+      q.id !== 'identity_proof' &&
+      q.id !== 'student_id_proof' &&
+      q.id !== 'team_identity_proof'
+  );
   const errors = [];
 
   for (const q of playerQuestions) {
@@ -100,7 +107,10 @@ const getAccountPrefillData = (user) => {
 // @access  Private
 exports.createTeamRegistration = async (req, res, next) => {
   try {
-    const tournament = await Tournament.findById(req.params.id);
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: req.params.id }
+      : { slug: req.params.id };
+    const tournament = await Tournament.findOne(query);
 
     if (!tournament) {
       return res.status(404).json({
@@ -292,7 +302,7 @@ exports.joinTeamByCode = async (req, res, next) => {
 
     // Check if player is already in this team
     const isAlreadyInTeam = registration.players.some(
-      (p) => p.user.toString() === req.user.id
+      (p) => (p.user?._id || p.user).toString() === req.user.id.toString()
     );
 
     if (isAlreadyInTeam) {
@@ -300,6 +310,8 @@ exports.joinTeamByCode = async (req, res, next) => {
         success: true,
         message: 'You are already a member of this team',
         registrationId: registration._id,
+        tournamentId: tournament._id,
+        tournamentSlug: tournament.slug || tournament._id,
         registration,
       });
     }
@@ -361,6 +373,8 @@ exports.joinTeamByCode = async (req, res, next) => {
       success: true,
       message: `Successfully joined ${registration.teamName}! Complete your player information.`,
       registrationId: registration._id,
+      tournamentId: tournament._id,
+      tournamentSlug: tournament.slug || tournament._id,
       registration: populated,
     });
   } catch (error) {
@@ -475,7 +489,7 @@ exports.submitPlayerInformation = async (req, res, next) => {
 
     // Find player slot for authenticated user
     const playerIndex = registration.players.findIndex(
-      (p) => p.user.toString() === req.user.id
+      (p) => (p.user?._id || p.user).toString() === req.user.id.toString()
     );
 
     if (playerIndex === -1) {
@@ -723,17 +737,20 @@ exports.removeTeamMember = async (req, res, next) => {
       });
     }
 
-    const isCaptain = (registration.leader || registration.captain).toString() === req.user.id;
+    const leaderId = (registration.leader?._id || registration.leader || registration.captain?._id || registration.captain)?.toString();
+    const captainId = (registration.captain?._id || registration.captain)?.toString();
+    const currentUserId = req.user.id.toString();
+    const isLeader = (leaderId === currentUserId) || (captainId === currentUserId);
     const isAdmin = req.user.role === 'admin';
 
-    if (!isCaptain && !isAdmin) {
+    if (!isLeader && !isAdmin) {
       return res.status(403).json({
         success: false,
         message: 'Only the team leader or an admin can remove team members',
       });
     }
 
-    if ((registration.leader || registration.captain).toString() === userId) {
+    if (leaderId === userId.toString() || captainId === userId.toString()) {
       return res.status(400).json({
         success: false,
         message: 'Cannot remove team leader from roster. Transfer leadership first.',
@@ -741,7 +758,7 @@ exports.removeTeamMember = async (req, res, next) => {
     }
 
     registration.players = registration.players.filter(
-      (p) => p.user.toString() !== userId
+      (p) => (p.user?._id || p.user).toString() !== userId.toString()
     );
 
     // Re-index slots
@@ -759,7 +776,7 @@ exports.removeTeamMember = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Member removed from squad',
+      message: 'Member removed from squad successfully',
       registration: populated,
     });
   } catch (error) {
@@ -814,7 +831,10 @@ exports.leaveSquad = async (req, res, next) => {
 // @access  Public
 exports.getPublicTeams = async (req, res, next) => {
   try {
-    const tournament = await Tournament.findById(req.params.id);
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: req.params.id }
+      : { slug: req.params.id };
+    const tournament = await Tournament.findOne(query);
 
     if (!tournament) {
       return res.status(404).json({
@@ -910,7 +930,10 @@ exports.getPublicTeams = async (req, res, next) => {
 // @access  Private (Admin / Staff)
 exports.getAdminRegistrations = async (req, res, next) => {
   try {
-    const tournament = await Tournament.findById(req.params.id);
+    const tQuery = req.params.id.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: req.params.id }
+      : { slug: req.params.id };
+    const tournament = await Tournament.findOne(tQuery);
 
     if (!tournament) {
       return res.status(404).json({
@@ -1045,7 +1068,19 @@ exports.getMyRegistrations = async (req, res, next) => {
 // @access  Private
 exports.deregisterFromTournament = async (req, res, next) => {
   try {
-    const tournamentId = req.params.id;
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: req.params.id }
+      : { slug: req.params.id };
+    const tournamentDoc = await Tournament.findOne(query);
+
+    if (!tournamentDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    const tournamentId = tournamentDoc._id;
     const userId = req.user.id;
 
     // Find registration where user is captain, leader, or player
@@ -1401,9 +1436,27 @@ exports.acceptInvitation = async (req, res, next) => {
       });
     }
 
+    // Check if player is already in this team
+    const isAlreadyInTeam = registration.players.some(
+      (p) => (p.user?._id || p.user).toString() === req.user.id.toString()
+    );
+
+    if (isAlreadyInTeam) {
+      invitation.status = 'accepted';
+      await invitation.save();
+      return res.status(200).json({
+        success: true,
+        message: `You are already part of ${registration.teamName}! Complete your player information now.`,
+        registrationId: registration._id,
+        tournamentId: tournament._id,
+        tournamentSlug: tournament.slug || tournament._id,
+      });
+    }
+
     // Verify user is not already registered in another team for this tournament
     const alreadyRegistered = await TournamentRegistration.findOne({
       tournament: tournament._id,
+      _id: { $ne: registration._id },
       $or: [
         { captain: req.user.id },
         { leader: req.user.id },
@@ -1465,6 +1518,7 @@ exports.acceptInvitation = async (req, res, next) => {
       message: `You have joined ${registration.teamName}! Complete your player information now.`,
       registrationId: registration._id,
       tournamentId: tournament._id,
+      tournamentSlug: tournament.slug || tournament._id,
     });
   } catch (error) {
     next(error);

@@ -40,12 +40,15 @@ const TournamentDetails = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
 
-  // Registration Modal (Team Name + Team Type ONLY)
+  // Registration Modal (Team Name + Team Type or Join via Code)
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
+  const [registerModalTab, setRegisterModalTab] = useState('create'); // 'create' | 'join'
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamType, setNewTeamType] = useState('UEM Student Team');
+  const [joinTeamCode, setJoinTeamCode] = useState('');
   const [creatingTeam, setCreatingTeam] = useState(false);
+  const [joiningTeam, setJoiningTeam] = useState(false);
 
   // Match score update modal for staff/admin
   const [editMatchModal, setEditMatchModal] = useState(null);
@@ -121,6 +124,26 @@ const TournamentDetails = () => {
     }
     setNewTeamName('');
     setNewTeamType('UEM Student Team');
+    setJoinTeamCode('');
+    setRegisterModalTab('create');
+    setRegisterModalOpen(true);
+  };
+
+  const handleOpenJoinCode = () => {
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+    if (user.role !== 'student' && user.role !== 'admin') {
+      addToast('Only authenticated college students can register for tournaments', 'error');
+      return;
+    }
+    if (isUserRegistered) {
+      addToast('You are already registered for this tournament', 'info');
+      return;
+    }
+    setJoinTeamCode('');
+    setRegisterModalTab('join');
     setRegisterModalOpen(true);
   };
 
@@ -142,12 +165,38 @@ const TournamentDetails = () => {
         addToast(res.data.message || 'Squad created successfully!', 'success');
         setRegisterModalOpen(false);
         setUserSquad(res.data.registration);
-        navigate(`/tournaments/${tournament._id}/register`);
+        navigate(`/tournaments/${tournament.slug || tournament._id}/register`);
       }
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to create team', 'error');
     } finally {
       setCreatingTeam(false);
+    }
+  };
+
+  const handleJoinTeamSubmit = async (e) => {
+    e.preventDefault();
+    if (!joinTeamCode.trim()) {
+      addToast('Please enter a team invite code', 'error');
+      return;
+    }
+
+    try {
+      setJoiningTeam(true);
+      const res = await API.post('/registrations/join', {
+        teamCode: joinTeamCode.trim().toUpperCase(),
+      });
+
+      if (res.data.success) {
+        addToast(res.data.message || 'Joined squad successfully!', 'success');
+        setRegisterModalOpen(false);
+        fetchTournamentDetails();
+        navigate(`/tournaments/${res.data.tournamentSlug || tournament.slug || tournament._id}/register`);
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to join team', 'error');
+    } finally {
+      setJoiningTeam(false);
     }
   };
 
@@ -300,13 +349,22 @@ const TournamentDetails = () => {
                 </button>
               </div>
             ) : isRegistrationOpen ? (
-              <button
-                type="button"
-                onClick={handleOpenRegister}
-                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
-              >
-                <Users className="w-4 h-4" /> REGISTER
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleOpenRegister}
+                  className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                >
+                  <Users className="w-4 h-4" /> REGISTER / CREATE SQUAD
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenJoinCode}
+                  className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/90 border border-indigo-500/40 text-indigo-300 font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/10 transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4" /> JOIN WITH TEAM CODE
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
@@ -705,60 +763,127 @@ const TournamentDetails = () => {
         )}
       </div>
 
-      {/* Simple Tournament Registration Modal (Team Name + Team Type ONLY) */}
+      {/* Tournament Registration Modal (Create Squad or Join via Team Code) */}
       <Modal
         isOpen={registerModalOpen}
         onClose={() => setRegisterModalOpen(false)}
-        title={`Register for ${tournament.name}`}
+        title={`Tournament Registration: ${tournament.name}`}
       >
-        <form onSubmit={handleCreateTeamSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-mono font-bold text-slate-300 mb-1.5">
-              Team Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={newTeamName}
-              onChange={(e) => setNewTeamName(e.target.value)}
-              placeholder="e.g. Team Alpha"
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-mono font-bold text-slate-300 mb-1.5">
-              Team Type *
-            </label>
-            <select
-              value={newTeamType}
-              onChange={(e) => setNewTeamType(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono"
-            >
-              <option value="UEM Student Team">UEM Student Team</option>
-              <option value="Outside Team">Outside Team</option>
-              <option value="Mixed Team">Mixed Team</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+        <div className="space-y-4">
+          {/* Tabs */}
+          <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono font-bold">
             <button
               type="button"
-              disabled={creatingTeam}
-              onClick={() => setRegisterModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+              onClick={() => setRegisterModalTab('create')}
+              className={`py-2 rounded-lg transition-all cursor-pointer ${
+                registerModalTab === 'create'
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              Cancel
+              👑 Create Team
             </button>
             <button
-              type="submit"
-              disabled={creatingTeam}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 disabled:opacity-50 transition-all cursor-pointer"
+              type="button"
+              onClick={() => setRegisterModalTab('join')}
+              className={`py-2 rounded-lg transition-all cursor-pointer ${
+                registerModalTab === 'join'
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              {creatingTeam ? 'Creating Team...' : 'Create Team'}
+              🎯 Join with Code
             </button>
           </div>
-        </form>
+
+          {registerModalTab === 'create' ? (
+            <form onSubmit={handleCreateTeamSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono font-bold text-slate-300 mb-1.5">
+                  Team Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  placeholder="e.g. Team Alpha"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono font-bold text-slate-300 mb-1.5">
+                  Team Type *
+                </label>
+                <select
+                  value={newTeamType}
+                  onChange={(e) => setNewTeamType(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono"
+                >
+                  <option value="UEM Student Team">UEM Student Team</option>
+                  <option value="Outside Team">Outside Team</option>
+                  <option value="Mixed Team">Mixed Team</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  disabled={creatingTeam}
+                  onClick={() => setRegisterModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingTeam}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {creatingTeam ? 'Creating Team...' : 'Create Team'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleJoinTeamSubmit} className="space-y-4">
+              <p className="text-xs text-slate-400">
+                Enter the unique team invite code shared by your squad captain to join their tournament roster.
+              </p>
+              <div>
+                <label className="block text-xs font-mono font-bold text-slate-300 mb-1.5">
+                  Team Invite Code *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={joinTeamCode}
+                  onChange={(e) => setJoinTeamCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. BGMI-X7K29"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-base text-cyan-300 font-mono font-black uppercase tracking-wider focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  disabled={joiningTeam}
+                  onClick={() => setRegisterModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={joiningTeam}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {joiningTeam ? 'Verifying Code & Joining...' : 'Join Squad'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </Modal>
 
       {/* Staff Match Edit Score Modal */}

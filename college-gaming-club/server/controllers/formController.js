@@ -7,7 +7,10 @@ const { getBgmiDefaultQuestions, getFreeFireDefaultQuestions } = require('../uti
 // @access  Public
 exports.getTournamentForm = async (req, res, next) => {
   try {
-    const tournament = await Tournament.findById(req.params.id);
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: req.params.id }
+      : { slug: req.params.id };
+    const tournament = await Tournament.findOne(query);
 
     if (!tournament) {
       return res.status(404).json({
@@ -50,6 +53,7 @@ exports.getTournamentForm = async (req, res, next) => {
       tournament: {
         _id: tournament._id,
         name: tournament.name,
+        slug: tournament.slug,
         game: tournament.game,
         banner: tournament.banner,
         minTeamSize: tournament.minTeamSize || 4,
@@ -71,7 +75,10 @@ exports.getTournamentForm = async (req, res, next) => {
 // @access  Private (Admin / Staff)
 exports.saveTournamentForm = async (req, res, next) => {
   try {
-    const tournament = await Tournament.findById(req.params.id);
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: req.params.id }
+      : { slug: req.params.id };
+    const tournament = await Tournament.findOne(query);
 
     if (!tournament) {
       return res.status(404).json({
@@ -140,6 +147,8 @@ exports.saveTournamentForm = async (req, res, next) => {
       form,
       tournament: {
         _id: tournament._id,
+        name: tournament.name,
+        slug: tournament.slug,
         minTeamSize: tournament.minTeamSize,
         maxTeamSize: tournament.maxTeamSize,
         allowSubstitutes: tournament.allowSubstitutes,
@@ -158,7 +167,10 @@ exports.saveTournamentForm = async (req, res, next) => {
 exports.applyFormPreset = async (req, res, next) => {
   try {
     const { preset } = req.body; // 'bgmi' | 'free_fire'
-    const tournament = await Tournament.findById(req.params.id);
+    const query = req.params.id.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: req.params.id }
+      : { slug: req.params.id };
+    const tournament = await Tournament.findOne(query);
 
     if (!tournament) {
       return res.status(404).json({

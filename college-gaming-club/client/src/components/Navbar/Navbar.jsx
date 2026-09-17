@@ -91,7 +91,7 @@ const Navbar = () => {
       if (res.data.success) {
         setInvitationsOpen(false);
         fetchInvitations();
-        navigate(`/tournaments/${res.data.tournamentId}/register`);
+        navigate(`/tournaments/${res.data.tournamentSlug || res.data.tournamentId}/register`);
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to accept invitation');
