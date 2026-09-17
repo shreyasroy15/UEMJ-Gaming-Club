@@ -1,6 +1,7 @@
 const Tournament = require('../models/Tournament');
 const TournamentForm = require('../models/TournamentForm');
 const TournamentRegistration = require('../models/TournamentRegistration');
+const TournamentInvitation = require('../models/TournamentInvitation');
 const User = require('../models/User');
 
 // Helper to generate unique team code
@@ -1005,3 +1006,471 @@ exports.getMyRegistrations = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Deregister user from a tournament (or leave/delete team if leader)
+// @route   POST /api/tournaments/:id/deregister
+// @access  Private
+exports.deregisterFromTournament = async (req, res, next) => {
+  try {
+    const tournamentId = req.params.id;
+    const userId = req.user.id;
+
+    // Find registration where user is captain, leader, or player
+    const registration = await TournamentRegistration.findOne({
+      tournament: tournamentId,
+      $or: [
+        { captain: userId },
+        { leader: userId },
+        { 'players.user': userId },
+      ],
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'You are not registered in any team for this tournament',
+      });
+    }
+
+    const currentLeaderId = (registration.leader || registration.captain).toString();
+    const isLeader = currentLeaderId === userId.toString();
+    const remainingPlayers = registration.players.filter((p) => p.user.toString() !== userId.toString());
+
+    if (isLeader) {
+      if (remainingPlayers.length === 0) {
+        // Team has no other members -> automatically delete the team
+        await TournamentRegistration.findByIdAndDelete(registration._id);
+        // Also cancel any pending invitations for this team
+        await TournamentInvitation.updateMany(
+          { registration: registration._id, status: 'pending' },
+          { status: 'cancelled' }
+        );
+
+        // Also clean up tournament registeredTeams if present
+        await Tournament.findByIdAndUpdate(tournamentId, {
+          $pull: { registeredTeams: { team: registration._id } },
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'You have deregistered from the tournament. Your team has been disbanded.',
+          action: 'disbanded',
+        });
+      } else {
+        // Team has other members -> transfer leadership to next available player (slot 2 or first remaining)
+        const nextLeader = remainingPlayers[0];
+        nextLeader.role = 'captain';
+        registration.captain = nextLeader.user;
+        registration.leader = nextLeader.user;
+        registration.players = remainingPlayers;
+
+        // Re-index remaining players
+        registration.players.forEach((p, idx) => {
+          p.slotNumber = idx + 1;
+        });
+
+        const tournament = await Tournament.findById(tournamentId);
+        await evaluateTeamCompletion(registration, tournament);
+
+        return res.status(200).json({
+          success: true,
+          message: 'You have deregistered from the tournament. Team leadership has been transferred to your teammate.',
+          action: 'left',
+          newLeader: nextLeader.user,
+        });
+      }
+    } else {
+      // Normal member leaving
+      registration.players = remainingPlayers;
+      registration.players.forEach((p, idx) => {
+        p.slotNumber = idx + 1;
+      });
+
+      const tournament = await Tournament.findById(tournamentId);
+      await evaluateTeamCompletion(registration, tournament);
+
+      return res.status(200).json({
+        success: true,
+        message: 'You have deregistered from the tournament team.',
+        action: 'left',
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Search user by exact username
+// @route   GET /api/users/search/:username
+// @access  Private
+exports.searchUserByUsername = async (req, res, next) => {
+  try {
+    const rawUsername = (req.params.username || '').trim().toLowerCase();
+    if (!rawUsername) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a username to search',
+      });
+    }
+
+    const targetUser = await User.findOne({ username: rawUsername })
+      .select('name username avatar college');
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        _id: targetUser._id,
+        name: targetUser.name,
+        username: targetUser.username,
+        avatar: targetUser.avatar,
+        college: targetUser.college,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Team leader sends tournament invite to an existing user by username
+// @route   POST /api/registrations/:id/invitations
+// @access  Private (Team Leader)
+exports.sendTournamentInvitation = async (req, res, next) => {
+  try {
+    const registration = await TournamentRegistration.findById(req.params.id);
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration squad not found',
+      });
+    }
+
+    const tournament = await Tournament.findById(registration.tournament);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    // Check leader permission
+    const currentLeaderId = (registration.leader || registration.captain).toString();
+    if (currentLeaderId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the team leader can invite players',
+      });
+    }
+
+    // Check capacity
+    const maxCapacity = tournament.maxTeamSize || 5;
+    if (registration.players.length >= maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `Your team is already full (${registration.players.length}/${maxCapacity} players)`,
+      });
+    }
+
+    // Check deadline
+    if (new Date() > new Date(tournament.registrationDeadline)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tournament registration deadline has passed',
+      });
+    }
+
+    const { username } = req.body;
+    if (!username || !username.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a username to invite',
+      });
+    }
+
+    const targetUser = await User.findOne({ username: username.trim().toLowerCase() });
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.',
+      });
+    }
+
+    if (targetUser._id.toString() === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot invite yourself to your own team',
+      });
+    }
+
+    // Check if target user is already in this team
+    const alreadyInTeam = registration.players.some(
+      (p) => p.user.toString() === targetUser._id.toString()
+    );
+    if (alreadyInTeam) {
+      return res.status(400).json({
+        success: false,
+        message: `@${targetUser.username} is already a member of this team roster`,
+      });
+    }
+
+    // Check if target user is already registered in another team for this tournament
+    const alreadyRegistered = await TournamentRegistration.findOne({
+      tournament: tournament._id,
+      $or: [
+        { captain: targetUser._id },
+        { leader: targetUser._id },
+        { 'players.user': targetUser._id },
+      ],
+    });
+
+    if (alreadyRegistered) {
+      return res.status(400).json({
+        success: false,
+        message: `@${targetUser.username} is already participating in another team ("${alreadyRegistered.teamName}") for this tournament.`,
+      });
+    }
+
+    // Check active pending invitations (Prevent duplicate active invitations)
+    const activeInvitation = await TournamentInvitation.findOne({
+      registration: registration._id,
+      recipient: targetUser._id,
+      status: 'pending',
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (activeInvitation) {
+      return res.status(400).json({
+        success: false,
+        message: `An active invitation has already been sent to @${targetUser.username}.`,
+      });
+    }
+
+    // Create new invitation
+    const invitation = await TournamentInvitation.create({
+      tournament: tournament._id,
+      registration: registration._id,
+      sender: req.user.id,
+      recipient: targetUser._id,
+      status: 'pending',
+    });
+
+    const populated = await TournamentInvitation.findById(invitation._id)
+      .populate('recipient', 'name username avatar college')
+      .populate('sender', 'name username avatar');
+
+    res.status(201).json({
+      success: true,
+      message: `Tournament invitation sent to @${targetUser.username}!`,
+      invitation: populated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get user's incoming tournament invitations
+// @route   GET /api/registrations/invitations/my
+// @access  Private
+exports.getMyInvitations = async (req, res, next) => {
+  try {
+    const invitations = await TournamentInvitation.find({
+      recipient: req.user.id,
+      status: 'pending',
+      expiresAt: { $gt: new Date() },
+    })
+      .populate('tournament', 'name slug game banner status registrationDeadline')
+      .populate({
+        path: 'registration',
+        select: 'teamName teamTag teamCode captain leader players',
+        populate: [
+          { path: 'leader', select: 'name username avatar' },
+          { path: 'captain', select: 'name username avatar' },
+        ],
+      })
+      .populate('sender', 'name username avatar')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: invitations.length,
+      invitations,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Accept tournament invitation
+// @route   POST /api/registrations/invitations/:id/accept
+// @access  Private
+exports.acceptInvitation = async (req, res, next) => {
+  try {
+    const invitation = await TournamentInvitation.findById(req.params.id)
+      .populate('tournament')
+      .populate('registration');
+
+    if (!invitation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invitation not found',
+      });
+    }
+
+    if (invitation.recipient.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to accept this invitation',
+      });
+    }
+
+    if (invitation.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `This invitation has already been ${invitation.status}`,
+      });
+    }
+
+    if (new Date() > new Date(invitation.expiresAt)) {
+      invitation.status = 'expired';
+      await invitation.save();
+      return res.status(400).json({
+        success: false,
+        message: 'This invitation has expired',
+      });
+    }
+
+    const registration = await TournamentRegistration.findById(invitation.registration._id);
+    if (!registration) {
+      invitation.status = 'cancelled';
+      await invitation.save();
+      return res.status(404).json({
+        success: false,
+        message: 'The team for this invitation no longer exists',
+      });
+    }
+
+    const tournament = await Tournament.findById(invitation.tournament._id);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    // Check registration deadline
+    if (new Date() > new Date(tournament.registrationDeadline)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration deadline has passed for this tournament',
+      });
+    }
+
+    // Verify user is not already registered in another team for this tournament
+    const alreadyRegistered = await TournamentRegistration.findOne({
+      tournament: tournament._id,
+      $or: [
+        { captain: req.user.id },
+        { leader: req.user.id },
+        { 'players.user': req.user.id },
+      ],
+    });
+
+    if (alreadyRegistered) {
+      return res.status(400).json({
+        success: false,
+        message: `You are already registered in team "${alreadyRegistered.teamName}" for this tournament. Each participant can only join one team per tournament.`,
+      });
+    }
+
+    // Check team capacity
+    const maxCapacity = tournament.maxTeamSize || 5;
+    if (registration.players.length >= maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `Team "${registration.teamName}" is already full`,
+      });
+    }
+
+    // Add player to team
+    const minStarters = tournament.minTeamSize || 4;
+    const currentStarters = registration.players.filter((p) => p.role === 'starter' || p.role === 'captain').length;
+    const role = currentStarters < minStarters ? 'starter' : 'substitute';
+    const nextSlot = registration.players.length + 1;
+    const playerPrefill = getAccountPrefillData(req.user);
+
+    registration.players.push({
+      user: req.user.id,
+      role,
+      slotNumber: nextSlot,
+      status: 'joined', // not complete until required player fields are filled
+      responses: playerPrefill,
+      joinedAt: new Date(),
+    });
+
+    await evaluateTeamCompletion(registration, tournament);
+
+    // Update invitation status
+    invitation.status = 'accepted';
+    await invitation.save();
+
+    // Cancel any other invitations for this user in the same tournament
+    await TournamentInvitation.updateMany(
+      {
+        tournament: tournament._id,
+        recipient: req.user.id,
+        _id: { $ne: invitation._id },
+        status: 'pending',
+      },
+      { status: 'cancelled' }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `You have joined ${registration.teamName}! Complete your player information now.`,
+      registrationId: registration._id,
+      tournamentId: tournament._id,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Decline tournament invitation
+// @route   POST /api/registrations/invitations/:id/decline
+// @access  Private
+exports.declineInvitation = async (req, res, next) => {
+  try {
+    const invitation = await TournamentInvitation.findById(req.params.id);
+
+    if (!invitation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invitation not found',
+      });
+    }
+
+    if (invitation.recipient.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to decline this invitation',
+      });
+    }
+
+    invitation.status = 'declined';
+    await invitation.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Invitation declined.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

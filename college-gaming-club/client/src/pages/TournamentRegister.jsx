@@ -69,6 +69,14 @@ const TournamentRegister = () => {
   const [identityProofDeadline, setIdentityProofDeadline] = useState(null);
   const [isIdentityProofDeadlinePassed, setIsIdentityProofDeadlinePassed] = useState(false);
 
+  // Add Player by Username Modal State
+  const [addPlayerModalOpen, setAddPlayerModalOpen] = useState(false);
+  const [searchUsername, setSearchUsername] = useState('');
+  const [searchingUser, setSearchingUser] = useState(false);
+  const [searchedUser, setSearchedUser] = useState(null);
+  const [searchError, setSearchError] = useState('');
+  const [sendingInvite, setSendingInvite] = useState(false);
+
   // Copied state
   const [copied, setCopied] = useState(false);
 
@@ -174,13 +182,14 @@ const TournamentRegister = () => {
       if (res.data.success) {
         addToast(res.data.message || 'Squad created successfully!', 'success');
         setActiveRegistration(res.data.registration);
-        // Pre-fill user defaults for player form
-        setPlayerResponses({
-          player_name: user?.name || '',
-          college_name: user?.college || '',
-        });
-        // Open player form modal immediately so captain can complete slot 1
-        setPlayerModalOpen(true);
+        if (res.data.registration?.players?.[0]?.responses) {
+          const mapObj = {};
+          const resps = res.data.registration.players[0].responses;
+          Object.keys(resps).forEach((k) => {
+            mapObj[k] = resps[k];
+          });
+          setPlayerResponses(mapObj);
+        }
       }
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to create team', 'error');
@@ -269,6 +278,49 @@ const TournamentRegister = () => {
       }
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to leave squad', 'error');
+    }
+  };
+
+  // 6. Handle Search User by Username
+  const handleSearchUser = async (e) => {
+    e.preventDefault();
+    if (!searchUsername.trim()) return;
+
+    try {
+      setSearchingUser(true);
+      setSearchError('');
+      setSearchedUser(null);
+      const res = await API.get(`/users/search/${encodeURIComponent(searchUsername.trim())}`);
+      if (res.data.success) {
+        setSearchedUser(res.data.user);
+      }
+    } catch (err) {
+      setSearchError(err.response?.data?.message || 'User not found.');
+    } finally {
+      setSearchingUser(false);
+    }
+  };
+
+  // 7. Handle Send Tournament Invite
+  const handleSendInvite = async () => {
+    if (!searchedUser || !activeRegistration) return;
+
+    try {
+      setSendingInvite(true);
+      const res = await API.post(`/registrations/${activeRegistration._id}/invitations`, {
+        username: searchedUser.username,
+      });
+
+      if (res.data.success) {
+        addToast(res.data.message || 'Invitation sent successfully!', 'success');
+        setAddPlayerModalOpen(false);
+        setSearchUsername('');
+        setSearchedUser(null);
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to send invitation', 'error');
+    } finally {
+      setSendingInvite(false);
     }
   };
 
@@ -468,10 +520,26 @@ const TournamentRegister = () => {
 
         {/* Roster Slots List */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-white font-mono flex items-center gap-2">
-              <Users className="w-4 h-4 text-cyan-400" /> Squad Roster Slots ({activeRegistration.players?.length} / {maxCapacity})
-            </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <h3 className="text-base font-bold text-white font-mono flex items-center gap-2">
+                <Users className="w-4 h-4 text-cyan-400" /> Squad Roster Slots ({activeRegistration.players?.length} / {maxCapacity})
+              </h3>
+              {isCaptain && (activeRegistration.players?.length || 0) < maxCapacity && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchUsername('');
+                    setSearchedUser(null);
+                    setSearchError('');
+                    setAddPlayerModalOpen(true);
+                  }}
+                  className="px-3 py-1 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase font-mono tracking-wider flex items-center gap-1 shadow-md shadow-cyan-500/20"
+                >
+                  <UserPlus className="w-3.5 h-3.5" /> + Add Player
+                </button>
+              )}
+            </div>
             {!isCaptain && (
               <button
                 type="button"
@@ -569,7 +637,16 @@ const TournamentRegister = () => {
               return (
                 <div
                   key={`empty-starter-${i}`}
-                  onClick={handleCopyInvite}
+                  onClick={() => {
+                    if (isCaptain) {
+                      setSearchUsername('');
+                      setSearchedUser(null);
+                      setSearchError('');
+                      setAddPlayerModalOpen(true);
+                    } else {
+                      handleCopyInvite();
+                    }
+                  }}
                   className="p-4 rounded-2xl border-2 border-dashed border-cyan-800/40 hover:border-cyan-500 bg-slate-950/40 flex items-center justify-between gap-3 cursor-pointer group transition-all"
                 >
                   <div className="flex items-center gap-3">
@@ -580,11 +657,13 @@ const TournamentRegister = () => {
                       <h4 className="text-xs font-bold text-slate-200 font-mono">
                         PLAYER {slotNum} (Required Starter)
                       </h4>
-                      <p className="text-[11px] text-slate-400">Click to copy invite link & add teammate</p>
+                      <p className="text-[11px] text-slate-400">
+                        {isCaptain ? 'Click to search username & invite player' : 'Click to copy invite link & add teammate'}
+                      </p>
                     </div>
                   </div>
                   <span className="text-[10px] text-cyan-400 font-mono underline group-hover:text-cyan-300">
-                    Invite Teammate
+                    {isCaptain ? '+ Add Player' : 'Invite Teammate'}
                   </span>
                 </div>
               );
@@ -594,7 +673,16 @@ const TournamentRegister = () => {
             {(activeRegistration.players?.length || 0) >= minStarters &&
               (activeRegistration.players?.length || 0) < maxCapacity && (
                 <div
-                  onClick={handleCopyInvite}
+                  onClick={() => {
+                    if (isCaptain) {
+                      setSearchUsername('');
+                      setSearchedUser(null);
+                      setSearchError('');
+                      setAddPlayerModalOpen(true);
+                    } else {
+                      handleCopyInvite();
+                    }
+                  }}
                   className="p-4 rounded-2xl border-2 border-dashed border-purple-800/50 hover:border-purple-500 bg-purple-950/10 flex items-center justify-between gap-3 cursor-pointer group transition-all"
                 >
                   <div className="flex items-center gap-3">
@@ -611,7 +699,7 @@ const TournamentRegister = () => {
                     </div>
                   </div>
                   <span className="text-[10px] text-purple-400 font-mono underline group-hover:text-purple-300">
-                    Copy Invite Link
+                    {isCaptain ? '+ Add Player' : 'Copy Invite Link'}
                   </span>
                 </div>
               )}
@@ -854,6 +942,82 @@ const TournamentRegister = () => {
             </div>
           </form>
         </Modal>
+
+        {/* Add Player by Username Modal */}
+        <Modal
+          isOpen={addPlayerModalOpen}
+          onClose={() => {
+            setAddPlayerModalOpen(false);
+            setSearchUsername('');
+            setSearchedUser(null);
+            setSearchError('');
+          }}
+          title="Invite Player to Squad"
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-slate-400">
+              Enter the exact username of the registered student/player you want to add to your tournament roster.
+            </p>
+
+            <form onSubmit={handleSearchUser} className="flex gap-2">
+              <input
+                type="text"
+                required
+                value={searchUsername}
+                onChange={(e) => setSearchUsername(e.target.value)}
+                placeholder="e.g. sanglap123"
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
+              />
+              <button
+                type="submit"
+                disabled={searchingUser}
+                className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider font-mono disabled:opacity-50"
+              >
+                {searchingUser ? 'Searching...' : 'Search'}
+              </button>
+            </form>
+
+            {searchError && (
+              <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-800/40 text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{searchError}</span>
+              </div>
+            )}
+
+            {searchedUser && (
+              <div className="p-4 rounded-2xl bg-slate-950 border border-cyan-800/40 space-y-3">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={searchedUser.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'}
+                    alt={searchedUser.name}
+                    className="w-12 h-12 rounded-xl object-cover border border-slate-700 shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-bold text-white font-mono truncate">
+                      {searchedUser.name}
+                    </h4>
+                    <p className="text-xs text-cyan-400 font-mono">
+                      @{searchedUser.username}
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {searchedUser.college || 'UEM Jaipur'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={sendingInvite}
+                  onClick={handleSendInvite}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-cyan-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5 font-mono"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  {sendingInvite ? 'Sending Invite...' : 'Send Tournament Invite'}
+                </button>
+              </div>
+            )}
+          </div>
+        </Modal>
       </div>
     );
   }
@@ -912,89 +1076,33 @@ const TournamentRegister = () => {
         </button>
       </div>
 
-      {/* 1. CREATE SQUAD FORM */}
+      {/* 1. CREATE SQUAD FORM (First show ONLY Team Name -> Create Team) */}
       {mode === 'create' ? (
         <form onSubmit={handleCreateTeam} className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
           <div>
             <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
-              <Shield className="w-5 h-5 text-cyan-400" /> Create Squad Roster
+              <Shield className="w-5 h-5 text-cyan-400" /> Create Team
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              You will be registered as the Squad Captain (Slot 1). You will receive an invite code to share with your teammates.
+              Enter your team name to generate your squad and unique Team Code. You will automatically become the Team Leader.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-1.5">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
               <label className="block text-xs font-mono font-bold text-slate-300">
-                Squad / Team Name *
+                Team Name *
               </label>
               <input
                 type="text"
                 required
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                placeholder="e.g. Apex Predators"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-mono font-bold text-slate-300">
-                Team Tag (Max 5 chars)
-              </label>
-              <input
-                type="text"
-                maxLength={5}
-                value={teamTag}
-                onChange={(e) => setTeamTag(e.target.value.toUpperCase())}
-                placeholder="e.g. APX"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono uppercase"
+                placeholder="e.g. Team Alpha"
+                className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-400 font-mono"
               />
             </div>
           </div>
-
-          {/* Dynamic Team Questions */}
-          {teamQuestions.length > 0 && (
-            <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-4">
-              <h3 className="text-xs font-mono font-bold text-indigo-400 uppercase">
-                Tournament Team Questionnaire
-              </h3>
-              {teamQuestions.map((q) => (
-                <div key={q.id} className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300">
-                    {q.label} {q.required && <span className="text-rose-400">*</span>}
-                  </label>
-                  {q.helpText && <p className="text-[11px] text-slate-400">{q.helpText}</p>}
-
-                  {q.fieldType === 'dropdown' ? (
-                    <select
-                      required={q.required}
-                      value={teamResponses[q.id] || ''}
-                      onChange={(e) => setTeamResponses({ ...teamResponses, [q.id]: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white"
-                    >
-                      <option value="">Select an option</option>
-                      {q.options?.map((opt, i) => (
-                        <option key={i} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      required={q.required}
-                      value={teamResponses[q.id] || ''}
-                      onChange={(e) => setTeamResponses({ ...teamResponses, [q.id]: e.target.value })}
-                      placeholder={q.placeholder || ''}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
 
           <div className="pt-2">
             <button
@@ -1002,7 +1110,7 @@ const TournamentRegister = () => {
               disabled={creating}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 disabled:opacity-50 cursor-pointer"
             >
-              {creating ? 'Creating Squad...' : 'Create Squad & Generate Invite Code'}
+              {creating ? 'Creating Team...' : 'Create Team'}
             </button>
           </div>
         </form>

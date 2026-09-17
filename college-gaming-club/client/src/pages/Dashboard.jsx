@@ -27,10 +27,11 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [tournRes, teamsRes, matchRes] = await Promise.allSettled([
+        const [tournRes, teamsRes, matchRes, myRegsRes] = await Promise.allSettled([
           API.get('/tournaments'),
           API.get('/teams'),
           API.get('/matches'),
+          API.get('/registrations/my-tournaments'),
         ]);
 
         const allTournaments =
@@ -39,8 +40,10 @@ const Dashboard = () => {
           teamsRes.status === 'fulfilled' ? teamsRes.value.data.teams || [] : [];
         const allMatches =
           matchRes.status === 'fulfilled' ? matchRes.value.data.matches || [] : [];
-        const allAnnouncements =
-          annRes.status === 'fulfilled' ? annRes.value.data.announcements || [] : [];
+        const dynamicTourneys =
+          myRegsRes.status === 'fulfilled'
+            ? (myRegsRes.value.data.registrations || []).map((r) => r.tournament).filter(Boolean)
+            : [];
 
         // Filter user's teams
         const userTeams = allTeams.filter((t) =>
@@ -49,13 +52,17 @@ const Dashboard = () => {
 
         const userTeamIds = userTeams.map((t) => t._id.toString());
 
-        // Filter tournaments player is registered for
+        // Filter tournaments player is registered for (both legacy and dynamic registrations)
         const registeredTourneys = allTournaments.filter((tourney) =>
           tourney.registeredTeams?.some((reg) =>
             userTeamIds.includes((reg.team?._id || reg.team).toString())
           )
         );
-        setMyTournaments(registeredTourneys);
+        const combinedMap = new Map();
+        [...dynamicTourneys, ...registeredTourneys].forEach((t) => {
+          if (t && t._id) combinedMap.set(t._id.toString(), t);
+        });
+        setMyTournaments(Array.from(combinedMap.values()));
 
         // Recommended open tournaments
         const openTourneys = allTournaments.filter(

@@ -16,6 +16,7 @@ const {
   createTeamRegistration,
   getPublicTeams,
   getAdminRegistrations,
+  deregisterFromTournament,
 } = require('../controllers/registrationController');
 
 // Nested form routes: /api/tournaments/:id/form
@@ -23,6 +24,7 @@ router.use('/:id/form', formRoutes);
 
 // Tournament registration endpoints
 router.post('/:id/registrations/create-team', protect, createTeamRegistration);
+router.post('/:id/deregister', protect, deregisterFromTournament);
 router.get('/:id/public-teams', getPublicTeams);
 router.get('/:id/admin-registrations', protect, staffOnly, getAdminRegistrations);
 

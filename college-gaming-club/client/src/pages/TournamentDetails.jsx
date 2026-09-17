@@ -59,6 +59,10 @@ const TournamentDetails = () => {
   const [matchStatus, setMatchStatus] = useState('scheduled');
   const [updatingMatch, setUpdatingMatch] = useState(false);
 
+  // Deregistration State
+  const [deregisterModalOpen, setDeregisterModalOpen] = useState(false);
+  const [deregistering, setDeregistering] = useState(false);
+
   useEffect(() => {
     fetchTournamentDetails();
   }, [id, user]);
@@ -182,6 +186,23 @@ const TournamentDetails = () => {
     }
   };
 
+  const handleDeregister = async () => {
+    try {
+      setDeregistering(true);
+      const res = await API.post(`/tournaments/${tournament._id}/deregister`);
+      if (res.data.success) {
+        addToast(res.data.message || 'Successfully deregistered from tournament', 'success');
+        setUserSquad(null);
+        setDeregisterModalOpen(false);
+        fetchTournamentDetails();
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to deregister', 'error');
+    } finally {
+      setDeregistering(false);
+    }
+  };
+
   // Match Click (admin can edit score)
   const handleMatchClick = (match) => {
     if (!isStaff) return;
@@ -295,12 +316,21 @@ const TournamentDetails = () => {
             )}
 
             {userSquad ? (
-              <Link
-                to={`/tournaments/${tournament._id}/register`}
-                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider text-center shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all"
-              >
-                <CheckCircle2 className="w-4 h-4 text-white" /> View Your Squad ({userSquad.teamName})
-              </Link>
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <Link
+                  to={`/tournaments/${tournament._id}/register`}
+                  className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider text-center shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-white" /> View Your Squad ({userSquad.teamName})
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setDeregisterModalOpen(true)}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-600/50 text-rose-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  De-register
+                </button>
+              </div>
             ) : isRegistrationOpen ? (
               <Link
                 to={`/tournaments/${tournament._id}/register`}
@@ -897,6 +927,48 @@ const TournamentDetails = () => {
             >
               <UserPlus className="w-4 h-4" /> Sign Up
             </Link>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Deregistration Confirmation Modal */}
+      <Modal
+        isOpen={deregisterModalOpen}
+        onClose={() => setDeregisterModalOpen(false)}
+        title="Confirm Deregistration"
+      >
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-800/40 text-rose-300 text-xs flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold text-white text-sm">
+                Are you sure you want to deregister from {tournament?.name}?
+              </p>
+              <p className="text-slate-300">
+                • If you are the Team Leader and your team has no other members, your team will be automatically disbanded.<br />
+                • If your team has other members, team leadership will safely transfer to your teammate.<br />
+                • Your registration state will be cleared so you can join or create another team.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+            <button
+              type="button"
+              disabled={deregistering}
+              onClick={() => setDeregisterModalOpen(false)}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={deregistering}
+              onClick={handleDeregister}
+              className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white shadow-md shadow-rose-600/30 transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {deregistering ? 'Deregistering...' : 'Yes, De-register'}
+            </button>
           </div>
         </div>
       </Modal>

@@ -14,15 +14,24 @@ import {
   LayoutDashboard,
   Flame,
   ArrowRight,
+  Bell,
+  Check,
 } from 'lucide-react';
+import API from '../../services/api';
 
 const Navbar = () => {
   const { user, isAuthenticated, isStaff, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // Tournament Invitations Notification
+  const [invitations, setInvitations] = useState([]);
+  const [invitationsOpen, setInvitationsOpen] = useState(false);
+  const [respondingId, setRespondingId] = useState(null);
   
   const profileMenuRef = useRef(null);
+  const invitationsRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -52,18 +61,74 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close profile dropdown when clicking outside
+  // Fetch invitations for authenticated user
+  const fetchInvitations = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await API.get('/registrations/invitations/my');
+      if (res.data.success) {
+        setInvitations(res.data.invitations || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchInvitations();
+      const interval = setInterval(fetchInvitations, 25000);
+      return () => clearInterval(interval);
+    } else {
+      setInvitations([]);
+    }
+  }, [isAuthenticated]);
+
+  const handleAcceptInvite = async (inviteId) => {
+    try {
+      setRespondingId(inviteId);
+      const res = await API.post(`/registrations/invitations/${inviteId}/accept`);
+      if (res.data.success) {
+        setInvitationsOpen(false);
+        fetchInvitations();
+        navigate(`/tournaments/${res.data.tournamentId}/register`);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to accept invitation');
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId) => {
+    try {
+      setRespondingId(inviteId);
+      const res = await API.post(`/registrations/invitations/${inviteId}/decline`);
+      if (res.data.success) {
+        fetchInvitations();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to decline invitation');
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  // Close profile dropdown and invitations when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setProfileDropdownOpen(false);
       }
+      if (invitationsRef.current && !invitationsRef.current.contains(event.target)) {
+        setInvitationsOpen(false);
+      }
     };
-    if (profileDropdownOpen) {
+    if (profileDropdownOpen || invitationsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [profileDropdownOpen]);
+  }, [profileDropdownOpen, invitationsOpen]);
 
   // Lock body scroll on mobile menu
   useEffect(() => {
@@ -154,9 +219,88 @@ const Navbar = () => {
               {/* Right Side Action / CTA Pill Button */}
               <div className="flex items-center gap-2 sm:gap-2.5">
                 {isAuthenticated ? (
-                  <div className="flex items-center gap-2" ref={profileMenuRef}>
+                  <div className="flex items-center gap-2">
+                    {/* Tournament Invitations Bell */}
+                    <div className="relative" ref={invitationsRef}>
+                      <button
+                        onClick={() => setInvitationsOpen(!invitationsOpen)}
+                        className="relative p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+                        title="Tournament Invitations"
+                      >
+                        <Bell className="w-4 h-4 text-cyan-400" />
+                        {invitations.length > 0 && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[9px] font-black text-white flex items-center justify-center animate-pulse">
+                            {invitations.length}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Invitations Dropdown */}
+                      {invitationsOpen && (
+                        <div className="absolute right-0 mt-3 w-80 sm:w-88 rounded-3xl bg-[#090e1f]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.1)] p-3 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3">
+                          <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                            <span className="text-xs font-mono font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                              <Bell className="w-3.5 h-3.5 text-cyan-400" /> Tournament Invites
+                            </span>
+                            <span className="text-[10px] font-mono text-cyan-400 font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
+                              {invitations.length} Pending
+                            </span>
+                          </div>
+
+                          {invitations.length === 0 ? (
+                            <p className="text-xs text-slate-400 text-center py-4">
+                              No active tournament invitations.
+                            </p>
+                          ) : (
+                            <div className="max-h-72 overflow-y-auto space-y-2.5 pr-1">
+                              {invitations.map((inv) => (
+                                <div
+                                  key={inv._id}
+                                  className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <img
+                                      src={inv.sender?.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'}
+                                      alt={inv.sender?.name}
+                                      className="w-8 h-8 rounded-lg object-cover border border-slate-700"
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-bold text-white truncate">
+                                        Team {inv.registration?.teamName || 'Squad'}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400 truncate">
+                                        Invited by @{inv.sender?.username} for {inv.tournament?.name}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-2 pt-1">
+                                    <button
+                                      disabled={respondingId === inv._id}
+                                      onClick={() => handleAcceptInvite(inv._id)}
+                                      className="py-1.5 px-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono font-bold text-[11px] uppercase transition-all flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer"
+                                    >
+                                      <Check className="w-3 h-3" />
+                                      {respondingId === inv._id ? 'Joining...' : 'Accept'}
+                                    </button>
+                                    <button
+                                      disabled={respondingId === inv._id}
+                                      onClick={() => handleDeclineInvite(inv._id)}
+                                      className="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-semibold text-[11px] uppercase transition-all disabled:opacity-50 cursor-pointer"
+                                    >
+                                      Decline
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {/* User Profile Pill */}
-                    <div className="relative">
+                    <div className="relative" ref={profileMenuRef}>
                       <button
                         onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                         className="flex items-center gap-2 p-1 pr-2.5 sm:pr-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 backdrop-blur-md transition-all cursor-pointer select-none group"

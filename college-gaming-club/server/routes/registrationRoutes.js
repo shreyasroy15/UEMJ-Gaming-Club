@@ -13,18 +13,26 @@ const {
   getMyRegistrations,
   uploadTeamIdentityProof,
   transferLeadership,
+  sendTournamentInvitation,
+  getMyInvitations,
+  acceptInvitation,
+  declineInvitation,
 } = require('../controllers/registrationController');
 const { protect } = require('../middleware/authMiddleware');
 const { staffOnly } = require('../middleware/adminMiddleware');
 
-// User my-registrations
+// User my-registrations & invitations
 router.get('/my-tournaments', protect, getMyRegistrations);
+router.get('/invitations/my', protect, getMyInvitations);
+router.post('/invitations/:id/accept', protect, acceptInvitation);
+router.post('/invitations/:id/decline', protect, declineInvitation);
 
 // Join team with code
 router.post('/join', protect, joinTeamByCode);
 
 // Workspace & submissions
 router.get('/:id', protect, getRegistrationWorkspace);
+router.post('/:id/invitations', protect, sendTournamentInvitation);
 router.put('/:id/player-submission', protect, submitPlayerInformation);
 router.put('/:id/team-identity-proof', protect, uploadTeamIdentityProof);
 router.put('/:id/transfer-leader', protect, transferLeadership);
