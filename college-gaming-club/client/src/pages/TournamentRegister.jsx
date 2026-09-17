@@ -15,6 +15,7 @@ import {
   Copy,
   CheckCircle2,
   AlertTriangle,
+  AlertCircle,
   Clock,
   ArrowRight,
   Sparkles,
@@ -373,8 +374,14 @@ const TournamentRegister = () => {
       q.id !== 'team_identity_proof'
   );
 
-  const minStarters = tournament.minTeamSize || 4;
-  const maxCapacity = tournament.maxTeamSize || 5;
+  const minStarters = tournament?.minTeamSize || 4;
+  const maxCapacity = tournament?.maxTeamSize || 5;
+
+  const workspaceData = {
+    canUploadIdentityProof,
+    identityProofDeadline,
+    isIdentityProofDeadlinePassed,
+  };
 
   // Active Squad Workspace View
   if (activeRegistration) {
@@ -484,7 +491,7 @@ const TournamentRegister = () => {
         <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-cyan-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white font-mono">Your Status ({user.name}):</span>
+              <span className="text-xs font-bold text-white font-mono">Your Status ({user?.name || user?.username || 'Player'}):</span>
               <span
                 className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                   myPlayerSlot?.status === 'completed'
@@ -734,19 +741,19 @@ const TournamentRegister = () => {
             </div>
 
             {/* Deadline information */}
-            {workspaceData?.identityProofDeadline && (
+            {identityProofDeadline && (
               <div
                 className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${
-                  workspaceData.isIdentityProofDeadlinePassed
+                  isIdentityProofDeadlinePassed
                     ? 'bg-rose-950/20 border-rose-800/40 text-rose-300'
                     : 'bg-purple-950/20 border-purple-800/30 text-purple-300'
                 }`}
               >
                 <span>
                   ⏰ <strong>Identity Proof Submission Deadline:</strong>{' '}
-                  {new Date(workspaceData.identityProofDeadline).toLocaleString()}
+                  {new Date(identityProofDeadline).toLocaleString()}
                 </span>
-                {workspaceData.isIdentityProofDeadlinePassed && (
+                {isIdentityProofDeadlinePassed && (
                   <span className="font-bold text-rose-400 uppercase tracking-wide text-[10px]">
                     Deadline Passed — Submissions Locked
                   </span>
@@ -755,7 +762,7 @@ const TournamentRegister = () => {
             )}
 
             {/* Step Unlock Guidance */}
-            {!workspaceData?.canUploadIdentityProof ? (
+            {!canUploadIdentityProof ? (
               <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-800/40 text-amber-300 text-xs flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                 <div>
@@ -794,7 +801,7 @@ const TournamentRegister = () => {
                   </div>
                 )}
 
-                {workspaceData.isIdentityProofDeadlinePassed ? (
+                {isIdentityProofDeadlinePassed ? (
                   <p className="text-xs text-slate-500 italic">
                     The identity proof deadline has passed. Uploading or updating the PDF is disabled.
                   </p>

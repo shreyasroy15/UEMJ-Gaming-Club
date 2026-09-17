@@ -214,6 +214,16 @@ exports.createTeamRegistration = async (req, res, next) => {
       status: 'incomplete',
     });
 
+    // Synchronize tournament registeredTeams with TournamentRegistration
+    await Tournament.findByIdAndUpdate(tournament._id, {
+      $addToSet: {
+        registeredTeams: {
+          team: registration._id,
+          registeredAt: new Date(),
+        },
+      },
+    });
+
     // Populate user details for return
     const populated = await TournamentRegistration.findById(registration._id)
       .populate('captain', 'name username avatar email')
@@ -822,7 +832,7 @@ exports.getPublicTeams = async (req, res, next) => {
 
     const registrations = await TournamentRegistration.find({
       tournament: tournament._id,
-      status: { $in: ['complete', 'verified'] }, // only show complete/confirmed teams publicly
+      status: { $ne: 'rejected' }, // show all active teams publicly
     })
       .populate('captain', 'name username avatar')
       .populate('leader', 'name username avatar')
@@ -878,6 +888,7 @@ exports.getPublicTeams = async (req, res, next) => {
           avatar: (reg.leader || reg.captain)?.avatar,
         },
         status: reg.status,
+        teamType: reg.teamType || 'UEM Student Team',
         teamResponses: safeTeamResponses,
         players: safePlayers,
         registeredAt: reg.createdAt,
