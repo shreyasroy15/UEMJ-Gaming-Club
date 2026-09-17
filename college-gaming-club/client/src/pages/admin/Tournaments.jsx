@@ -839,18 +839,18 @@ const AdminTournaments = () => {
                                       <span className="font-mono">{responses.phone_number || 'N/A'}</span>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500 block">Student Proof Document:</span>
-                                      {responses.student_id_proof ? (
+                                      <span className="text-slate-500 block">Identity / College Proof (PDF):</span>
+                                      {responses.identity_proof || responses.student_id_proof ? (
                                         <a
-                                          href={responses.student_id_proof}
+                                          href={responses.identity_proof || responses.student_id_proof}
                                           target="_blank"
                                           rel="noreferrer"
-                                          className="text-cyan-400 underline font-bold flex items-center gap-1"
+                                          className="text-red-400 hover:text-red-300 underline font-bold flex items-center gap-1"
                                         >
-                                          <FileText className="w-3 h-3" /> Preview ID Card
+                                          <FileText className="w-3.5 h-3.5 text-red-400" /> View Identity Proof PDF
                                         </a>
                                       ) : (
-                                        <span className="text-rose-400">Not Uploaded</span>
+                                        <span className="text-rose-400 font-mono text-[10px]">Missing Document</span>
                                       )}
                                     </div>
                                   </div>

@@ -453,15 +453,22 @@ const TournamentRegister = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Slot 1: Captain */}
+            {/* Filled Roster Slots */}
             {activeRegistration.players?.map((slot) => {
               const isMe = (slot.user?._id || slot.user) === user?._id;
-              const isSlotCaptain = slot.role === 'captain';
+              const isSlotCaptain = slot.role === 'captain' || slot.slotNumber === 1;
+              const isSubstitute = slot.role === 'substitute' || slot.slotNumber > minStarters;
 
               return (
                 <div
                   key={slot._id || slot.slotNumber}
-                  className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 flex items-start justify-between gap-3 shadow-md"
+                  className={`p-4 rounded-2xl border flex items-start justify-between gap-3 shadow-md ${
+                    isSlotCaptain
+                      ? 'bg-slate-900/80 border-amber-900/40'
+                      : isSubstitute
+                      ? 'bg-slate-900/70 border-purple-900/40'
+                      : 'bg-slate-900/70 border-slate-800'
+                  }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <img
@@ -475,23 +482,25 @@ const TournamentRegister = () => {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <h4 className="text-xs sm:text-sm font-bold text-white font-mono truncate">
-                          {slot.user?.name} {isMe && <span className="text-cyan-400">(You)</span>}
+                          PLAYER {slot.slotNumber}: {slot.user?.name} {isMe && <span className="text-cyan-400">(You)</span>}
                         </h4>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
+                          className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-bold uppercase ${
                             isSlotCaptain
                               ? 'bg-amber-950 text-amber-300 border border-amber-700/50'
-                              : slot.role === 'substitute'
+                              : isSubstitute
                               ? 'bg-purple-950 text-purple-300 border border-purple-700/50'
                               : 'bg-indigo-950 text-indigo-300 border border-indigo-700/50'
                           }`}
                         >
-                          {isSlotCaptain ? '👑 Captain' : slot.role}
+                          {isSlotCaptain ? '👑 Captain' : isSubstitute ? 'Substitute' : 'Required Starter'}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-mono truncate">
+                          @{slot.user?.username}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 font-mono truncate">
-                        Slot #{slot.slotNumber} • @{slot.user?.username}
-                      </p>
                       <div className="mt-1 flex items-center gap-2">
                         <span
                           className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
@@ -500,7 +509,7 @@ const TournamentRegister = () => {
                               : 'bg-amber-950 text-amber-400 border border-amber-800'
                           }`}
                         >
-                          {slot.status === 'completed' ? '✓ Completed' : '⏳ Incomplete'}
+                          {slot.status === 'completed' ? '✓ Profile Completed' : '⏳ Details Incomplete'}
                         </span>
                       </div>
                     </div>
@@ -511,7 +520,7 @@ const TournamentRegister = () => {
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(slot.user?._id || slot.user, slot.user?.name)}
-                      className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 transition-colors"
+                      className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-300 transition-colors cursor-pointer"
                       title="Remove member from squad"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -521,27 +530,60 @@ const TournamentRegister = () => {
               );
             })}
 
-            {/* Empty Slots place-markers */}
-            {Array.from({ length: Math.max(0, minStarters - (activeRegistration.players?.length || 0)) }).map((_, i) => (
-              <div
-                key={`empty-${i}`}
-                onClick={handleCopyInvite}
-                className="p-4 rounded-2xl border-2 border-dashed border-slate-800 hover:border-slate-700 bg-slate-950/40 flex items-center justify-between gap-3 cursor-pointer group transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 group-hover:text-cyan-400">
-                    <UserPlus className="w-5 h-5" />
+            {/* Empty Required Starter Slots (Up to minStarters) */}
+            {Array.from({ length: Math.max(0, minStarters - (activeRegistration.players?.length || 0)) }).map((_, i) => {
+              const currentCount = activeRegistration.players?.length || 0;
+              const slotNum = currentCount + i + 1;
+
+              return (
+                <div
+                  key={`empty-starter-${i}`}
+                  onClick={handleCopyInvite}
+                  className="p-4 rounded-2xl border-2 border-dashed border-cyan-800/40 hover:border-cyan-500 bg-slate-950/40 flex items-center justify-between gap-3 cursor-pointer group transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 group-hover:text-cyan-400">
+                      <UserPlus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-200 font-mono">
+                        PLAYER {slotNum} (Required Starter)
+                      </h4>
+                      <p className="text-[11px] text-slate-400">Click to copy invite link & add teammate</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-300 font-mono">Empty Starter Slot</h4>
-                    <p className="text-[11px] text-slate-500">Click to copy invite link & share with teammate</p>
-                  </div>
+                  <span className="text-[10px] text-cyan-400 font-mono underline group-hover:text-cyan-300">
+                    Invite Teammate
+                  </span>
                 </div>
-                <span className="text-[10px] text-cyan-400 font-mono underline group-hover:text-cyan-300">
-                  Invite Teammate
-                </span>
-              </div>
-            ))}
+              );
+            })}
+
+            {/* Dynamic [+ Add Player] Slot (Up to maxCapacity) */}
+            {(activeRegistration.players?.length || 0) >= minStarters &&
+              (activeRegistration.players?.length || 0) < maxCapacity && (
+                <div
+                  onClick={handleCopyInvite}
+                  className="p-4 rounded-2xl border-2 border-dashed border-purple-800/50 hover:border-purple-500 bg-purple-950/10 flex items-center justify-between gap-3 cursor-pointer group transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-purple-950/40 border border-purple-800 flex items-center justify-center text-purple-400 group-hover:text-purple-300">
+                      <UserPlus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-purple-200 font-mono">
+                        [+ Add Player {(activeRegistration.players?.length || 0) + 1} (Substitute)]
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        Optional substitute slot available ({activeRegistration.players?.length}/{maxCapacity})
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-purple-400 font-mono underline group-hover:text-purple-300">
+                    Copy Invite Link
+                  </span>
+                </div>
+              )}
           </div>
         </div>
 
@@ -559,17 +601,28 @@ const TournamentRegister = () => {
             <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-1">
               {playerQuestions.map((q) => {
                 const isUpload = q.fieldType === 'image_upload' || q.fieldType === 'file_upload';
+                const isPdfDoc = q.id === 'identity_proof' || q.fieldType === 'file_upload';
 
                 if (isUpload) {
                   return (
                     <div key={q.id}>
                       <CloudinaryUpload
                         label={`${q.label} ${q.required ? '*' : ''}`}
-                        helpText={q.helpText || (q.fieldType === 'file_upload' ? 'Upload College ID Card' : 'Upload photo')}
+                        helpText={
+                          isPdfDoc
+                            ? 'Single PDF only (College ID card or fee receipt, max 10MB)'
+                            : q.helpText || 'Upload photo or avatar'
+                        }
                         value={playerResponses[q.id] || ''}
                         type={q.isPublic ? 'public' : 'private'}
+                        accept={isPdfDoc ? '.pdf,application/pdf' : 'image/*'}
                         onChange={(url) => setPlayerResponses({ ...playerResponses, [q.id]: url })}
                       />
+                      {isPdfDoc && (
+                        <p className="text-[10px] text-amber-400 flex items-center gap-1 mt-1 font-mono">
+                          <Lock className="w-3 h-3" /> Private: Document is stored securely and only accessible to tournament organizers.
+                        </p>
+                      )}
                     </div>
                   );
                 }

@@ -79,7 +79,7 @@ exports.saveTournamentForm = async (req, res, next) => {
       });
     }
 
-    const { title, description, isPublished, questions } = req.body;
+    const { title, description, isPublished, questions, teamConfig } = req.body;
 
     if (!title || !Array.isArray(questions)) {
       return res.status(400).json({
@@ -117,13 +117,28 @@ exports.saveTournamentForm = async (req, res, next) => {
       });
 
       tournament.registrationForm = form._id;
-      await tournament.save();
     }
+
+    // Update tournament team sizing rules if provided
+    if (teamConfig) {
+      if (teamConfig.minTeamSize !== undefined) tournament.minTeamSize = Number(teamConfig.minTeamSize);
+      if (teamConfig.maxTeamSize !== undefined) tournament.maxTeamSize = Number(teamConfig.maxTeamSize);
+      if (teamConfig.allowSubstitutes !== undefined) tournament.allowSubstitutes = Boolean(teamConfig.allowSubstitutes);
+      if (teamConfig.maxSubstitutes !== undefined) tournament.maxSubstitutes = Number(teamConfig.maxSubstitutes);
+    }
+    await tournament.save();
 
     res.status(200).json({
       success: true,
       message: 'Tournament form saved successfully',
       form,
+      tournament: {
+        _id: tournament._id,
+        minTeamSize: tournament.minTeamSize,
+        maxTeamSize: tournament.maxTeamSize,
+        allowSubstitutes: tournament.allowSubstitutes,
+        maxSubstitutes: tournament.maxSubstitutes,
+      },
     });
   } catch (error) {
     next(error);
