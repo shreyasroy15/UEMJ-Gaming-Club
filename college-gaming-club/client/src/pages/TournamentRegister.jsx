@@ -64,6 +64,11 @@ const TournamentRegister = () => {
   const [playerResponses, setPlayerResponses] = useState({});
   const [submittingPlayer, setSubmittingPlayer] = useState(false);
 
+  // Team-Level Identity Proof state
+  const [canUploadIdentityProof, setCanUploadIdentityProof] = useState(false);
+  const [identityProofDeadline, setIdentityProofDeadline] = useState(null);
+  const [isIdentityProofDeadlinePassed, setIsIdentityProofDeadlinePassed] = useState(false);
+
   // Copied state
   const [copied, setCopied] = useState(false);
 
@@ -93,6 +98,10 @@ const TournamentRegister = () => {
             const wsRes = await API.get(`/registrations/${matched._id}`);
             if (wsRes.data.success) {
               setActiveRegistration(wsRes.data.registration);
+              setCanUploadIdentityProof(Boolean(wsRes.data.canUploadIdentityProof));
+              setIdentityProofDeadline(wsRes.data.identityProofDeadline);
+              setIsIdentityProofDeadlinePassed(Boolean(wsRes.data.isIdentityProofDeadlinePassed));
+
               if (wsRes.data.currentUserState?.responses) {
                 const mapObj = {};
                 const resps = wsRes.data.currentUserState.responses;
@@ -120,12 +129,28 @@ const TournamentRegister = () => {
       const wsRes = await API.get(`/registrations/${regId}`);
       if (wsRes.data.success) {
         setActiveRegistration(wsRes.data.registration);
+        setCanUploadIdentityProof(Boolean(wsRes.data.canUploadIdentityProof));
+        setIdentityProofDeadline(wsRes.data.identityProofDeadline);
+        setIsIdentityProofDeadlinePassed(Boolean(wsRes.data.isIdentityProofDeadlinePassed));
         if (wsRes.data.currentUserState?.responses) {
           setPlayerResponses(wsRes.data.currentUserState.responses);
         }
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleUploadTeamProof = async (url) => {
+    if (!url) return;
+    try {
+      const res = await API.put(`/registrations/${activeRegistration._id}/team-identity-proof`, { url });
+      if (res.data.success) {
+        addToast('Team Identity Proof PDF uploaded successfully!', 'success');
+        reloadRegistration(activeRegistration._id);
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to upload team identity proof', 'error');
     }
   };
 
@@ -291,7 +316,13 @@ const TournamentRegister = () => {
   }
 
   const teamQuestions = (form?.questions || []).filter((q) => q.scope === 'team');
-  const playerQuestions = (form?.questions || []).filter((q) => q.scope === 'player');
+  const playerQuestions = (form?.questions || []).filter(
+    (q) =>
+      q.scope === 'player' &&
+      q.id !== 'identity_proof' &&
+      q.id !== 'student_id_proof' &&
+      q.id !== 'team_identity_proof'
+  );
 
   const minStarters = tournament.minTeamSize || 4;
   const maxCapacity = tournament.maxTeamSize || 5;
@@ -584,6 +615,123 @@ const TournamentRegister = () => {
                   </span>
                 </div>
               )}
+          </div>
+
+          {/* ONE TEAM-LEVEL IDENTITY PROOF (Only unlocked after required players complete their details) */}
+          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-4 border-b border-slate-800">
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-400" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+                    Team Identity Proof (Single PDF)
+                  </h3>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                    Private / Admin Only
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                  Upload ONE PDF containing the identity/college proof of all registered team members. For UEM students, include the required IEMCRP/college proof for each member.
+                </p>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2 self-start md:self-auto">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                    activeRegistration.identityProof?.status === 'verified'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : activeRegistration.identityProof?.status === 'rejected'
+                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                      : activeRegistration.identityProof?.url
+                      ? 'bg-sky-500/10 text-sky-400 border-sky-500/30'
+                      : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                  }`}
+                >
+                  Status: {activeRegistration.identityProof?.status || (activeRegistration.identityProof?.url ? 'Submitted' : 'Pending')}
+                </span>
+              </div>
+            </div>
+
+            {/* Deadline information */}
+            {workspaceData?.identityProofDeadline && (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                  workspaceData.isIdentityProofDeadlinePassed
+                    ? 'bg-rose-950/20 border-rose-800/40 text-rose-300'
+                    : 'bg-purple-950/20 border-purple-800/30 text-purple-300'
+                }`}
+              >
+                <span>
+                  ⏰ <strong>Identity Proof Submission Deadline:</strong>{' '}
+                  {new Date(workspaceData.identityProofDeadline).toLocaleString()}
+                </span>
+                {workspaceData.isIdentityProofDeadlinePassed && (
+                  <span className="font-bold text-rose-400 uppercase tracking-wide text-[10px]">
+                    Deadline Passed — Submissions Locked
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Step Unlock Guidance */}
+            {!workspaceData?.canUploadIdentityProof ? (
+              <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-800/40 text-amber-300 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-bold">Team Identity Proof is locked</p>
+                  <p className="text-amber-300/80 mt-0.5">
+                    All required starter players ({minStarters}) must join and complete their profile details before the combined team identity proof PDF can be submitted.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {activeRegistration.identityProof?.url && (
+                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText className="w-5 h-5 text-purple-400 shrink-0" />
+                      <div className="truncate">
+                        <p className="text-xs font-bold text-slate-200 truncate">
+                          Combined_Team_Identity_Proof.pdf
+                        </p>
+                        {activeRegistration.identityProof?.submittedAt && (
+                          <p className="text-[10px] text-slate-500">
+                            Uploaded {new Date(activeRegistration.identityProof.submittedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <a
+                      href={activeRegistration.identityProof.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 flex items-center gap-1.5 shrink-0"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      View Uploaded PDF
+                    </a>
+                  </div>
+                )}
+
+                {workspaceData.isIdentityProofDeadlinePassed ? (
+                  <p className="text-xs text-slate-500 italic">
+                    The identity proof deadline has passed. Uploading or updating the PDF is disabled.
+                  </p>
+                ) : (
+                  <CloudinaryUpload
+                    label={
+                      activeRegistration.identityProof?.url
+                        ? 'Replace Team Identity Proof (Single Combined PDF) *'
+                        : 'Upload Team Identity Proof (Single Combined PDF) *'
+                    }
+                    helpText="Single PDF containing identity/college proof for all registered team members (Max 10MB)"
+                    value={activeRegistration.identityProof?.url || ''}
+                    onChange={handleUploadTeamProof}
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
 

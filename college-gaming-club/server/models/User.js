@@ -33,6 +33,16 @@ const userSchema = new mongoose.Schema(
       default: 'University of Engineering & Management (UEM)',
       trim: true,
     },
+    studentId: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    phone: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     avatar: {
       type: String,
       default: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80',

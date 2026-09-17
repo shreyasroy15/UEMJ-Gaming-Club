@@ -44,14 +44,31 @@ const validatePlayerResponses = (questions, responses = {}) => {
 const evaluateTeamCompletion = async (registration, tournament) => {
   const minRequiredStarters = tournament.minTeamSize || 4;
 
-  // Find starter slots (including captain who is slot 1)
+  // Find starter slots (including captain/leader who is slot 1)
   const starters = registration.players.filter(
     (p) => p.role === 'captain' || p.role === 'starter'
   );
 
   const completedStarters = starters.filter((p) => p.status === 'completed');
+  const startersSatisfied = starters.length >= minRequiredStarters && completedStarters.length >= minRequiredStarters;
 
-  const isComplete = starters.length >= minRequiredStarters && completedStarters.length >= minRequiredStarters;
+  // Check if team-level identity proof is required by the form
+  const form = await TournamentForm.findOne({ tournament: tournament._id });
+  const hasIdentityProofQuestion = form?.questions?.some(
+    (q) => q.scope === 'team' && (q.id === 'team_identity_proof' || q.id === 'identity_proof') && q.required
+  );
+
+  // If team identity proof is required, it must be uploaded!
+  const hasUploadedProof = Boolean(
+    (registration.identityProof && registration.identityProof.url) ||
+    (registration.teamResponses && (
+      (registration.teamResponses instanceof Map
+        ? (registration.teamResponses.get('team_identity_proof') || registration.teamResponses.get('identity_proof'))
+        : (registration.teamResponses.team_identity_proof || registration.teamResponses.identity_proof))
+    ))
+  );
+
+  const isComplete = startersSatisfied && (!hasIdentityProofQuestion || hasUploadedProof);
 
   if (isComplete && registration.status === 'incomplete') {
     registration.status = 'complete';
@@ -62,6 +79,19 @@ const evaluateTeamCompletion = async (registration, tournament) => {
 
   await registration.save();
   return registration;
+};
+
+// Helper: extract user account profile data for auto-prefill
+const getAccountPrefillData = (user) => {
+  if (!user) return {};
+  return {
+    player_name: user.name || '',
+    email: user.email || '',
+    college_name: user.college || '',
+    college_id: user.studentId || '',
+    phone_number: user.phone || '',
+    profile_photo: user.avatar || '',
+  };
 };
 
 // @desc    Create a new team registration for tournament
@@ -103,16 +133,20 @@ exports.createTeamRegistration = async (req, res, next) => {
       });
     }
 
-    // Rule: User cannot already be in any team in this tournament
+    // Rule: One-team-per-tournament rule enforced on backend
     const existingParticipation = await TournamentRegistration.findOne({
       tournament: tournament._id,
-      'players.user': req.user.id,
+      $or: [
+        { captain: req.user.id },
+        { leader: req.user.id },
+        { 'players.user': req.user.id },
+      ],
     });
 
     if (existingParticipation) {
       return res.status(400).json({
         success: false,
-        message: `You are already registered in team "${existingParticipation.teamName}" for this tournament`,
+        message: `You are already registered in team "${existingParticipation.teamName}" for this tournament. Each participant can only join one team per tournament.`,
         registrationId: existingParticipation._id,
       });
     }
@@ -141,7 +175,10 @@ exports.createTeamRegistration = async (req, res, next) => {
 
     const teamCode = await generateUniqueCode(tournament.game);
 
-    // Create registration with Captain in slot 1
+    // Auto-prefill Leader Slot 1 with authenticated account profile data
+    const leaderPrefill = getAccountPrefillData(req.user);
+
+    // Create registration with Captain / Leader in slot 1
     const registration = await TournamentRegistration.create({
       tournament: tournament._id,
       teamName: teamName.trim(),
@@ -149,14 +186,19 @@ exports.createTeamRegistration = async (req, res, next) => {
       teamLogo: teamLogo || undefined,
       teamCode,
       captain: req.user.id,
+      leader: req.user.id,
       teamResponses: teamResponses || {},
+      identityProof: {
+        url: '',
+        status: 'pending',
+      },
       players: [
         {
           user: req.user.id,
           role: 'captain',
           slotNumber: 1,
           status: 'joined',
-          responses: {},
+          responses: leaderPrefill,
           joinedAt: new Date(),
         },
       ],
@@ -166,6 +208,7 @@ exports.createTeamRegistration = async (req, res, next) => {
     // Populate user details for return
     const populated = await TournamentRegistration.findById(registration._id)
       .populate('captain', 'name username avatar email')
+      .populate('leader', 'name username avatar email')
       .populate('players.user', 'name username avatar email');
 
     res.status(201).json({
@@ -236,17 +279,21 @@ exports.joinTeamByCode = async (req, res, next) => {
       });
     }
 
-    // Check if player is registered in ANOTHER team for this same tournament
+    // Rule: One-team-per-tournament rule enforced on backend
     const inAnotherTeam = await TournamentRegistration.findOne({
       tournament: tournament._id,
       _id: { $ne: registration._id },
-      'players.user': req.user.id,
+      $or: [
+        { captain: req.user.id },
+        { leader: req.user.id },
+        { 'players.user': req.user.id },
+      ],
     });
 
     if (inAnotherTeam) {
       return res.status(400).json({
         success: false,
-        message: `You are already registered in team "${inAnotherTeam.teamName}" for this tournament`,
+        message: `You are already registered in team "${inAnotherTeam.teamName}" for this tournament. Each participant can only join one team per tournament.`,
       });
     }
 
@@ -265,12 +312,15 @@ exports.joinTeamByCode = async (req, res, next) => {
     const role = currentStarters < minStarters ? 'starter' : 'substitute';
     const nextSlot = registration.players.length + 1;
 
+    // Auto-prefill joined player slot with authenticated account data
+    const playerPrefill = getAccountPrefillData(req.user);
+
     registration.players.push({
       user: req.user.id,
       role,
       slotNumber: nextSlot,
       status: 'joined',
-      responses: {},
+      responses: playerPrefill,
       joinedAt: new Date(),
     });
 
@@ -279,6 +329,7 @@ exports.joinTeamByCode = async (req, res, next) => {
 
     const populated = await TournamentRegistration.findById(registration._id)
       .populate('captain', 'name username avatar')
+      .populate('leader', 'name username avatar')
       .populate('players.user', 'name username avatar');
 
     res.status(200).json({
@@ -292,14 +343,15 @@ exports.joinTeamByCode = async (req, res, next) => {
   }
 };
 
-// @desc    Get registration workspace details (team status, roster checklist, form schema)
+// @desc    Get registration workspace details (team status, roster checklist, form schema, prefill data)
 // @route   GET /api/registrations/:id
 // @access  Private
 exports.getRegistrationWorkspace = async (req, res, next) => {
   try {
     const registration = await TournamentRegistration.findById(req.params.id)
-      .populate('captain', 'name username avatar email')
-      .populate('players.user', 'name username avatar email')
+      .populate('captain', 'name username avatar email college studentId phone')
+      .populate('leader', 'name username avatar email college studentId phone')
+      .populate('players.user', 'name username avatar email college studentId phone')
       .populate('tournament');
 
     if (!registration) {
@@ -312,22 +364,53 @@ exports.getRegistrationWorkspace = async (req, res, next) => {
     const form = await TournamentForm.findOne({ tournament: registration.tournament._id });
 
     // Identify user's role in this registration
-    const isCaptain = registration.captain._id.toString() === req.user.id;
+    const isLeader = (registration.leader?._id || registration.captain?._id || registration.captain).toString() === req.user.id;
     const currentSlot = registration.players.find(
       (p) => p.user._id.toString() === req.user.id
     );
+
+    // Completion and order evaluation
+    const tournament = registration.tournament;
+    const minRequiredStarters = tournament.minTeamSize || 4;
+    const starters = registration.players.filter((p) => p.role === 'captain' || p.role === 'starter');
+    const completedStarters = starters.filter((p) => p.status === 'completed');
+    const canUploadIdentityProof = starters.length >= minRequiredStarters && completedStarters.length >= minRequiredStarters;
+
+    const identityProofDeadline = tournament.identityProofDeadline || tournament.registrationDeadline;
+    const isIdentityProofDeadlinePassed = identityProofDeadline ? new Date() > new Date(identityProofDeadline) : false;
+
+    // Pre-fill data from authenticated user profile
+    const accountPrefill = getAccountPrefillData(req.user);
+
+    // Merge missing responses with account data
+    let mergedResponses = {};
+    if (currentSlot && currentSlot.responses) {
+      mergedResponses = currentSlot.responses instanceof Map
+        ? Object.fromEntries(currentSlot.responses)
+        : { ...currentSlot.responses };
+    }
+    for (const [k, v] of Object.entries(accountPrefill)) {
+      if (!mergedResponses[k] && v) {
+        mergedResponses[k] = v;
+      }
+    }
 
     res.status(200).json({
       success: true,
       registration,
       form,
+      canUploadIdentityProof,
+      identityProofDeadline,
+      isIdentityProofDeadlinePassed,
       currentUserState: {
-        isCaptain,
+        isCaptain: isLeader,
+        isLeader,
         isMember: Boolean(currentSlot),
         role: currentSlot ? currentSlot.role : null,
         slotNumber: currentSlot ? currentSlot.slotNumber : null,
         status: currentSlot ? currentSlot.status : null,
-        responses: currentSlot ? currentSlot.responses : {},
+        responses: mergedResponses,
+        accountPrefill,
       },
     });
   } catch (error) {
@@ -335,7 +418,7 @@ exports.getRegistrationWorkspace = async (req, res, next) => {
   }
 };
 
-// @desc    Submit / Update player-specific tournament responses & documents
+// @desc    Submit / Update player-specific tournament responses (No player-level identity proof)
 // @route   PUT /api/registrations/:id/player-submission
 // @access  Private
 exports.submitPlayerInformation = async (req, res, next) => {
@@ -379,7 +462,7 @@ exports.submitPlayerInformation = async (req, res, next) => {
       });
     }
 
-    // Validate required player questions
+    // Validate required player questions (ignoring any team questions or legacy identity_proof)
     if (form && form.questions) {
       const validation = validatePlayerResponses(form.questions, responses);
       if (!validation.isValid) {
@@ -388,6 +471,16 @@ exports.submitPlayerInformation = async (req, res, next) => {
           message: validation.errors[0] || 'Please complete all required player questions',
           errors: validation.errors,
         });
+      }
+    }
+
+    // Update user profile with phone or studentId if provided and user lacks it
+    if (responses.phone_number || responses.college_id) {
+      const userUpdates = {};
+      if (responses.phone_number && !req.user.phone) userUpdates.phone = responses.phone_number;
+      if (responses.college_id && !req.user.studentId) userUpdates.studentId = responses.college_id;
+      if (Object.keys(userUpdates).length > 0) {
+        User.findByIdAndUpdate(req.user.id, userUpdates).catch(() => {});
       }
     }
 
@@ -401,11 +494,180 @@ exports.submitPlayerInformation = async (req, res, next) => {
 
     const populated = await TournamentRegistration.findById(registration._id)
       .populate('captain', 'name username avatar')
+      .populate('leader', 'name username avatar')
       .populate('players.user', 'name username avatar');
 
     res.status(200).json({
       success: true,
       message: 'Your player tournament information has been submitted successfully!',
+      registration: populated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Upload / Update Team-Level Combined Identity Proof PDF
+// @route   PUT /api/registrations/:id/team-identity-proof
+// @access  Private (Team members / Captain)
+exports.uploadTeamIdentityProof = async (req, res, next) => {
+  try {
+    const registration = await TournamentRegistration.findById(req.params.id);
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration squad not found',
+      });
+    }
+
+    const tournament = await Tournament.findById(registration.tournament);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    // Check authorization: must be a member of the team (or admin)
+    const isMember = registration.players.some((p) => p.user.toString() === req.user.id);
+    const isAdmin = req.user.role === 'admin';
+    if (!isMember && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only registered members of this team can upload the team identity proof',
+      });
+    }
+
+    // Check identity proof submission deadline
+    const deadline = tournament.identityProofDeadline || tournament.registrationDeadline;
+    if (deadline && new Date() > new Date(deadline)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Identity proof submission deadline has passed. Uploads and updates are closed for users.',
+      });
+    }
+
+    // Check completion order: All required players must have completed their details first!
+    const minRequiredStarters = tournament.minTeamSize || 4;
+    const starters = registration.players.filter((p) => p.role === 'captain' || p.role === 'starter');
+    const completedStarters = starters.filter((p) => p.status === 'completed');
+
+    if (starters.length < minRequiredStarters || completedStarters.length < minRequiredStarters) {
+      return res.status(400).json({
+        success: false,
+        message: `All ${minRequiredStarters} required team members must complete their individual player details before the team identity proof PDF can be uploaded. (${completedStarters.length}/${minRequiredStarters} completed)`,
+      });
+    }
+
+    const { url } = req.body;
+    if (!url || !url.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide the uploaded PDF document URL',
+      });
+    }
+
+    // Update team identity proof
+    registration.identityProof = {
+      url: url.trim(),
+      submittedAt: new Date(),
+      status: 'submitted',
+      verificationNotes: '',
+    };
+
+    if (!registration.teamResponses) {
+      registration.teamResponses = new Map();
+    }
+    if (registration.teamResponses instanceof Map) {
+      registration.teamResponses.set('team_identity_proof', url.trim());
+    } else {
+      registration.teamResponses.team_identity_proof = url.trim();
+    }
+
+    // Re-evaluate team completion
+    await evaluateTeamCompletion(registration, tournament);
+
+    const populated = await TournamentRegistration.findById(registration._id)
+      .populate('captain', 'name username avatar email')
+      .populate('leader', 'name username avatar email')
+      .populate('players.user', 'name username avatar email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Team Identity Proof PDF uploaded successfully!',
+      registration: populated,
+      identityProof: populated.identityProof,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Transfer team leadership to another registered squad member
+// @route   PUT /api/registrations/:id/transfer-leader
+// @access  Private (Current Leader or Admin)
+exports.transferLeadership = async (req, res, next) => {
+  try {
+    const { newLeaderUserId } = req.body;
+    if (!newLeaderUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please specify the new team leader user ID',
+      });
+    }
+
+    const registration = await TournamentRegistration.findById(req.params.id);
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration squad not found',
+      });
+    }
+
+    const currentLeaderId = (registration.leader || registration.captain).toString();
+    const isCurrentLeader = currentLeaderId === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isCurrentLeader && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the current team leader or an admin can transfer leadership',
+      });
+    }
+
+    // Target must be an existing member in the team
+    const targetMember = registration.players.find(
+      (p) => p.user.toString() === newLeaderUserId.toString()
+    );
+
+    if (!targetMember) {
+      return res.status(400).json({
+        success: false,
+        message: 'The selected user is not a member of this team roster',
+      });
+    }
+
+    // Swap roles
+    registration.players.forEach((p) => {
+      if (p.user.toString() === newLeaderUserId.toString()) {
+        p.role = 'captain';
+      } else if (p.role === 'captain') {
+        p.role = 'starter';
+      }
+    });
+
+    registration.captain = newLeaderUserId;
+    registration.leader = newLeaderUserId;
+    await registration.save();
+
+    const populated = await TournamentRegistration.findById(registration._id)
+      .populate('captain', 'name username avatar email')
+      .populate('leader', 'name username avatar email')
+      .populate('players.user', 'name username avatar email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Leadership successfully transferred to selected squad member',
       registration: populated,
     });
   } catch (error) {
@@ -428,20 +690,20 @@ exports.removeTeamMember = async (req, res, next) => {
       });
     }
 
-    const isCaptain = registration.captain.toString() === req.user.id;
+    const isCaptain = (registration.leader || registration.captain).toString() === req.user.id;
     const isAdmin = req.user.role === 'admin';
 
     if (!isCaptain && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Only the captain or an admin can remove team members',
+        message: 'Only the team leader or an admin can remove team members',
       });
     }
 
-    if (registration.captain.toString() === userId) {
+    if ((registration.leader || registration.captain).toString() === userId) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot remove team captain from roster',
+        message: 'Cannot remove team leader from roster. Transfer leadership first.',
       });
     }
 
@@ -459,6 +721,7 @@ exports.removeTeamMember = async (req, res, next) => {
 
     const populated = await TournamentRegistration.findById(registration._id)
       .populate('captain', 'name username avatar')
+      .populate('leader', 'name username avatar')
       .populate('players.user', 'name username avatar');
 
     res.status(200).json({
@@ -485,10 +748,10 @@ exports.leaveSquad = async (req, res, next) => {
       });
     }
 
-    if (registration.captain.toString() === req.user.id) {
+    if ((registration.leader || registration.captain).toString() === req.user.id) {
       return res.status(400).json({
         success: false,
-        message: 'Captain cannot leave the team. Disband squad or transfer captaincy first.',
+        message: 'Team leader cannot leave the team. Transfer leadership or disband squad first.',
       });
     }
 
@@ -513,7 +776,7 @@ exports.leaveSquad = async (req, res, next) => {
   }
 };
 
-// @desc    Get public teams for tournament (Privacy-safe: NO emails, phones, or ID card documents)
+// @desc    Get public teams for tournament (Privacy-safe: NO emails, phones, college IDs, or ID card PDFs)
 // @route   GET /api/tournaments/:id/public-teams
 // @access  Public
 exports.getPublicTeams = async (req, res, next) => {
@@ -539,15 +802,16 @@ exports.getPublicTeams = async (req, res, next) => {
       status: { $in: ['complete', 'verified'] }, // only show complete/confirmed teams publicly
     })
       .populate('captain', 'name username avatar')
+      .populate('leader', 'name username avatar')
       .populate('players.user', 'name username avatar');
 
-    // Build sanitized public output
+    // Build sanitized public output - Identity proof is STRICTLY EXCLUDED
     const sanitizedTeams = registrations.map((reg) => {
-      // Filter public team responses
+      // Filter public team responses (never include identity proof)
       const safeTeamResponses = {};
       if (reg.teamResponses) {
         for (const [key, val] of (reg.teamResponses instanceof Map ? reg.teamResponses : Object.entries(reg.teamResponses))) {
-          if (publicQuestionIds.has(key)) {
+          if (publicQuestionIds.has(key) && key !== 'team_identity_proof' && key !== 'identity_proof') {
             safeTeamResponses[key] = val;
           }
         }
@@ -558,7 +822,7 @@ exports.getPublicTeams = async (req, res, next) => {
         const safePlayerResponses = {};
         if (p.responses) {
           for (const [key, val] of (p.responses instanceof Map ? p.responses : Object.entries(p.responses))) {
-            if (publicQuestionIds.has(key)) {
+            if (publicQuestionIds.has(key) && key !== 'phone_number' && key !== 'college_id' && key !== 'identity_proof') {
               safePlayerResponses[key] = val;
             }
           }
@@ -581,9 +845,14 @@ exports.getPublicTeams = async (req, res, next) => {
         teamTag: reg.teamTag,
         teamLogo: reg.teamLogo,
         captain: {
-          name: reg.captain?.name || 'Captain',
-          username: reg.captain?.username || 'Captain',
+          name: reg.captain?.name || 'Leader',
+          username: reg.captain?.username || 'Leader',
           avatar: reg.captain?.avatar,
+        },
+        leader: {
+          name: (reg.leader || reg.captain)?.name || 'Leader',
+          username: (reg.leader || reg.captain)?.username || 'Leader',
+          avatar: (reg.leader || reg.captain)?.avatar,
         },
         status: reg.status,
         teamResponses: safeTeamResponses,
@@ -602,7 +871,7 @@ exports.getPublicTeams = async (req, res, next) => {
   }
 };
 
-// @desc    Admin: List all registrations for a tournament with full verification details
+// @desc    Admin: List all registrations for a tournament with full verification details & ONE Team Identity PDF
 // @route   GET /api/admin/tournaments/:id/registrations
 // @access  Private (Admin / Staff)
 exports.getAdminRegistrations = async (req, res, next) => {
@@ -623,8 +892,9 @@ exports.getAdminRegistrations = async (req, res, next) => {
     }
 
     const registrations = await TournamentRegistration.find(query)
-      .populate('captain', 'name username email avatar college')
-      .populate('players.user', 'name username email avatar college')
+      .populate('captain', 'name username email avatar college studentId phone')
+      .populate('leader', 'name username email avatar college studentId phone')
+      .populate('players.user', 'name username email avatar college studentId phone')
       .sort({ createdAt: -1 });
 
     const form = await TournamentForm.findOne({ tournament: tournament._id });
@@ -641,6 +911,8 @@ exports.getAdminRegistrations = async (req, res, next) => {
         minTeamSize: tournament.minTeamSize || 4,
         maxTeamSize: tournament.maxTeamSize || 5,
         maxTeams: tournament.maxTeams || 16,
+        registrationDeadline: tournament.registrationDeadline,
+        identityProofDeadline: tournament.identityProofDeadline || tournament.registrationDeadline,
       },
     });
   } catch (error) {
@@ -648,19 +920,12 @@ exports.getAdminRegistrations = async (req, res, next) => {
   }
 };
 
-// @desc    Admin: Verify or reject team registration
+// @desc    Admin: Verify or reject team registration and identity proof
 // @route   PUT /api/admin/registrations/:id/verify
 // @access  Private (Admin / Staff)
 exports.verifyRegistration = async (req, res, next) => {
   try {
-    const { status, verificationNotes } = req.body; // 'verified' | 'rejected' | 'complete' | 'incomplete'
-
-    if (!['verified', 'rejected', 'complete', 'incomplete'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Status must be verified, rejected, complete, or incomplete',
-      });
-    }
+    const { status, identityProofStatus, verificationNotes } = req.body;
 
     const registration = await TournamentRegistration.findById(req.params.id);
 
@@ -671,16 +936,41 @@ exports.verifyRegistration = async (req, res, next) => {
       });
     }
 
-    registration.status = status;
+    if (status) {
+      if (!['verified', 'rejected', 'complete', 'incomplete'].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Status must be verified, rejected, complete, or incomplete',
+        });
+      }
+      registration.status = status;
+    }
+
+    if (identityProofStatus) {
+      if (!['pending', 'submitted', 'verified', 'rejected'].includes(identityProofStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: 'identityProofStatus must be pending, submitted, verified, or rejected',
+        });
+      }
+      if (!registration.identityProof) {
+        registration.identityProof = {};
+      }
+      registration.identityProof.status = identityProofStatus;
+    }
+
     if (verificationNotes !== undefined) {
       registration.verificationNotes = verificationNotes;
+      if (registration.identityProof) {
+        registration.identityProof.verificationNotes = verificationNotes;
+      }
     }
 
     await registration.save();
 
     res.status(200).json({
       success: true,
-      message: `Registration status updated to ${status.toUpperCase()}`,
+      message: 'Registration verification updated successfully',
       registration,
     });
   } catch (error) {
@@ -694,10 +984,15 @@ exports.verifyRegistration = async (req, res, next) => {
 exports.getMyRegistrations = async (req, res, next) => {
   try {
     const registrations = await TournamentRegistration.find({
-      'players.user': req.user.id,
+      $or: [
+        { 'players.user': req.user.id },
+        { captain: req.user.id },
+        { leader: req.user.id },
+      ],
     })
-      .populate('tournament', 'name slug game banner status registrationDeadline startDate')
+      .populate('tournament', 'name slug game banner status registrationDeadline identityProofDeadline startDate')
       .populate('captain', 'name username avatar')
+      .populate('leader', 'name username avatar')
       .populate('players.user', 'name username avatar')
       .sort({ updatedAt: -1 });
 

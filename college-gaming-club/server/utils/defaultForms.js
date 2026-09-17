@@ -1,7 +1,7 @@
 // Predefined form templates for esports games
 
 const getBgmiDefaultQuestions = () => [
-  // Team Questions
+  // Team Questions (Applied once for the entire team)
   {
     id: 'team_type',
     scope: 'team',
@@ -26,8 +26,20 @@ const getBgmiDefaultQuestions = () => [
     order: 2,
     isPublic: true,
   },
+  {
+    id: 'team_identity_proof',
+    scope: 'team',
+    label: 'Team Identity / College Proof',
+    helpText: 'Upload ONE PDF containing the identity/college proof of all registered team members. For UEM students, include the required IEMCRP/college proof for each member.',
+    fieldType: 'file_upload',
+    required: true,
+    options: [],
+    placeholder: '',
+    order: 3,
+    isPublic: false, // Private / Admin Only: YES
+  },
 
-  // Player Questions (Applied to Captain, Starters, and Substitute)
+  // Player Template Questions (Repeated once for each member: Leader, Starters, Substitute)
   {
     id: 'player_name',
     scope: 'player',
@@ -37,7 +49,7 @@ const getBgmiDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. Shreyas Roy',
-    order: 3,
+    order: 4,
     isPublic: true,
   },
   {
@@ -49,7 +61,7 @@ const getBgmiDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. University of Engineering & Management, Jaipur',
-    order: 4,
+    order: 5,
     isPublic: true,
   },
   {
@@ -61,7 +73,7 @@ const getBgmiDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. UEMJ/2023/BTECH/042',
-    order: 5,
+    order: 6,
     isPublic: false, // Private: not exposed on public team showcase
   },
   {
@@ -73,7 +85,7 @@ const getBgmiDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. 5123456789',
-    order: 6,
+    order: 7,
     isPublic: true,
   },
   {
@@ -85,7 +97,7 @@ const getBgmiDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. ApexGod丨亗',
-    order: 7,
+    order: 8,
     isPublic: true,
   },
   {
@@ -97,7 +109,7 @@ const getBgmiDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. +91 9876543210',
-    order: 8,
+    order: 9,
     isPublic: false, // Private: not exposed on public team showcase
   },
   {
@@ -109,24 +121,13 @@ const getBgmiDefaultQuestions = () => [
     required: false,
     options: [],
     placeholder: '',
-    order: 9,
-    isPublic: true,
-  },
-  {
-    id: 'identity_proof',
-    scope: 'player',
-    label: 'Identity / College Proof',
-    helpText: 'Upload student ID card or enrollment proof document (Single PDF only, max 10MB)',
-    fieldType: 'file_upload',
-    required: true,
-    options: [],
-    placeholder: '',
     order: 10,
-    isPublic: false, // Private: only visible to admins
+    isPublic: true,
   },
 ];
 
 const getFreeFireDefaultQuestions = () => [
+  // Team Questions
   {
     id: 'team_type',
     scope: 'team',
@@ -140,6 +141,20 @@ const getFreeFireDefaultQuestions = () => [
     isPublic: true,
   },
   {
+    id: 'team_identity_proof',
+    scope: 'team',
+    label: 'Team Identity / College Proof',
+    helpText: 'Upload ONE PDF containing the identity/college proof of all registered team members. For UEM students, include the required IEMCRP/college proof for each member.',
+    fieldType: 'file_upload',
+    required: true,
+    options: [],
+    placeholder: '',
+    order: 2,
+    isPublic: false, // Private / Admin Only: YES
+  },
+
+  // Player Questions
+  {
     id: 'player_name',
     scope: 'player',
     label: 'Full Name',
@@ -148,7 +163,7 @@ const getFreeFireDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. Rohit Sharma',
-    order: 2,
+    order: 3,
     isPublic: true,
   },
   {
@@ -160,7 +175,7 @@ const getFreeFireDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. UEM Jaipur',
-    order: 3,
+    order: 4,
     isPublic: true,
   },
   {
@@ -172,7 +187,7 @@ const getFreeFireDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. 1202200201',
-    order: 4,
+    order: 5,
     isPublic: false,
   },
   {
@@ -184,7 +199,7 @@ const getFreeFireDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. 987654321',
-    order: 5,
+    order: 6,
     isPublic: true,
   },
   {
@@ -196,7 +211,7 @@ const getFreeFireDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. 亗•SHADOW•亗',
-    order: 6,
+    order: 7,
     isPublic: true,
   },
   {
@@ -208,7 +223,7 @@ const getFreeFireDefaultQuestions = () => [
     required: true,
     options: [],
     placeholder: 'e.g. +91 9123456780',
-    order: 7,
+    order: 8,
     isPublic: false,
   },
   {
@@ -219,20 +234,8 @@ const getFreeFireDefaultQuestions = () => [
     required: false,
     options: [],
     placeholder: '',
-    order: 8,
-    isPublic: true,
-  },
-  {
-    id: 'identity_proof',
-    scope: 'player',
-    label: 'Identity / College Proof',
-    helpText: 'Upload student ID card or enrollment proof document (Single PDF only, max 10MB)',
-    fieldType: 'file_upload',
-    required: true,
-    options: [],
-    placeholder: '',
     order: 9,
-    isPublic: false,
+    isPublic: true,
   },
 ];
 

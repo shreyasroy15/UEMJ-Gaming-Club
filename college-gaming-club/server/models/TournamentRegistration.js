@@ -66,10 +66,24 @@ const tournamentRegistrationSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+    leader: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
     captain: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    identityProof: {
+      url: { type: String, default: '' },
+      submittedAt: { type: Date },
+      status: {
+        type: String,
+        enum: ['pending', 'submitted', 'verified', 'rejected'],
+        default: 'pending',
+      },
+      verificationNotes: { type: String, default: '' },
     },
     teamResponses: {
       type: Map,

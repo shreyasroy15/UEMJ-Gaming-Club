@@ -58,6 +58,7 @@ const AdminTournaments = () => {
     allowSubstitutes: true,
     maxSubstitutes: 1,
     registrationDeadline: '',
+    identityProofDeadline: '',
     startDate: '',
     status: 'upcoming',
   });
@@ -106,6 +107,7 @@ const AdminTournaments = () => {
       allowSubstitutes: true,
       maxSubstitutes: 1,
       registrationDeadline: new Date(Date.now() + 7 * 24 * 3600000).toISOString().slice(0, 16),
+      identityProofDeadline: new Date(Date.now() + 7 * 24 * 3600000).toISOString().slice(0, 16),
       startDate: new Date(Date.now() + 10 * 24 * 3600000).toISOString().slice(0, 16),
       status: 'registration-open',
     });
@@ -128,6 +130,9 @@ const AdminTournaments = () => {
       allowSubstitutes: tournament.allowSubstitutes !== false,
       maxSubstitutes: tournament.maxSubstitutes || 1,
       registrationDeadline: new Date(tournament.registrationDeadline).toISOString().slice(0, 16),
+      identityProofDeadline: tournament.identityProofDeadline
+        ? new Date(tournament.identityProofDeadline).toISOString().slice(0, 16)
+        : new Date(tournament.registrationDeadline).toISOString().slice(0, 16),
       startDate: new Date(tournament.startDate).toISOString().slice(0, 16),
       status: tournament.status || 'upcoming',
     });
@@ -216,22 +221,24 @@ const AdminTournaments = () => {
   };
 
   // Verify / Reject Team Registration
-  const handleVerifyRegistration = async (regId, status) => {
+  const handleVerifyRegistration = async (regId, status = null, identityProofStatus = null) => {
     let note = '';
-    if (status === 'rejected') {
-      note = prompt('Please enter the reason for rejection (e.g. Invalid Student ID card):') || '';
+    if (status === 'rejected' || identityProofStatus === 'rejected') {
+      note = prompt('Please enter the reason for rejection (e.g. Invalid or unreadable college ID card in PDF):') || '';
       if (!note) return;
     }
 
     try {
       setVerifyingId(regId);
-      const res = await API.put(`/registrations/${regId}/verify`, {
-        status,
-        verificationNotes: note,
-      });
+      const payload = {};
+      if (status) payload.status = status;
+      if (identityProofStatus) payload.identityProofStatus = identityProofStatus;
+      if (note) payload.verificationNotes = note;
+
+      const res = await API.put(`/registrations/${regId}/verify`, payload);
 
       if (res.data.success) {
-        addToast(`Team status updated to ${status.toUpperCase()}!`, 'success');
+        addToast('Registration verification updated successfully!', 'success');
         // Refresh list
         const refreshed = await API.get(`/tournaments/${viewingTournament._id}/admin-registrations`);
         setAdminRegistrations(refreshed.data.registrations || []);
@@ -555,7 +562,7 @@ const AdminTournaments = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
                 Registration Deadline *
@@ -565,6 +572,19 @@ const AdminTournaments = () => {
                 required
                 value={formData.registrationDeadline}
                 onChange={(e) => setFormData({ ...formData, registrationDeadline: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                Identity Proof Deadline *
+              </label>
+              <input
+                type="datetime-local"
+                required
+                value={formData.identityProofDeadline}
+                onChange={(e) => setFormData({ ...formData, identityProofDeadline: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
               />
             </div>
@@ -694,6 +714,17 @@ const AdminTournaments = () => {
               {filteredRegistrations.map((reg, idx) => {
                 const isExpanded = expandedTeamId === reg._id;
                 const isComplete = reg.status === 'complete' || reg.status === 'verified';
+                const minStarters = viewingTournament?.minTeamSize || 4;
+                const starters = reg.players?.filter((p) => p.role === 'captain' || p.role === 'starter') || [];
+                const completedStarters = starters.filter((p) => p.status === 'completed');
+
+                // Extract team-level identity proof
+                const idProofUrl = reg.identityProof?.url ||
+                  (reg.teamResponses instanceof Map
+                    ? (reg.teamResponses.get('team_identity_proof') || reg.teamResponses.get('identity_proof'))
+                    : (reg.teamResponses?.team_identity_proof || reg.teamResponses?.identity_proof));
+
+                const idProofStatus = reg.identityProof?.status || (idProofUrl ? 'submitted' : 'pending');
 
                 return (
                   <div
@@ -714,8 +745,12 @@ const AdminTournaments = () => {
                               {reg.teamCode}
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">
-                            Captain: <strong>{reg.captain?.name}</strong> • Players: {reg.players?.length}
+                          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2 font-mono">
+                            <span>Leader: <strong>{(reg.leader || reg.captain)?.name}</strong></span>
+                            <span>•</span>
+                            <span className={completedStarters.length >= minStarters ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                              {completedStarters.length}/{minStarters} Required Players
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -742,7 +777,7 @@ const AdminTournaments = () => {
                             type="button"
                             disabled={verifyingId === reg._id}
                             onClick={() => handleVerifyRegistration(reg._id, 'verified')}
-                            className="p-1.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800"
+                            className="p-1.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 cursor-pointer"
                             title="Verify and Approve Team"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -753,7 +788,7 @@ const AdminTournaments = () => {
                             type="button"
                             disabled={verifyingId === reg._id}
                             onClick={() => handleVerifyRegistration(reg._id, 'rejected')}
-                            className="p-1.5 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800"
+                            className="p-1.5 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 cursor-pointer"
                             title="Reject Registration"
                           >
                             <XCircle className="w-3.5 h-3.5" />
@@ -763,7 +798,7 @@ const AdminTournaments = () => {
                         <button
                           type="button"
                           onClick={() => setExpandedTeamId(isExpanded ? null : reg._id)}
-                          className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+                          className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
                           title="View Roster Details"
                         >
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -780,9 +815,90 @@ const AdminTournaments = () => {
                           </div>
                         )}
 
+                        {/* ONE Team-Level Combined Identity Proof Section */}
+                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-amber-900/40 space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-amber-400" />
+                              <span className="font-bold text-white font-mono uppercase text-xs">
+                                Team Identity Proof (Combined 1 PDF)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 font-mono">
+                              <span className="text-[10px] text-slate-400">Status:</span>
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                  idProofStatus === 'verified'
+                                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-600'
+                                    : idProofStatus === 'rejected'
+                                    ? 'bg-rose-950 text-rose-300 border border-rose-600'
+                                    : idProofStatus === 'submitted'
+                                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-600'
+                                    : 'bg-amber-950 text-amber-300 border border-amber-600'
+                                }`}
+                              >
+                                {idProofStatus}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1">
+                            {idProofUrl ? (
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={idProofUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 font-bold"
+                                >
+                                  <FileText className="w-4 h-4 text-red-400" /> [ View Team PDF ]
+                                </a>
+                                {reg.identityProof?.submittedAt && (
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    Uploaded: {new Date(reg.identityProof.submittedAt).toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-amber-400 font-mono text-[11px]">
+                                ⏳ Pending: Squad has not yet submitted the combined identity proof PDF
+                              </span>
+                            )}
+
+                            {idProofUrl && (
+                              <div className="flex items-center gap-1.5">
+                                {idProofStatus !== 'verified' && (
+                                  <button
+                                    type="button"
+                                    disabled={verifyingId === reg._id}
+                                    onClick={() => handleVerifyRegistration(reg._id, null, 'verified')}
+                                    className="px-2.5 py-1 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 text-[11px] font-bold border border-emerald-800 flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <CheckCircle2 className="w-3 h-3" /> Approve PDF
+                                  </button>
+                                )}
+                                {idProofStatus !== 'rejected' && (
+                                  <button
+                                    type="button"
+                                    disabled={verifyingId === reg._id}
+                                    onClick={() => handleVerifyRegistration(reg._id, null, 'rejected')}
+                                    className="px-2.5 py-1 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 text-[11px] font-bold border border-rose-800 flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <XCircle className="w-3 h-3" /> Reject PDF
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Roster Members Breakdown */}
                         <div>
-                          <h4 className="text-[11px] font-mono font-bold text-slate-400 uppercase mb-2">
-                            Roster Players & Submitted Documents ({reg.players?.length || 0}):
+                          <h4 className="text-[11px] font-mono font-bold text-slate-400 uppercase mb-2 flex items-center justify-between">
+                            <span>Roster Members ({reg.players?.length || 0}):</span>
+                            <span className="text-cyan-400 font-bold font-mono">
+                              {completedStarters.length}/{minStarters} Starters Completed
+                            </span>
                           </h4>
 
                           <div className="space-y-3">
@@ -790,34 +906,38 @@ const AdminTournaments = () => {
                               const responses = player.responses instanceof Map
                                 ? Object.fromEntries(player.responses)
                                 : player.responses || {};
+                              const isCompleted = player.status === 'completed';
+                              const isSlotLeader = player.role === 'captain';
 
                               return (
                                 <div
-                                  key={player._id}
+                                  key={player._id || player.slotNumber}
                                   className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2"
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-bold text-white">
-                                        Slot #{player.slotNumber}: {responses.player_name || player.user?.name}
+                                      <span className="font-bold text-white font-mono">
+                                        Player {player.slotNumber} {isCompleted ? '✓' : '⏳'}: {responses.player_name || player.user?.name}
                                       </span>
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-indigo-950 text-indigo-300">
-                                        {player.role}
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold ${
+                                        isSlotLeader ? 'bg-amber-950 text-amber-300' : 'bg-indigo-950 text-indigo-300'
+                                      }`}>
+                                        {isSlotLeader ? 'Leader' : player.role}
                                       </span>
                                     </div>
                                     <span
                                       className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${
-                                        player.status === 'completed'
-                                          ? 'text-emerald-400 bg-emerald-950'
-                                          : 'text-amber-400 bg-amber-950'
+                                        isCompleted
+                                          ? 'text-emerald-400 bg-emerald-950 border border-emerald-800'
+                                          : 'text-amber-400 bg-amber-950 border border-amber-800'
                                       }`}
                                     >
-                                      {player.status}
+                                      {isCompleted ? '✓ Profile Completed' : '⏳ Details Incomplete'}
                                     </span>
                                   </div>
 
-                                  {/* Player responses key-values */}
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] text-slate-300 pt-1 border-t border-slate-800/60">
+                                  {/* Player responses key-values (No individual ID card proof) */}
+                                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[10px] text-slate-300 pt-1 border-t border-slate-800/60">
                                     <div>
                                       <span className="text-slate-500 block">IGN:</span>
                                       <span className="font-mono font-bold text-cyan-300">{responses.game_ign || 'N/A'}</span>
@@ -828,30 +948,15 @@ const AdminTournaments = () => {
                                     </div>
                                     <div>
                                       <span className="text-slate-500 block">College:</span>
-                                      <span>{responses.college_name || player.user?.college || 'N/A'}</span>
+                                      <span className="truncate block">{responses.college_name || player.user?.college || 'N/A'}</span>
                                     </div>
                                     <div>
                                       <span className="text-slate-500 block">College ID:</span>
                                       <span className="font-mono">{responses.college_id || 'N/A'}</span>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500 block">Phone / WhatsApp:</span>
+                                      <span className="text-slate-500 block">WhatsApp:</span>
                                       <span className="font-mono">{responses.phone_number || 'N/A'}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500 block">Identity / College Proof (PDF):</span>
-                                      {responses.identity_proof || responses.student_id_proof ? (
-                                        <a
-                                          href={responses.identity_proof || responses.student_id_proof}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="text-red-400 hover:text-red-300 underline font-bold flex items-center gap-1"
-                                        >
-                                          <FileText className="w-3.5 h-3.5 text-red-400" /> View Identity Proof PDF
-                                        </a>
-                                      ) : (
-                                        <span className="text-rose-400 font-mono text-[10px]">Missing Document</span>
-                                      )}
                                     </div>
                                   </div>
                                 </div>

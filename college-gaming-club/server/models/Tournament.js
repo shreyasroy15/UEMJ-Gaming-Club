@@ -90,6 +90,9 @@ const tournamentSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    identityProofDeadline: {
+      type: Date,
+    },
     startDate: {
       type: Date,
       required: true,

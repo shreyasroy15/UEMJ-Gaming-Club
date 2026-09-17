@@ -29,6 +29,8 @@ import {
   UserPlus,
   X,
   FileText,
+  Clock,
+  Shield,
 } from 'lucide-react';
 
 const FIELD_TYPES = [
@@ -41,7 +43,7 @@ const FIELD_TYPES = [
   { id: 'multiple_choice', label: 'Multiple Choice (Radio)' },
   { id: 'checkbox', label: 'Checkboxes (Multi-select)' },
   { id: 'image_upload', label: 'Image Upload (Photo / Avatar)' },
-  { id: 'file_upload', label: 'File Upload (Identity / College Proof PDF)' },
+  { id: 'file_upload', label: 'File Upload (PDF Document)' },
 ];
 
 const FormBuilder = () => {
@@ -64,6 +66,7 @@ const FormBuilder = () => {
   const [maxTeamSize, setMaxTeamSize] = useState(5);
   const [allowSubstitutes, setAllowSubstitutes] = useState(true);
   const [maxSubstitutes, setMaxSubstitutes] = useState(1);
+  const [identityProofDeadline, setIdentityProofDeadline] = useState('');
 
   // Preview form state
   const [previewValues, setPreviewValues] = useState({});
@@ -82,7 +85,36 @@ const FormBuilder = () => {
         setFormTitle(form.title || `${res.data.tournament.name} Registration Form`);
         setFormDescription(form.description || '');
         setIsPublished(form.isPublished !== false);
-        setQuestions(form.questions || []);
+
+        // Sanitize questions: STRICTLY remove identity_proof from player scope
+        let rawQuestions = form.questions || [];
+        let sanitized = rawQuestions.filter((q) => {
+          if (q.scope === 'player' && (q.id === 'identity_proof' || q.id === 'student_id_proof' || q.id === 'team_identity_proof')) {
+            return false;
+          }
+          return true;
+        });
+
+        // Ensure Team Identity Proof exists in team scope
+        const hasTeamProof = sanitized.some(
+          (q) => q.scope === 'team' && (q.id === 'team_identity_proof' || q.id === 'identity_proof')
+        );
+        if (!hasTeamProof) {
+          sanitized.push({
+            id: 'team_identity_proof',
+            scope: 'team',
+            label: 'Team Identity / College Proof',
+            helpText: 'Upload ONE PDF containing the identity/college proof of all registered team members. For UEM students, include the required IEMCRP/college proof for each member.',
+            fieldType: 'file_upload',
+            required: true,
+            options: [],
+            placeholder: '',
+            order: 3,
+            isPublic: false,
+          });
+        }
+
+        setQuestions(sanitized);
         setTournament(res.data.tournament);
 
         const minS = res.data.tournament.minTeamSize || 4;
@@ -92,6 +124,11 @@ const FormBuilder = () => {
         setAllowSubstitutes(res.data.tournament.allowSubstitutes !== false);
         setMaxSubstitutes(res.data.tournament.maxSubstitutes || 1);
         setPreviewSlotCount(minS);
+
+        const idDeadline = res.data.tournament.identityProofDeadline || res.data.tournament.registrationDeadline;
+        if (idDeadline) {
+          setIdentityProofDeadline(new Date(idDeadline).toISOString().slice(0, 16));
+        }
       }
     } catch (err) {
       console.error(err);
@@ -191,6 +228,7 @@ const FormBuilder = () => {
           maxTeamSize: Number(maxTeamSize),
           allowSubstitutes: Boolean(allowSubstitutes),
           maxSubstitutes: Number(maxSubstitutes),
+          identityProofDeadline: identityProofDeadline ? new Date(identityProofDeadline).toISOString() : undefined,
         },
       };
 
@@ -260,7 +298,7 @@ const FormBuilder = () => {
           <div className="flex p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold">
             <button
               onClick={() => setActiveMode('builder')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 activeMode === 'builder'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
@@ -273,7 +311,7 @@ const FormBuilder = () => {
                 setActiveMode('preview');
                 setPreviewSlotCount(minTeamSize);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 activeMode === 'preview'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
@@ -301,13 +339,13 @@ const FormBuilder = () => {
               <h2 className="text-sm font-bold text-white uppercase font-mono flex items-center gap-2">
                 <Settings className="w-4 h-4 text-indigo-400" /> Player Count & Squad Configuration
               </h2>
-              <span className="text-[11px] text-slate-400 font-mono">Controls how slots are generated</span>
+              <span className="text-[11px] text-slate-400 font-mono">Controls squad rules & deadlines</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-mono font-bold text-slate-300">
-                  Required Players (Starters) *
+                  Required Players *
                 </label>
                 <input
                   type="number"
@@ -318,13 +356,13 @@ const FormBuilder = () => {
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono font-bold"
                 />
                 <p className="text-[10px] text-slate-400">
-                  e.g. 2 for Duo, 4 for Squad. Must complete to finalize registration.
+                  e.g. 2 for Duo, 4 for Squad.
                 </p>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-mono font-bold text-slate-300">
-                  Maximum Players (Capacity) *
+                  Maximum Players *
                 </label>
                 <input
                   type="number"
@@ -335,7 +373,7 @@ const FormBuilder = () => {
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono font-bold"
                 />
                 <p className="text-[10px] text-slate-400">
-                  Cap on total roster. Teams can use <strong>[+ Add Player]</strong> up to this limit.
+                  Total cap with optional slots.
                 </p>
               </div>
 
@@ -351,17 +389,17 @@ const FormBuilder = () => {
                       onChange={(e) => setAllowSubstitutes(e.target.checked)}
                       className="w-4 h-4 rounded text-indigo-500 bg-slate-950 border-slate-800 focus:ring-0 cursor-pointer"
                     />
-                    <span>Enable Substitute Slots</span>
+                    <span>Enable Subs</span>
                   </label>
                 </div>
                 <p className="text-[10px] text-slate-400">
-                  Slots beyond Required Players will be labeled as Substitute.
+                  Extra slots become substitute.
                 </p>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-mono font-bold text-slate-300">
-                  Max Substitutes Allowed
+                  Max Substitutes
                 </label>
                 <input
                   type="number"
@@ -373,7 +411,22 @@ const FormBuilder = () => {
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono font-bold disabled:opacity-40"
                 />
                 <p className="text-[10px] text-slate-400">
-                  Usually 1 substitute for esports squads.
+                  Usually 1 for esports.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-mono font-bold text-slate-300 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" /> Identity Proof Deadline *
+                </label>
+                <input
+                  type="datetime-local"
+                  value={identityProofDeadline}
+                  onChange={(e) => setIdentityProofDeadline(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
+                />
+                <p className="text-[10px] text-slate-400">
+                  After this deadline, user uploads are closed.
                 </p>
               </div>
             </div>
@@ -381,11 +434,11 @@ const FormBuilder = () => {
             <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[11px] text-slate-300 flex items-start gap-2">
               <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
               <span>
-                <strong>How registration forms work:</strong> Students initially see exactly{' '}
+                <strong>Squad Architecture:</strong> Initial registration shows exactly{' '}
                 <span className="text-cyan-300 font-bold font-mono">{minTeamSize} required player slot(s)</span>.
-                If Maximum Players ({maxTeamSize}) is greater than {minTeamSize}, an interactive{' '}
-                <span className="text-indigo-300 font-bold font-mono">[+ Add Player]</span> button allows captains
-                to add optional player slots up to the {maxTeamSize} player limit.
+                Captains can use <span className="text-indigo-300 font-bold font-mono">[+ Add Player]</span> to add optional slots
+                up to {maxTeamSize}. Once all required players complete their player profiles, the{' '}
+                <strong className="text-amber-300">ONE Team Identity Proof PDF</strong> upload unlocks.
               </span>
             </div>
           </div>
@@ -434,7 +487,7 @@ const FormBuilder = () => {
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
-                  placeholder="e.g. All players must upload college ID card PDF for verification."
+                  placeholder="e.g. All squads must upload one consolidated college proof PDF."
                 />
               </div>
             </div>
@@ -470,7 +523,7 @@ const FormBuilder = () => {
                   <Users className="w-4 h-4 text-indigo-400" /> 1. Team Fields ({teamQuestions.length})
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Filled <strong>once</strong> for the entire team (e.g. Team Category, Team Motto, Bio).
+                  Filled <strong>once</strong> for the entire squad (Team Category, Team Identity Proof PDF, Bio).
                 </p>
               </div>
 
@@ -483,18 +536,12 @@ const FormBuilder = () => {
               </button>
             </div>
 
-            {teamQuestions.length === 0 ? (
-              <div className="p-6 rounded-2xl border border-dashed border-slate-800 text-center text-xs text-slate-500">
-                No team-specific questions configured. Squads will only be asked for Team Name and Tag.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {questions.map((q, idx) => {
-                  if (q.scope !== 'team') return null;
-                  return renderQuestionCard(q, idx);
-                })}
-              </div>
-            )}
+            <div className="space-y-3">
+              {questions.map((q, idx) => {
+                if (q.scope !== 'team') return null;
+                return renderQuestionCard(q, idx);
+              })}
+            </div>
           </div>
 
           {/* 5. SECTION 2: PLAYER FIELD TEMPLATE (BLUEPRINT REPEATED FOR EACH PLAYER) */}
@@ -510,8 +557,8 @@ const FormBuilder = () => {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-300 mt-0.5">
-                  ⚡ <strong>Admin defines this once:</strong> The system automatically instantiates this exact set of fields
-                  for <strong>Player 1 (Captain)</strong>, <strong>Player 2</strong>, <strong>Player 3</strong>, and any optional slots.
+                  ⚡ <strong>Defined ONCE:</strong> Repeated automatically for Player 1 (Leader), Player 2, Player 3, etc.
+                  (Identity Proof is handled at the team level, NOT per-player).
                 </p>
               </div>
 
@@ -520,7 +567,7 @@ const FormBuilder = () => {
                 onClick={() => handleAddQuestion('player')}
                 className="px-3 py-1.5 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-700/60 text-xs font-bold text-cyan-300 flex items-center gap-1.5 cursor-pointer shrink-0"
               >
-                <Plus className="w-3.5 h-3.5" /> Add Custom Player Field
+                <Plus className="w-3.5 h-3.5" /> Add Player Field
               </button>
             </div>
 
@@ -539,7 +586,7 @@ const FormBuilder = () => {
             <div className="flex items-center gap-2">
               <Eye className="w-4 h-4 text-indigo-400 shrink-0" />
               <span>
-                <strong>Interactive Student Preview:</strong> Showing Required Starters ({minTeamSize}) with dynamic{' '}
+                <strong>Interactive Student Preview:</strong> Required Starters ({minTeamSize}) with dynamic{' '}
                 <strong>[+ Add Player]</strong> capability up to Maximum Players ({maxTeamSize}).
               </span>
             </div>
@@ -589,37 +636,42 @@ const FormBuilder = () => {
                 </div>
               </div>
 
-              {teamQuestions.map((q) => (
-                <div key={q.id} className="space-y-1.5 pt-2">
-                  <label className="block text-xs font-bold text-slate-200">
-                    {q.label} {q.required && <span className="text-rose-400">*</span>}
-                  </label>
-                  {q.helpText && <p className="text-[11px] text-slate-400">{q.helpText}</p>}
+              {teamQuestions.map((q) => {
+                const isTeamIdProof = q.id === 'team_identity_proof' || q.fieldType === 'file_upload';
+                if (isTeamIdProof) return null; // rendered in dedicated section below
 
-                  {q.fieldType === 'dropdown' ? (
-                    <select
-                      value={previewValues[q.id] || ''}
-                      onChange={(e) => handlePreviewChange(q.id, e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                    >
-                      <option value="">{q.placeholder || 'Select an option'}</option>
-                      {q.options?.map((opt, i) => (
-                        <option key={i} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type={q.fieldType === 'number' ? 'number' : 'text'}
-                      value={previewValues[q.id] || ''}
-                      onChange={(e) => handlePreviewChange(q.id, e.target.value)}
-                      placeholder={q.placeholder || ''}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
-                    />
-                  )}
-                </div>
-              ))}
+                return (
+                  <div key={q.id} className="space-y-1.5 pt-2">
+                    <label className="block text-xs font-bold text-slate-200">
+                      {q.label} {q.required && <span className="text-rose-400">*</span>}
+                    </label>
+                    {q.helpText && <p className="text-[11px] text-slate-400">{q.helpText}</p>}
+
+                    {q.fieldType === 'dropdown' ? (
+                      <select
+                        value={previewValues[q.id] || ''}
+                        onChange={(e) => handlePreviewChange(q.id, e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                      >
+                        <option value="">{q.placeholder || 'Select an option'}</option>
+                        {q.options?.map((opt, i) => (
+                          <option key={i} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={q.fieldType === 'number' ? 'number' : 'text'}
+                        value={previewValues[q.id] || ''}
+                        onChange={(e) => handlePreviewChange(q.id, e.target.value)}
+                        placeholder={q.placeholder || ''}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Dynamic Repeated Player Slots Simulation */}
@@ -630,7 +682,7 @@ const FormBuilder = () => {
                     <User className="w-4 h-4 text-cyan-400" /> Player Slots ({previewSlotCount} Active Slots)
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Each slot below auto-renders the Player Field Template blueprint.
+                    Each slot below auto-renders the Player Field Template blueprint (no document uploads inside player slots).
                   </p>
                 </div>
 
@@ -671,7 +723,7 @@ const FormBuilder = () => {
                         <div>
                           <h4 className="text-sm font-bold text-white font-mono">
                             PLAYER {slotNum}{' '}
-                            {isCaptain ? '(Captain / Lead)' : isSubstitute ? '(Substitute)' : '(Required Starter)'}
+                            {isCaptain ? '(Team Leader)' : isSubstitute ? '(Substitute)' : '(Required Starter)'}
                           </h4>
                           <span className="text-[10px] text-slate-400">
                             {isRequiredStarter ? 'Mandatory for squad completion' : 'Optional player slot'}
@@ -689,14 +741,14 @@ const FormBuilder = () => {
                               : 'bg-indigo-950 text-indigo-300 border border-indigo-700/50'
                           }`}
                         >
-                          {isCaptain ? 'Captain' : isSubstitute ? 'Substitute' : 'Starter'}
+                          {isCaptain ? 'Team Leader' : isSubstitute ? 'Substitute' : 'Starter'}
                         </span>
 
                         {isSubstitute && (
                           <button
                             type="button"
                             onClick={() => handlePreviewRemoveSlot(slotNum)}
-                            className="p-1 rounded-lg bg-red-950 hover:bg-red-900 text-red-300"
+                            className="p-1 rounded-lg bg-red-950 hover:bg-red-900 text-red-300 cursor-pointer"
                             title="Remove optional slot"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -709,13 +761,12 @@ const FormBuilder = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {playerQuestions.map((q) => {
                         const fieldKey = `p${slotNum}_${q.id}`;
-                        const isDocProof = q.id === 'identity_proof' || q.fieldType === 'file_upload';
 
                         return (
                           <div
                             key={fieldKey}
                             className={`space-y-1.5 ${
-                              q.fieldType === 'long_text' || isDocProof ? 'sm:col-span-2' : ''
+                              q.fieldType === 'long_text' ? 'sm:col-span-2' : ''
                             }`}
                           >
                             <div className="flex items-center justify-between">
@@ -730,17 +781,9 @@ const FormBuilder = () => {
                             </div>
                             {q.helpText && <p className="text-[10px] text-slate-400">{q.helpText}</p>}
 
-                            {isDocProof ? (
-                              <div className="p-4 rounded-xl border border-dashed border-red-900/60 bg-red-950/10 text-center text-xs text-slate-300">
-                                <FileText className="w-6 h-6 mx-auto mb-1 text-red-400" />
-                                <span className="font-bold text-white">Upload Single Identity / College Proof (PDF)</span>
-                                <p className="text-[10px] text-slate-400 mt-0.5">
-                                  Single PDF document up to 10MB (Admin eyes only)
-                                </p>
-                              </div>
-                            ) : q.fieldType === 'image_upload' ? (
-                              <div className="p-3.5 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 text-center text-xs text-slate-400">
-                                <Upload className="w-5 h-5 mx-auto mb-1 text-cyan-400" />
+                            {q.fieldType === 'image_upload' ? (
+                              <div className="p-3 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 text-center text-xs text-slate-400">
+                                <Upload className="w-4 h-4 mx-auto mb-1 text-cyan-400" />
                                 <span className="text-slate-300 font-semibold">Upload Photo</span>
                               </div>
                             ) : q.fieldType === 'dropdown' ? (
@@ -784,6 +827,40 @@ const FormBuilder = () => {
                 </div>
               )}
             </div>
+
+            {/* Dedicated ONE Team Identity Proof Upload (Combined PDF) */}
+            <div className="p-6 rounded-3xl bg-slate-900/90 border border-amber-900/40 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-amber-400" />
+                  <h4 className="text-sm font-bold text-white font-mono uppercase">
+                    3. Team Identity / College Proof (Single Combined PDF)
+                  </h4>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-red-950 text-red-300 border border-red-800">
+                  🔒 Private / Admin Only
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300">
+                Upload ONE PDF containing the identity/college proof of all registered team members. For UEM students, include the required IEMCRP/college proof for each member.
+              </p>
+
+              <div className="p-5 rounded-2xl border-2 border-dashed border-amber-800/60 bg-amber-950/10 text-center space-y-2">
+                <FileText className="w-8 h-8 mx-auto text-amber-400" />
+                <div className="text-xs font-bold text-white">
+                  ONE Combined Team Identity Proof (PDF)
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  ⚡ Unlocks automatically once all {minTeamSize} required starters have filled their player profiles.
+                </p>
+                {identityProofDeadline && (
+                  <p className="text-[10px] text-amber-400 font-mono">
+                    Submission Deadline: {new Date(identityProofDeadline).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -794,16 +871,16 @@ const FormBuilder = () => {
   function renderQuestionCard(q, idx) {
     const isTeam = q.scope === 'team';
     const hasOptions = ['dropdown', 'multiple_choice', 'checkbox'].includes(q.fieldType);
-    const isIdentityProof = q.id === 'identity_proof';
+    const isTeamIdentityProof = q.id === 'team_identity_proof' || q.id === 'identity_proof';
 
     return (
       <div
         key={q.id || idx}
         className={`p-4 sm:p-5 rounded-2xl border transition-all ${
-          isTeam
+          isTeamIdentityProof
+            ? 'bg-slate-900/80 border-amber-900/60 shadow-lg shadow-amber-950/20'
+            : isTeam
             ? 'bg-slate-900/80 border-indigo-900/60 shadow-lg shadow-indigo-950/20'
-            : isIdentityProof
-            ? 'bg-slate-900/80 border-red-900/50 shadow-lg'
             : 'bg-slate-900/80 border-slate-800 shadow-lg'
         }`}
       >
@@ -817,17 +894,23 @@ const FormBuilder = () => {
             {/* Scope Badge */}
             <span
               className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase ${
-                isTeam
+                isTeamIdentityProof
+                  ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                  : isTeam
                   ? 'bg-indigo-950 text-indigo-300 border border-indigo-700/60'
                   : 'bg-cyan-950 text-cyan-300 border border-cyan-700/60'
               }`}
             >
-              {isTeam ? 'Team Scope (Once)' : 'Player Template (Repeats)'}
+              {isTeamIdentityProof
+                ? 'Team Identity Proof (1 PDF for squad)'
+                : isTeam
+                ? 'Team Scope (Once)'
+                : 'Player Template (Repeats for all)'}
             </span>
 
-            {isIdentityProof && (
+            {isTeamIdentityProof && (
               <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-red-950 text-red-300 border border-red-800">
-                📄 Single PDF Proof
+                🔒 Private / Admin Only
               </span>
             )}
           </div>
@@ -852,14 +935,16 @@ const FormBuilder = () => {
             >
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
-            <button
-              type="button"
-              onClick={() => handleDeleteQuestion(idx)}
-              className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900 text-red-300 transition-colors cursor-pointer"
-              title="Delete Question"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            {!isTeamIdentityProof && (
+              <button
+                type="button"
+                onClick={() => handleDeleteQuestion(idx)}
+                className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900 text-red-300 transition-colors cursor-pointer"
+                title="Delete Question"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -882,8 +967,9 @@ const FormBuilder = () => {
             <label className="block text-[11px] font-mono font-bold text-slate-300">Field Input Type</label>
             <select
               value={q.fieldType}
+              disabled={isTeamIdentityProof}
               onChange={(e) => handleUpdateQuestion(idx, { fieldType: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 disabled:opacity-60"
             >
               {FIELD_TYPES.map((ft) => (
                 <option key={ft.id} value={ft.id}>
@@ -898,23 +984,26 @@ const FormBuilder = () => {
             <label className="block text-[11px] font-mono font-bold text-slate-300">Target Scope</label>
             <select
               value={q.scope}
+              disabled={isTeamIdentityProof}
               onChange={(e) => handleUpdateQuestion(idx, { scope: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 disabled:opacity-60"
             >
               <option value="player">Player Template (Repeated)</option>
               <option value="team">Team Scope (Once)</option>
             </select>
           </div>
 
-          {/* Help Text */}
+          {/* Help Text / Guidance */}
           <div className="md:col-span-8 space-y-1">
-            <label className="block text-[11px] font-mono font-bold text-slate-300">Help / Subtitle Instructions</label>
+            <label className="block text-[11px] font-mono font-bold text-slate-300">
+              Guidance / Help Instructions
+            </label>
             <input
               type="text"
               value={q.helpText || ''}
               onChange={(e) => handleUpdateQuestion(idx, { helpText: e.target.value })}
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
-              placeholder="e.g. Upload PDF of your student ID or fee receipt"
+              placeholder="e.g. Upload ONE PDF containing identity proof of all members"
             />
           </div>
 
@@ -994,13 +1083,22 @@ const FormBuilder = () => {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={q.isPublic}
+                checked={isTeamIdentityProof ? false : q.isPublic}
+                disabled={isTeamIdentityProof}
                 onChange={(e) => handleUpdateQuestion(idx, { isPublic: e.target.checked })}
-                className="w-4 h-4 rounded text-indigo-500 bg-slate-950 border-slate-800 focus:ring-0 cursor-pointer"
+                className="w-4 h-4 rounded text-indigo-500 bg-slate-950 border-slate-800 focus:ring-0 cursor-pointer disabled:opacity-50"
               />
               <span className="font-bold text-slate-300 flex items-center gap-1">
-                {q.isPublic ? <Globe className="w-3 h-3 text-emerald-400" /> : <Lock className="w-3 h-3 text-amber-400" />}
-                {q.isPublic ? 'Publicly Visible on Team Card' : 'Private (Admin Eyes Only)'}
+                {isTeamIdentityProof || !q.isPublic ? (
+                  <Lock className="w-3 h-3 text-amber-400" />
+                ) : (
+                  <Globe className="w-3 h-3 text-emerald-400" />
+                )}
+                {isTeamIdentityProof
+                  ? 'Private / Admin Only (Enforced)'
+                  : q.isPublic
+                  ? 'Publicly Visible on Team Card'
+                  : 'Private (Admin Eyes Only)'}
               </span>
             </label>
           </div>

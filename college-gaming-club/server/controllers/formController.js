@@ -57,6 +57,7 @@ exports.getTournamentForm = async (req, res, next) => {
         allowSubstitutes: tournament.allowSubstitutes !== false,
         maxSubstitutes: tournament.maxSubstitutes || 1,
         registrationDeadline: tournament.registrationDeadline,
+        identityProofDeadline: tournament.identityProofDeadline || tournament.registrationDeadline,
         status: tournament.status,
       },
     });
@@ -119,12 +120,17 @@ exports.saveTournamentForm = async (req, res, next) => {
       tournament.registrationForm = form._id;
     }
 
-    // Update tournament team sizing rules if provided
+    // Update tournament team sizing rules & deadlines if provided
     if (teamConfig) {
       if (teamConfig.minTeamSize !== undefined) tournament.minTeamSize = Number(teamConfig.minTeamSize);
       if (teamConfig.maxTeamSize !== undefined) tournament.maxTeamSize = Number(teamConfig.maxTeamSize);
       if (teamConfig.allowSubstitutes !== undefined) tournament.allowSubstitutes = Boolean(teamConfig.allowSubstitutes);
       if (teamConfig.maxSubstitutes !== undefined) tournament.maxSubstitutes = Number(teamConfig.maxSubstitutes);
+      if (teamConfig.identityProofDeadline !== undefined) {
+        tournament.identityProofDeadline = teamConfig.identityProofDeadline
+          ? new Date(teamConfig.identityProofDeadline)
+          : tournament.registrationDeadline;
+      }
     }
     await tournament.save();
 
@@ -138,6 +144,7 @@ exports.saveTournamentForm = async (req, res, next) => {
         maxTeamSize: tournament.maxTeamSize,
         allowSubstitutes: tournament.allowSubstitutes,
         maxSubstitutes: tournament.maxSubstitutes,
+        identityProofDeadline: tournament.identityProofDeadline || tournament.registrationDeadline,
       },
     });
   } catch (error) {
