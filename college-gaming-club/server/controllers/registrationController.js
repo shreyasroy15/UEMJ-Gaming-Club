@@ -1799,3 +1799,114 @@ exports.declineInvitation = async (req, res, next) => {
   }
 };
 
+exports.getIdentityProofSecureUrl = async (req, res, next) => {
+  try {
+    const registration = await TournamentRegistration.findById(req.params.id);
+    if (!registration || !registration.identityProof?.url) {
+      return res.status(404).json({ success: false, message: 'Identity proof not found' });
+    }
+
+    // Check authorization: must be member or admin
+    const isAdmin = req.user.role === 'admin';
+    const currentUserId = req.user.id.toString();
+    const isMember = registration.players.some((p) => (p.user?._id || p.user)?.toString() === currentUserId);
+    const isCaptain = (registration.captain?._id || registration.captain)?.toString() === currentUserId;
+    const isLeader = (registration.leader?._id || registration.leader)?.toString() === currentUserId;
+
+    if (!isMember && !isAdmin && !isCaptain && !isLeader) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const publicId = registration.identityProof.publicId || getCloudinaryPublicId(registration.identityProof.url);
+
+    // Generate secure signed API download URL to bypass Cloudinary CDN PDF ACL restriction
+    let signedUrl = registration.identityProof.url;
+    if (cloudinaryConfigured && publicId && !publicId.startsWith('dev-upload-')) {
+      try {
+        signedUrl = cloudinary.utils.private_download_url(publicId, 'pdf', {
+          resource_type: registration.identityProof.resourceType || 'image',
+          type: 'upload',
+          expires_at: Math.floor(Date.now() / 1000) + 7200, // 2 hours
+        });
+      } catch (signErr) {
+        console.warn('Could not generate private_download_url:', signErr.message);
+        signedUrl = registration.identityProof.url;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      url: signedUrl,
+      fileName: registration.identityProof.fileName || 'Combined_Team_Identity_Proof.pdf',
+      fileSize: registration.identityProof.fileSize || 0,
+      streamUrl: `/api/registrations/${registration._id}/identity-proof-file`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Stream Identity Proof PDF file directly to browser (handles iframes & avoids CDN ACL)
+// @route   GET /api/registrations/:id/identity-proof-file
+// @access  Private (Team members / Captain / Admin)
+exports.streamIdentityProofFile = async (req, res, next) => {
+  try {
+    const registration = await TournamentRegistration.findById(req.params.id);
+    if (!registration || !registration.identityProof?.url) {
+      return res.status(404).json({ success: false, message: 'Identity proof not found' });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    const currentUserId = req.user.id.toString();
+    const isMember = registration.players.some((p) => (p.user?._id || p.user)?.toString() === currentUserId);
+    const isCaptain = (registration.captain?._id || registration.captain)?.toString() === currentUserId;
+    const isLeader = (registration.leader?._id || registration.leader)?.toString() === currentUserId;
+
+    if (!isMember && !isAdmin && !isCaptain && !isLeader) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const publicId = registration.identityProof.publicId || getCloudinaryPublicId(registration.identityProof.url);
+
+    // If development in-memory data URI
+    if (registration.identityProof.url.startsWith('data:application/pdf;base64,')) {
+      const base64Data = registration.identityProof.url.split(';base64,').pop();
+      const pdfBuffer = Buffer.from(base64Data, 'base64');
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${registration.identityProof.fileName || 'Combined_Team_Identity_Proof.pdf'}"`);
+      return res.send(pdfBuffer);
+    }
+
+    // Generate signed download URL
+    let downloadUrl = registration.identityProof.url;
+    if (cloudinaryConfigured && publicId && !publicId.startsWith('dev-upload-')) {
+      try {
+        downloadUrl = cloudinary.utils.private_download_url(publicId, 'pdf', {
+          resource_type: registration.identityProof.resourceType || 'image',
+          type: 'upload',
+          expires_at: Math.floor(Date.now() / 1000) + 7200,
+        });
+      } catch (e) {
+        console.warn('Error signing download url for stream:', e.message);
+      }
+    }
+
+    const fetchRes = await fetch(downloadUrl);
+    if (!fetchRes.ok) {
+      return res.status(fetchRes.status).json({
+        success: false,
+        message: 'Unable to stream identity proof document',
+      });
+    }
+
+    const fileName = registration.identityProof.fileName || 'Combined_Team_Identity_Proof.pdf';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+
+    const arrayBuffer = await fetchRes.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
+  } catch (error) {
+    next(error);
+  }
+};
+

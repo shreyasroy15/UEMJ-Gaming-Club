@@ -11,13 +11,17 @@ const gallerySchema = new mongoose.Schema(
       type: String,
       required: [true, 'Image URL is required'],
     },
+    publicId: {
+       type: String,
+       required: [true, 'Public ID is required'],
+    },
     description: {
       type: String,
       default: '',
     },
     category: {
       type: String,
-      enum: ['Tournaments', 'LAN Parties', 'Ceremonies', 'Setups', 'Community'],
+      enum: ['Tournaments', 'LAN Parties', 'Ceremonies', 'Setups', 'Community', 'Free Fire', 'BGMI'],
       default: 'Tournaments',
     },
     event: {

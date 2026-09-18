@@ -18,6 +18,8 @@ const {
   getMyInvitations,
   acceptInvitation,
   declineInvitation,
+  getIdentityProofSecureUrl,
+  streamIdentityProofFile,
 } = require('../controllers/registrationController');
 const { protect } = require('../middleware/authMiddleware');
 const { staffOnly } = require('../middleware/adminMiddleware');
@@ -68,6 +70,8 @@ const handlePdfUpload = (req, res, next) => {
 };
 
 // Workspace & submissions
+router.get('/:id/identity-proof-url', protect, getIdentityProofSecureUrl); // Secure signed URL route
+router.get('/:id/identity-proof-file', protect, streamIdentityProofFile); // Direct streaming route
 router.get('/:id', protect, getRegistrationWorkspace);
 router.post('/:id/invitations', protect, sendTournamentInvitation);
 router.put('/:id/player-submission', protect, submitPlayerInformation);

@@ -38,6 +38,8 @@ import AdminTournaments from './pages/admin/Tournaments';
 import AdminFormBuilder from './pages/admin/FormBuilder';
 import AdminMatches from './pages/admin/Matches';
 import AdminTeams from './pages/admin/Teams';
+import AdminTournamentTeams from './pages/admin/AdminTournamentTeams';
+import AdminTeamDetails from './pages/admin/AdminTeamDetails';
 import AdminGames from './pages/admin/Games';
 import AdminEvents from './pages/admin/Events';
 import AdminAnnouncements from './pages/admin/Announcements';
@@ -125,7 +127,11 @@ function App() {
               <Route path="tournaments" element={<AdminTournaments />} />
               <Route path="tournaments/:id/form" element={<AdminFormBuilder />} />
               <Route path="matches" element={<AdminMatches />} />
-              <Route path="teams" element={<AdminTeams />} />
+              <Route path="teams">
+                <Route index element={<AdminTeams />} />
+                <Route path=":tournamentId" element={<AdminTournamentTeams />} />
+                <Route path=":tournamentId/:registrationId" element={<AdminTeamDetails />} />
+              </Route>
               <Route path="games" element={<AdminGames />} />
               <Route path="events" element={<AdminEvents />} />
               <Route path="announcements" element={<AdminAnnouncements />} />

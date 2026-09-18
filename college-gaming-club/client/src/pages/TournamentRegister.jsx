@@ -166,8 +166,24 @@ const TournamentRegister = () => {
   const [proofError, setProofError] = useState('');
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [selectedFileMeta, setSelectedFileMeta] = useState(null);
+  const [identityProofSecureUrl, setIdentityProofSecureUrl] = useState('');
 
   const MAX_PDF_SIZE = 5 * 1024 * 1024; // 5 MB
+
+  useEffect(() => {
+    if (activeRegistration?._id && activeRegistration?.identityProof?.url) {
+      API.get(`/registrations/${activeRegistration._id}/identity-proof-url`)
+        .then((res) => {
+          if (res.data?.url) setIdentityProofSecureUrl(res.data.url);
+        })
+        .catch((err) => {
+          console.warn('Could not fetch secure identity proof URL:', err);
+          setIdentityProofSecureUrl(`/api/registrations/${activeRegistration._id}/identity-proof-file`);
+        });
+    } else {
+      setIdentityProofSecureUrl('');
+    }
+  }, [activeRegistration?._id, activeRegistration?.identityProof?.url]);
 
   const formatFileSize = (bytes) => {
     if (!bytes || isNaN(bytes)) return '';
@@ -240,6 +256,7 @@ const TournamentRegister = () => {
       if (res.data.success) {
         addToast('Team identity proof removed successfully.', 'success');
         setShowRemoveConfirm(false);
+        setIdentityProofSecureUrl('');
         if (res.data.registration) {
           setActiveRegistration(res.data.registration);
         } else {
@@ -253,6 +270,19 @@ const TournamentRegister = () => {
     } finally {
       setRemovingProof(false);
     }
+  };
+
+  const handleViewPdf = async () => {
+    try {
+      const res = await API.get(`/registrations/${activeRegistration._id}/identity-proof-url`);
+      if (res.data?.url) {
+        window.open(res.data.url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+    } catch (err) {
+      console.warn('Could not fetch signed identity-proof-url:', err);
+    }
+    window.open(activeRegistration.identityProof.url, '_blank', 'noopener,noreferrer');
   };
 
 
@@ -1027,15 +1057,14 @@ const TournamentRegister = () => {
 
                     {/* Action buttons */}
                     <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
-                      <a
-                        href={activeRegistration.identityProof.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 flex items-center gap-1.5 transition-colors"
+                      <button
+                        type="button"
+                        onClick={handleViewPdf}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         View PDF
-                      </a>
+                      </button>
 
                       {!isIdentityProofDeadlinePassed && (
                         <>
@@ -1087,6 +1116,34 @@ const TournamentRegister = () => {
                       <p className="text-[10px] text-slate-500 italic mt-1">
                         Identity proof submission deadline has passed. Replace and remove are disabled.
                       </p>
+                    )}
+
+                    {/* Inline Scrollable PDF Preview (User-side view without tapping) */}
+                    {identityProofSecureUrl && (
+                      <div className="pt-3 border-t border-slate-800/80 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5 font-mono uppercase tracking-wider">
+                            <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                            PDF Document Preview (Scroll to view)
+                          </span>
+                          <a
+                            href={identityProofSecureUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Open Fullscreen
+                          </a>
+                        </div>
+                        <div className="w-full h-[450px] sm:h-[550px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
+                          <iframe
+                            src={identityProofSecureUrl}
+                            className="w-full h-full rounded-xl bg-slate-950"
+                            title="Team Identity Proof Preview"
+                          />
+                        </div>
+                      </div>
                     )}
                   </div>
                 ) : (
