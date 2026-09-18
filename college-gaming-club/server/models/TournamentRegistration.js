@@ -84,6 +84,10 @@ const tournamentRegistrationSchema = new mongoose.Schema(
     },
     identityProof: {
       url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
+      resourceType: { type: String, default: 'raw' },
+      fileName: { type: String, default: '' },
+      fileSize: { type: Number, default: 0 },
       submittedAt: { type: Date },
       status: {
         type: String,

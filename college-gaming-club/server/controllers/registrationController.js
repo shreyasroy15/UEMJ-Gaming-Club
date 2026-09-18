@@ -3,6 +3,7 @@ const TournamentForm = require('../models/TournamentForm');
 const TournamentRegistration = require('../models/TournamentRegistration');
 const TournamentInvitation = require('../models/TournamentInvitation');
 const User = require('../models/User');
+const { cloudinary, isConfigured: cloudinaryConfigured } = require('../config/cloudinary');
 
 // Helper to generate unique team code
 const generateUniqueCode = async (game) => {
@@ -21,6 +22,20 @@ const generateUniqueCode = async (game) => {
     }
   }
   return code;
+};
+
+// Helper to extract Cloudinary publicId if not explicitly stored
+const getCloudinaryPublicId = (url) => {
+  if (!url || typeof url !== 'string' || !url.includes('cloudinary.com')) return '';
+  try {
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z0-9]+)?$/);
+    if (match && match[1]) {
+      return match[1];
+    }
+  } catch (e) {
+    console.error('Error parsing Cloudinary public ID:', e);
+  }
+  return '';
 };
 
 // Helper: check if a player's responses satisfy all required player-level questions (excluding team-level identity proof)
@@ -357,9 +372,10 @@ exports.joinTeamByCode = async (req, res, next) => {
       role,
       slotNumber: nextSlot,
       status: 'joined',
-      responses: playerPrefill,
+      responses: playerPrefill instanceof Map ? playerPrefill : new Map(Object.entries(playerPrefill)),
       joinedAt: new Date(),
     });
+    registration.markModified('players');
 
     // Save and re-evaluate
     await evaluateTeamCompletion(registration, tournament);
@@ -532,9 +548,10 @@ exports.submitPlayerInformation = async (req, res, next) => {
     }
 
     // Update player responses & mark completed
-    registration.players[playerIndex].responses = responses;
+    registration.players[playerIndex].responses = responses instanceof Map ? responses : new Map(Object.entries(responses));
     registration.players[playerIndex].status = 'completed';
     registration.players[playerIndex].completedAt = new Date();
+    registration.markModified('players');
 
     // Check if team is now complete
     await evaluateTeamCompletion(registration, tournament);
@@ -606,17 +623,104 @@ exports.uploadTeamIdentityProof = async (req, res, next) => {
       });
     }
 
-    const { url } = req.body;
-    if (!url || !url.trim()) {
+    const { url: bodyUrl, publicId: bodyPublicId, resourceType: bodyResourceType, fileName: bodyFileName, fileSize: bodyFileSize } = req.body || {};
+
+    let url = '';
+    let publicId = '';
+    let resourceType = 'raw';
+    let fileName = 'Combined_Team_Identity_Proof.pdf';
+    let fileSize = 0;
+
+    // Case 1: Direct multipart file upload
+    if (req.file) {
+      if (req.file.mimetype !== 'application/pdf') {
+        return res.status(400).json({
+          success: false,
+          message: 'Only PDF documents (.pdf) are allowed. Images and other file types are rejected.',
+        });
+      }
+
+      const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
+      if (ext !== 'pdf') {
+        return res.status(400).json({
+          success: false,
+          message: 'Only .pdf files are accepted.',
+        });
+      }
+
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: 'PDF must be 5 MB or smaller.',
+        });
+      }
+
+      fileName = req.file.originalname || 'Combined_Team_Identity_Proof.pdf';
+      fileSize = req.file.size;
+
+      if (cloudinaryConfigured) {
+        try {
+          const uploadResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              {
+                folder: 'uemj/private/identity-proofs',
+                resource_type: 'auto',
+              },
+              (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+              }
+            );
+            stream.end(req.file.buffer);
+          });
+
+          url = uploadResult.secure_url;
+          publicId = uploadResult.public_id;
+          resourceType = uploadResult.resource_type || 'raw';
+        } catch (uploadErr) {
+          console.error('Cloudinary upload error:', uploadErr);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to upload PDF to secure storage. Please try again.',
+          });
+        }
+      } else {
+        url = `data:application/pdf;base64,${req.file.buffer.toString('base64')}`;
+        publicId = `dev-upload-${Date.now()}`;
+        resourceType = 'raw';
+      }
+    } else if (bodyUrl && bodyUrl.trim()) {
+      // Case 2: JSON payload fallback
+      url = bodyUrl.trim();
+      publicId = bodyPublicId || '';
+      resourceType = bodyResourceType || 'raw';
+      fileName = bodyFileName || 'Combined_Team_Identity_Proof.pdf';
+      fileSize = Number(bodyFileSize) || 0;
+
+      if (fileSize > 5 * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: 'PDF must be 5 MB or smaller.',
+        });
+      }
+    } else {
       return res.status(400).json({
         success: false,
-        message: 'Please provide the uploaded PDF document URL',
+        message: 'Please provide a PDF file to upload (maximum 5 MB)',
       });
     }
 
+    // Save old Cloudinary publicId for cleanup after successful save
+    const oldPublicId = registration.identityProof?.publicId || getCloudinaryPublicId(registration.identityProof?.url);
+    const oldResourceType = registration.identityProof?.resourceType || 'raw';
+
     // Update team identity proof
     registration.identityProof = {
-      url: url.trim(),
+      url,
+      publicId,
+      resourceType,
+      fileName,
+      fileSize,
       submittedAt: new Date(),
       status: 'submitted',
       verificationNotes: '',
@@ -626,13 +730,31 @@ exports.uploadTeamIdentityProof = async (req, res, next) => {
       registration.teamResponses = new Map();
     }
     if (registration.teamResponses instanceof Map) {
-      registration.teamResponses.set('team_identity_proof', url.trim());
+      registration.teamResponses.set('team_identity_proof', url);
     } else {
-      registration.teamResponses.team_identity_proof = url.trim();
+      registration.teamResponses.team_identity_proof = url;
     }
+
+    registration.markModified('identityProof');
+    registration.markModified('teamResponses');
+    await registration.save();
 
     // Re-evaluate team completion
     await evaluateTeamCompletion(registration, tournament);
+
+    // Delete old Cloudinary asset AFTER successful save (replace flow)
+    if (oldPublicId && oldPublicId !== publicId && cloudinaryConfigured && !oldPublicId.startsWith('dev-upload-')) {
+      try {
+        const types = [oldResourceType, oldResourceType === 'raw' ? 'image' : 'raw'];
+        for (const t of types) {
+          const destroyRes = await cloudinary.uploader.destroy(oldPublicId, { resource_type: t });
+          if (destroyRes?.result === 'ok') break;
+        }
+      } catch (cleanupErr) {
+        console.error('Failed to delete old Cloudinary identity proof asset:', cleanupErr.message);
+        // Non-fatal: new upload succeeded, log and continue
+      }
+    }
 
     const populated = await TournamentRegistration.findById(registration._id)
       .populate('captain', 'name username avatar email')
@@ -649,6 +771,124 @@ exports.uploadTeamIdentityProof = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Delete / Remove Team-Level Combined Identity Proof PDF
+// @route   DELETE /api/registrations/:id/team-identity-proof
+// @access  Private (Team members / Captain)
+exports.deleteTeamIdentityProof = async (req, res, next) => {
+  try {
+    const registration = await TournamentRegistration.findById(req.params.id);
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration squad not found',
+      });
+    }
+
+    const tournament = await Tournament.findById(registration.tournament);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    // Check authorization: must be a member of the team (or admin)
+    const isMember = registration.players.some((p) => p.user.toString() === req.user.id);
+    const isAdmin = req.user.role === 'admin';
+    if (!isMember && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only registered members of this team can remove the team identity proof',
+      });
+    }
+
+    // Check identity proof submission deadline
+    const deadline = tournament.identityProofDeadline || tournament.registrationDeadline;
+    if (deadline && new Date() > new Date(deadline)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Identity proof submission deadline has passed. Removal is no longer allowed.',
+      });
+    }
+
+    // Check that there is actually something to delete
+    if (!registration.identityProof?.url) {
+      return res.status(400).json({
+        success: false,
+        message: 'No identity proof document to remove.',
+      });
+    }
+
+    const publicIdToDelete = registration.identityProof.publicId || getCloudinaryPublicId(registration.identityProof.url);
+    const resourceType = registration.identityProof.resourceType || 'raw';
+
+    // Delete from Cloudinary first
+    if (publicIdToDelete && cloudinaryConfigured && !publicIdToDelete.startsWith('dev-upload-')) {
+      try {
+        let destroyed = false;
+        const types = [resourceType, resourceType === 'raw' ? 'image' : 'raw'];
+        for (const t of types) {
+          const destroyRes = await cloudinary.uploader.destroy(publicIdToDelete, { resource_type: t });
+          if (destroyRes?.result === 'ok') {
+            destroyed = true;
+            break;
+          }
+        }
+      } catch (cloudErr) {
+        console.error('Cloudinary deletion failed:', cloudErr.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Unable to remove identity proof. Please try again.',
+        });
+      }
+    }
+
+    // Clear identity proof from registration
+    registration.identityProof = {
+      url: '',
+      publicId: '',
+      resourceType: 'raw',
+      fileName: '',
+      fileSize: 0,
+      submittedAt: undefined,
+      status: 'pending',
+      verificationNotes: '',
+    };
+
+    // Clear from teamResponses
+    if (registration.teamResponses) {
+      if (registration.teamResponses instanceof Map) {
+        registration.teamResponses.delete('team_identity_proof');
+        registration.teamResponses.delete('identity_proof');
+      } else {
+        delete registration.teamResponses.team_identity_proof;
+        delete registration.teamResponses.identity_proof;
+      }
+    }
+
+    registration.markModified('identityProof');
+    registration.markModified('teamResponses');
+    await registration.save();
+
+    // Re-evaluate team completion (may drop back to incomplete)
+    await evaluateTeamCompletion(registration, tournament);
+
+    const populated = await TournamentRegistration.findById(registration._id)
+      .populate('captain', 'name username avatar email')
+      .populate('leader', 'name username avatar email')
+      .populate('players.user', 'name username avatar email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Team identity proof removed successfully.',
+      registration: populated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 // @desc    Transfer team leadership to another registered squad member
 // @route   PUT /api/registrations/:id/transfer-leader
@@ -1492,9 +1732,10 @@ exports.acceptInvitation = async (req, res, next) => {
       role,
       slotNumber: nextSlot,
       status: 'joined', // not complete until required player fields are filled
-      responses: playerPrefill,
+      responses: playerPrefill instanceof Map ? playerPrefill : new Map(Object.entries(playerPrefill)),
       joinedAt: new Date(),
     });
+    registration.markModified('players');
 
     await evaluateTeamCompletion(registration, tournament);
 

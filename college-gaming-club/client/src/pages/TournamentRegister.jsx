@@ -28,6 +28,9 @@ import {
   Lock,
   FileText,
   Share2,
+  Loader2,
+  Upload,
+  X,
 } from 'lucide-react';
 
 const TournamentRegister = () => {
@@ -158,18 +161,100 @@ const TournamentRegister = () => {
     }
   };
 
-  const handleUploadTeamProof = async (url) => {
-    if (!url) return;
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [removingProof, setRemovingProof] = useState(false);
+  const [proofError, setProofError] = useState('');
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [selectedFileMeta, setSelectedFileMeta] = useState(null);
+
+  const MAX_PDF_SIZE = 5 * 1024 * 1024; // 5 MB
+
+  const formatFileSize = (bytes) => {
+    if (!bytes || isNaN(bytes)) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleUploadTeamProof = async (file) => {
+    if (!file) return;
+    setProofError('');
+    setShowRemoveConfirm(false);
+
+    // Validate PDF MIME type
+    if (file.type !== 'application/pdf') {
+      setProofError('Only PDF files are accepted. Please upload a .pdf document.');
+      return;
+    }
+
+    // Validate extension
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext !== 'pdf') {
+      setProofError('Only .pdf files are accepted.');
+      return;
+    }
+
+    // Validate size (Show current file size before rejecting)
+    const currentSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    if (file.size > MAX_PDF_SIZE) {
+      setProofError(`PDF must be 5 MB or smaller. Your file is ${currentSizeMB} MB.`);
+      return;
+    }
+
+    setSelectedFileMeta({ name: file.name, size: file.size });
+
     try {
-      const res = await API.put(`/registrations/${activeRegistration._id}/team-identity-proof`, { url });
+      setUploadingProof(true);
+
+      // Direct multipart upload to /team-identity-proof
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await API.put(`/registrations/${activeRegistration._id}/team-identity-proof`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
       if (res.data.success) {
         addToast('Team Identity Proof PDF uploaded successfully!', 'success');
-        reloadRegistration(activeRegistration._id);
+        if (res.data.registration) {
+          setActiveRegistration(res.data.registration);
+        } else {
+          reloadRegistration(activeRegistration._id);
+        }
+        setSelectedFileMeta(null);
       }
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to upload team identity proof', 'error');
+      const msg = err.response?.data?.message || 'Failed to upload team identity proof.';
+      setProofError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setUploadingProof(false);
     }
   };
+
+  const executeRemoveProof = async () => {
+    try {
+      setRemovingProof(true);
+      setProofError('');
+      const res = await API.delete(`/registrations/${activeRegistration._id}/team-identity-proof`);
+      if (res.data.success) {
+        addToast('Team identity proof removed successfully.', 'success');
+        setShowRemoveConfirm(false);
+        if (res.data.registration) {
+          setActiveRegistration(res.data.registration);
+        } else {
+          reloadRegistration(activeRegistration._id);
+        }
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Unable to remove identity proof. Please try again.';
+      setProofError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setRemovingProof(false);
+    }
+  };
+
 
   // 1. Handle Team Creation
   const handleCreateTeam = async (e) => {
@@ -544,14 +629,13 @@ const TournamentRegister = () => {
                   ? Object.fromEntries(myPlayerSlot.responses)
                   : { ...myPlayerSlot.responses }
                 : {};
-              setPlayerResponses((prev) => ({
+              setPlayerResponses({
                 player_name: user?.name || '',
                 college_name: user?.college || '',
                 college_id: user?.studentId || '',
                 phone_number: user?.phone || '',
                 ...existingResponses,
-                ...prev,
-              }));
+              });
               setPlayerModalOpen(true);
             }}
             className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shrink-0 cursor-pointer"
@@ -595,8 +679,15 @@ const TournamentRegister = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Filled Roster Slots */}
             {activeRegistration.players?.map((slot) => {
-              const isMe = (slot.user?._id || slot.user)?.toString() === currentUserId;
-              const isSlotCaptain = slot.role === 'captain' || slot.slotNumber === 1;
+              const slotUserId = (slot.user?._id || slot.user)?.toString();
+              const isMe = slotUserId === currentUserId;
+              const captainUserId = (
+                activeRegistration.captain?._id ||
+                activeRegistration.captain ||
+                activeRegistration.leader?._id ||
+                activeRegistration.leader
+              )?.toString();
+              const isSlotCaptain = slot.role === 'captain' || slotUserId === captainUserId;
               const isSubstitute = slot.role === 'substitute' || slot.slotNumber > minStarters;
 
               return (
@@ -666,14 +757,13 @@ const TournamentRegister = () => {
                               ? Object.fromEntries(slot.responses)
                               : { ...slot.responses }
                             : {};
-                          setPlayerResponses((prev) => ({
+                          setPlayerResponses({
                             player_name: user?.name || '',
                             college_name: user?.college || '',
                             college_id: user?.studentId || '',
                             phone_number: user?.phone || '',
                             ...existingResponses,
-                            ...prev,
-                          }));
+                          });
                           setPlayerModalOpen(true);
                         }}
                         className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
@@ -851,48 +941,212 @@ const TournamentRegister = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {activeRegistration.identityProof?.url && (
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <FileText className="w-5 h-5 text-purple-400 shrink-0" />
-                      <div className="truncate">
-                        <p className="text-xs font-bold text-slate-200 truncate">
-                          Combined_Team_Identity_Proof.pdf
-                        </p>
-                        {activeRegistration.identityProof?.submittedAt && (
-                          <p className="text-[10px] text-slate-500">
-                            Uploaded {new Date(activeRegistration.identityProof.submittedAt).toLocaleString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <a
-                      href={activeRegistration.identityProof.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 flex items-center gap-1.5 shrink-0"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      View Uploaded PDF
-                    </a>
+                {/* Error display */}
+                {proofError && (
+                  <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-800/40 text-rose-300 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{proofError}</span>
+                    <button type="button" onClick={() => setProofError('')} className="ml-auto p-0.5 hover:bg-rose-900/40 rounded">
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 )}
 
-                {isIdentityProofDeadlinePassed ? (
-                  <p className="text-xs text-slate-500 italic">
-                    The identity proof deadline has passed. Uploading or updating the PDF is disabled.
-                  </p>
+                {activeRegistration.identityProof?.url ? (
+                  /* ── Uploaded PDF Display ── */
+                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-lg bg-purple-950/60 border border-purple-800/50 flex items-center justify-center text-purple-400 shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-200 truncate">
+                            📄 {activeRegistration.identityProof.fileName || 'Combined_Team_Identity_Proof.pdf'}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-slate-400 mt-0.5">
+                            {activeRegistration.identityProof.fileSize ? (
+                              <span>Size: <strong className="text-slate-300 font-mono">{formatFileSize(activeRegistration.identityProof.fileSize)}</strong></span>
+                            ) : null}
+                            {activeRegistration.identityProof.submittedAt && (
+                              <span>Uploaded {new Date(activeRegistration.identityProof.submittedAt).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span className="text-[10px] font-bold text-emerald-400 font-mono">Uploaded Successfully</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Confirmation dialog for Remove */}
+                    {showRemoveConfirm && !isIdentityProofDeadlinePassed && (
+                      <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/60 space-y-2.5 animate-in fade-in duration-150">
+                        <div className="flex items-start gap-2.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-bold text-rose-200">
+                              Remove the team identity proof PDF?
+                            </p>
+                            <p className="text-[10px] text-rose-300/80">
+                              This will permanently delete the document from cloud storage and remove it from your registration.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowRemoveConfirm(false)}
+                            disabled={removingProof}
+                            className="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={executeRemoveProof}
+                            disabled={removingProof}
+                            className="px-3 py-1 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 transition-colors shadow"
+                          >
+                            {removingProof ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Removing...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Remove
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+                      <a
+                        href={activeRegistration.identityProof.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 flex items-center gap-1.5 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        View PDF
+                      </a>
+
+                      {!isIdentityProofDeadlinePassed && (
+                        <>
+                          <label
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-600/20 text-sky-300 border border-sky-500/30 hover:bg-sky-600/30 flex items-center gap-1.5 cursor-pointer transition-colors ${
+                              uploadingProof ? 'opacity-50 pointer-events-none' : ''
+                            }`}
+                          >
+                            {uploadingProof ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Replacing...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5" />
+                                Replace
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept=".pdf,application/pdf"
+                              className="hidden"
+                              disabled={uploadingProof}
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleUploadTeamProof(e.target.files[0]);
+                                e.target.value = '';
+                              }}
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowRemoveConfirm(true)}
+                            disabled={removingProof || showRemoveConfirm}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600/20 text-rose-300 border border-rose-500/30 hover:bg-rose-600/30 flex items-center gap-1.5 transition-colors ${
+                              removingProof ? 'opacity-50 pointer-events-none' : ''
+                            }`}
+                            title="Remove team identity proof"
+                          >
+                            <X className="w-3.5 h-3.5 text-rose-400" />
+                            Remove
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {isIdentityProofDeadlinePassed && (
+                      <p className="text-[10px] text-slate-500 italic mt-1">
+                        Identity proof submission deadline has passed. Replace and remove are disabled.
+                      </p>
+                    )}
+                  </div>
                 ) : (
-                  <CloudinaryUpload
-                    label={
-                      activeRegistration.identityProof?.url
-                        ? 'Replace Team Identity Proof (Single Combined PDF) *'
-                        : 'Upload Team Identity Proof (Single Combined PDF) *'
-                    }
-                    helpText="Single PDF containing identity/college proof for all registered team members (Max 10MB)"
-                    value={activeRegistration.identityProof?.url || ''}
-                    onChange={handleUploadTeamProof}
-                  />
+                  /* ── Upload PDF Control ── */
+                  isIdentityProofDeadlinePassed ? (
+                    <p className="text-xs text-slate-500 italic">
+                      Identity proof submission deadline has passed. Uploading is disabled.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-slate-400">
+                        Accepted format: <strong className="text-slate-200">PDF only</strong> · Maximum size: <strong className="text-slate-200">5 MB</strong>
+                      </p>
+
+                      <label
+                        className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center gap-2 ${
+                          uploadingProof
+                            ? 'border-cyan-500/40 bg-cyan-950/20'
+                            : 'border-slate-700 hover:border-purple-500/50 bg-slate-900/40 hover:bg-slate-900/60'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          className="hidden"
+                          disabled={uploadingProof}
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) handleUploadTeamProof(e.target.files[0]);
+                            e.target.value = '';
+                          }}
+                        />
+
+                        {uploadingProof ? (
+                          <>
+                            <Loader2 className="w-7 h-7 text-cyan-400 animate-spin" />
+                            <div className="space-y-0.5">
+                              <span className="text-xs text-slate-300 font-mono">Uploading PDF to secure storage...</span>
+                              {selectedFileMeta && (
+                                <p className="text-[10px] text-slate-400">
+                                  {selectedFileMeta.name} ({formatFileSize(selectedFileMeta.size)})
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-10 h-10 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-400 flex items-center justify-center">
+                              <Upload className="w-5 h-5" />
+                            </div>
+                            <div className="text-xs font-semibold text-slate-200">
+                              <span className="text-purple-400 underline">Upload PDF</span>
+                            </div>
+                            <p className="text-[10px] text-slate-500">
+                              Upload ONE PDF containing the identity/college proof for all registered team members
+                            </p>
+                          </>
+                        )}
+                      </label>
+                    </div>
+                  )
                 )}
               </div>
             )}
