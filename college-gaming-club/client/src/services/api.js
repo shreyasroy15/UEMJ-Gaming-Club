@@ -5,6 +5,96 @@ const API = axios.create({
   withCredentials: true,
 });
 
+// Fast In-Memory SWR (Stale-While-Revalidate) Cache & In-Flight Request Deduplication
+const apiCache = new Map();
+const inflightRequests = new Map();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds cache TTL
+
+export const clearApiCache = (urlPrefix = null) => {
+  if (!urlPrefix) {
+    apiCache.clear();
+  } else {
+    for (const key of apiCache.keys()) {
+      if (key.startsWith(urlPrefix) || key.includes(urlPrefix)) {
+        apiCache.delete(key);
+      }
+    }
+  }
+};
+
+// Prefetch common endpoints concurrently in the background for instant page transitions
+export const prefetchAppResources = () => {
+  const commonEndpoints = ['/tournaments', '/games', '/teams', '/matches'];
+  setTimeout(() => {
+    commonEndpoints.forEach((url) => {
+      API.get(url).catch(() => {});
+    });
+  }, 100);
+};
+
+// Intercept original GET to serve cached data instantly and revalidate in background
+const originalGet = API.get.bind(API);
+
+API.get = function (url, config = {}) {
+  // Bypass cache if explicitly requested
+  if (config.skipCache) {
+    return originalGet(url, config);
+  }
+
+  const paramKey = config.params ? JSON.stringify(config.params) : '';
+  const cacheKey = `${url}?${paramKey}`;
+  const now = Date.now();
+  const cached = apiCache.get(cacheKey);
+
+  // Return fresh cache instantly if available
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    // Revalidate in background if older than 12s
+    if (now - cached.timestamp > 12000 && !inflightRequests.has(cacheKey)) {
+      const bgPromise = originalGet(url, config)
+        .then((res) => {
+          if (res.status === 200 && res.data) {
+            apiCache.set(cacheKey, { data: res.data, response: res, timestamp: Date.now() });
+          }
+          return res;
+        })
+        .catch(() => {})
+        .finally(() => {
+          inflightRequests.delete(cacheKey);
+        });
+      inflightRequests.set(cacheKey, bgPromise);
+    }
+
+    return Promise.resolve({
+      ...cached.response,
+      data: cached.data,
+      fromCache: true,
+    });
+  }
+
+  // Deduplicate inflight requests to avoid duplicate fetches
+  if (inflightRequests.has(cacheKey)) {
+    return inflightRequests.get(cacheKey);
+  }
+
+  const reqPromise = originalGet(url, config)
+    .then((res) => {
+      if (res.status === 200 && res.data) {
+        apiCache.set(cacheKey, {
+          data: res.data,
+          response: { status: res.status, statusText: res.statusText, headers: res.headers },
+          timestamp: Date.now(),
+        });
+      }
+      return res;
+    })
+    .finally(() => {
+      inflightRequests.delete(cacheKey);
+    });
+
+  inflightRequests.set(cacheKey, reqPromise);
+  return reqPromise;
+};
+
 // Interceptor to attach JWT token to every request
 API.interceptors.request.use(
   (config) => {
@@ -17,12 +107,17 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
+// Response interceptor: invalidate cache on data mutations and handle 401
 API.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = response.config?.method?.toLowerCase();
+    if (['post', 'put', 'delete', 'patch'].includes(method)) {
+      clearApiCache();
+    }
+    return response;
+  },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Token expired or invalid
       if (localStorage.getItem('gaming_club_token')) {
         localStorage.removeItem('gaming_club_token');
         localStorage.removeItem('gaming_club_user');
@@ -33,3 +128,4 @@ API.interceptors.response.use(
 );
 
 export default API;
+

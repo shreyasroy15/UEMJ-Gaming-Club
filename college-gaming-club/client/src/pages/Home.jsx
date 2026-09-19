@@ -188,8 +188,8 @@ const Home = () => {
               </h1>
 
               {/* Subtitle */}
-              <p className="text-sm sm:text-lg md:text-xl font-mono text-slate-200 font-medium tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                {activeGameTitles} Campus Championships
+              <p className="text-sm sm:text-lg md:text-xl font-mono text-slate-200 font-medium tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] uppercase">
+                Online Gaming Tournaments
               </p>
 
               {/* Core Pillars */}

@@ -170,7 +170,7 @@ const Tournaments = () => {
   return (
     <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-10">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-900">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-slate-950/60 backdrop-blur-xl border border-cyan-500/20 shadow-[0_10px_35px_rgba(0,0,0,0.6),0_0_20px_rgba(6,182,212,0.08)]">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-400 font-mono">
             <Trophy className="w-4 h-4 text-cyan-400" />
@@ -179,7 +179,7 @@ const Tournaments = () => {
           <h1 className="text-2xl sm:text-4xl font-black text-white font-mono mt-1 break-words">
             CAMPUS TOURNAMENTS
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl">
+          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
             Compete in official university brackets, register your squad, and track your active registrations.
           </p>
         </div>
@@ -187,7 +187,7 @@ const Tournaments = () => {
         <div className="flex items-center gap-3">
           <Link
             to="/points-table"
-            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-400 text-xs font-bold font-mono transition-colors"
+            className="px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-amber-500/40 text-amber-300 text-xs font-bold font-mono transition-all shadow-[0_0_15px_rgba(245,158,11,0.15)]"
           >
             View Points Table →
           </Link>

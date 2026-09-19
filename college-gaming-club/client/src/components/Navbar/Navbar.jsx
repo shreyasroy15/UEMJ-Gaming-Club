@@ -16,6 +16,8 @@ import {
   ArrowRight,
   Bell,
   Check,
+  User,
+  LogIn,
 } from 'lucide-react';
 import API from '../../services/api';
 
@@ -51,7 +53,7 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  // Scroll detection for enhanced glass dynamic opacity
+  // Scroll detection
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -161,38 +163,56 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Floating Pill Capsule Header */}
-      <header className="fixed top-3 sm:top-5 left-0 right-0 z-50 px-3 sm:px-6 pointer-events-none transition-all duration-300">
-        <div className="max-w-7xl mx-auto flex flex-col items-center">
+      {/* Full-Width Sideways Transparent Header (Reference Esports Style) */}
+      <header className="fixed top-2 sm:top-4 left-0 right-0 z-50 px-4 sm:px-8 lg:px-12 pointer-events-none transition-all duration-300">
+        <div className="w-full flex flex-col items-center">
           {/* Main Navbar Container - Fully Transparent */}
           <nav
             aria-label="Main Navigation"
             className="pointer-events-auto w-full transition-all duration-300 relative bg-transparent border-none shadow-none"
           >
-
-
-            <div className="h-14 sm:h-16 px-3.5 sm:px-6 flex items-center justify-between gap-3">
-              {/* Brand Logo */}
+            <div className="h-14 sm:h-16 flex items-center justify-between gap-4 w-full">
+              {/* Brand Logo - Official College & Gaming Geeks Badges (Far Left) */}
               <Link
                 to="/"
-                className="flex items-center gap-2.5 group shrink-0 select-none cursor-pointer"
+                className="flex items-center gap-2.5 sm:gap-3 group shrink-0 select-none cursor-pointer"
               >
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-cyan-500/30 via-indigo-500/20 to-fuchsia-500/30 border border-cyan-400/40 p-0.5 flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.25)] group-hover:shadow-[0_0_22px_rgba(0,240,255,0.5)] group-hover:scale-105 transition-all duration-300">
-                  <div className="w-full h-full bg-slate-950/90 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <Gamepad2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-cyan-300 group-hover:text-cyan-200 group-hover:rotate-6 transition-all duration-300" />
+                <div className="flex items-center gap-2">
+                  {/* UEM College Crest Badge */}
+                  <div className="h-9 sm:h-10 px-2 py-0.5 rounded-xl bg-white/95 border border-white/40 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.15)] group-hover:scale-105 transition-all">
+                    <img
+                      src="/assets/uem-logo.png"
+                      alt="UEM Jaipur Crest"
+                      className="h-full w-auto object-contain"
+                    />
+                  </div>
+
+                  {/* Gaming Geeks Club Crest */}
+                  <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-xl bg-black/85 border border-lime-400/40 p-1 flex items-center justify-center shadow-[0_0_15px_rgba(163,230,53,0.25)] group-hover:shadow-[0_0_20px_rgba(163,230,53,0.5)] group-hover:scale-105 transition-all">
+                    <img
+                      src="/assets/gaming-geeks-logo.png"
+                      alt="Gaming Geeks Club"
+                      className="h-full w-auto object-contain drop-shadow-[0_0_6px_rgba(163,230,53,0.7)]"
+                    />
                   </div>
                 </div>
-                <div className="flex items-baseline gap-1.5 font-mono">
-                  <span className="font-black text-sm sm:text-base tracking-wider text-white uppercase group-hover:text-cyan-200 transition-colors">
-                    UEMJ
-                  </span>
-                  <span className="text-[10px] sm:text-[11px] font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 uppercase hidden min-[400px]:inline">
-                    GAMING
+
+                <div className="flex flex-col">
+                  <div className="flex items-baseline gap-1.5 font-mono">
+                    <span className="font-black text-sm sm:text-base tracking-wider text-white uppercase group-hover:text-cyan-200 transition-colors">
+                      UEMJ
+                    </span>
+                    <span className="text-[11px] sm:text-xs font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 uppercase hidden min-[480px]:inline">
+                      GAMING CLUB
+                    </span>
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-mono tracking-widest text-slate-400 uppercase hidden sm:block">
+                    GAMING GEEKS • UEM JAIPUR
                   </span>
                 </div>
               </Link>
 
-              {/* Desktop Nav Links (Signature GooeyNav) */}
+              {/* Desktop Nav Links (Centered Signature GooeyNav) */}
               <div className="hidden min-[1100px]:flex items-center">
                 <GooeyNav
                   items={navLinks}
@@ -205,7 +225,7 @@ const Navbar = () => {
                 />
               </div>
 
-              {/* Right Side Action / CTA Pill Button */}
+              {/* Right Side Action / CTA Pill Button (Far Right) */}
               <div className="flex items-center gap-2 sm:gap-2.5">
                 {isAuthenticated ? (
                   <div className="flex items-center gap-2">
@@ -357,22 +377,13 @@ const Navbar = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 sm:gap-2.5">
-                    {/* Login Link */}
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <Link
                       to="/login"
-                      className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-[13px] font-semibold text-slate-300 hover:text-white transition-colors"
+                      className="rounded-full px-4 sm:px-5 py-2 text-xs sm:text-[13px] font-mono font-bold tracking-wider uppercase text-slate-100 bg-slate-900/85 hover:bg-slate-800 border border-cyan-500/40 hover:border-cyan-300 shadow-[0_0_18px_rgba(6,182,212,0.2)] hover:shadow-[0_0_24px_rgba(6,182,212,0.4)] active:scale-95 transition-all duration-300 flex items-center gap-2 select-none cursor-pointer"
                     >
-                      Log In
-                    </Link>
-
-                    {/* Prominent Reference-Style "LET'S GO" Pill Button */}
-                    <Link
-                      to="/register"
-                      className="rounded-full px-4 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-black uppercase tracking-wider text-slate-950 bg-gradient-to-r from-[#fef08a] via-[#fde047] to-[#facc15] hover:from-white hover:to-[#fde047] shadow-[0_0_20px_rgba(253,224,71,0.4)] hover:shadow-[0_0_28px_rgba(253,224,71,0.6)] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0 select-none cursor-pointer"
-                    >
-                      <span>LET'S GO</span>
-                      <ArrowRight className="w-3.5 h-3.5 stroke-[3] hidden min-[480px]:inline-block" />
+                      <User className="w-3.5 h-3.5 text-cyan-400 stroke-[2.5]" />
+                      <span>Login / Register</span>
                     </Link>
                   </div>
                 )}
