@@ -164,23 +164,12 @@ const Navbar = () => {
       {/* Floating Pill Capsule Header */}
       <header className="fixed top-3 sm:top-5 left-0 right-0 z-50 px-3 sm:px-6 pointer-events-none transition-all duration-300">
         <div className="max-w-7xl mx-auto flex flex-col items-center">
-          {/* Main Pill Navbar Container */}
+          {/* Main Navbar Container - Fully Transparent */}
           <nav
             aria-label="Main Navigation"
-            className={`pointer-events-auto w-full rounded-full transition-all duration-500 relative ${
-              scrolled
-                ? 'bg-[#080d1a]/70 border-white/20 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.7),0_0_30px_rgba(0,240,255,0.08)]'
-                : 'bg-[#090e1f]/45 border-white/12 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.5),0_0_25px_rgba(0,240,255,0.05)]'
-            } backdrop-blur-2xl backdrop-saturate-150 border hover:border-white/25 hover:shadow-[0_20px_45px_-8px_rgba(0,0,0,0.75),0_0_35px_rgba(0,240,255,0.12)]`}
-            style={{
-              boxShadow: scrolled
-                ? '0 16px 40px -8px rgba(0, 0, 0, 0.7), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), 0 0 25px rgba(0, 240, 255, 0.08)'
-                : '0 12px 36px -6px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.22), 0 0 20px rgba(0, 240, 255, 0.05)',
-            }}
+            className="pointer-events-auto w-full transition-all duration-300 relative bg-transparent border-none shadow-none"
           >
-            {/* Ambient Top Specular Light Highlight */}
-            <div className="absolute inset-x-12 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none rounded-full" />
-            <div className="absolute inset-x-24 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent pointer-events-none" />
+
 
             <div className="h-14 sm:h-16 px-3.5 sm:px-6 flex items-center justify-between gap-3">
               {/* Brand Logo */}

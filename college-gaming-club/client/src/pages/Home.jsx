@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -16,14 +16,26 @@ import {
   Sparkles,
   Users,
   BarChart3,
+  Clock,
+  Flame,
+  ChevronRight,
+  Crown
 } from 'lucide-react';
+
+// Fallback local assets
+import bgmiFallbackBanner from '../assets/game-warrior-gh-pages/img/slider-2.jpg';
 
 const Home = () => {
   const { user, isAuthenticated } = useAuth();
   const [runningTournaments, setRunningTournaments] = useState([]);
   const [allTournaments, setAllTournaments] = useState([]);
   const [myTournaments, setMyTournaments] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Leaderboard active game tab
+  const [leaderboardGame, setLeaderboardGame] = useState('BGMI');
 
   useEffect(() => {
     fetchHomeData();
@@ -32,31 +44,39 @@ const Home = () => {
   const fetchHomeData = async () => {
     try {
       setLoading(true);
-      const [tournamentsRes, teamsRes] = await Promise.all([
-        API.get('/tournaments'),
-        isAuthenticated ? API.get('/teams') : Promise.resolve({ data: { teams: [] } }),
+      const [tournamentsRes, teamsRes, matchesRes] = await Promise.all([
+        API.get('/tournaments').catch(() => ({ data: { tournaments: [] } })),
+        API.get('/teams').catch(() => ({ data: { teams: [] } })),
+        API.get('/matches').catch(() => ({ data: { matches: [] } })),
       ]);
 
-      const tournaments = tournamentsRes.data.tournaments || [];
-      setAllTournaments(tournaments);
+      const tournamentsList = tournamentsRes.data?.tournaments || [];
+      const teamsList = teamsRes.data?.teams || [];
+      const matchesList = matchesRes.data?.matches || [];
 
-      // Filter active/currently running tournaments (status 'live' or 'ongoing')
-      const running = tournaments.filter(
+      setAllTournaments(tournamentsList);
+      setTeams(teamsList);
+      setMatches(matchesList);
+
+      // Filter active / live / ongoing tournaments
+      const running = tournamentsList.filter(
         (t) => t.status === 'live' || t.status === 'ongoing'
       );
       setRunningTournaments(running);
 
       if (isAuthenticated && user) {
-        // Find tournaments where user's team is registered
-        const userSquads = (teamsRes.data.teams || []).filter(
+        // Find tournaments where user's squad is registered
+        const userSquads = teamsList.filter(
           (tm) =>
             (tm.captain?._id || tm.captain) === user._id ||
             tm.members?.some((m) => (m.user?._id || m.user) === user._id)
         );
-        const userSquadIds = userSquads.map((s) => s._id.toString());
+        const userSquadIds = userSquads.map((s) => s._id?.toString());
 
-        const registeredIn = tournaments.filter((t) =>
-          t.registeredTeams?.some((r) => r.team && userSquadIds.includes((r.team._id || r.team).toString()))
+        const registeredIn = tournamentsList.filter((t) =>
+          t.registeredTeams?.some(
+            (r) => r.team && userSquadIds.includes((r.team._id || r.team).toString())
+          )
         );
         setMyTournaments(registeredIn);
       }
@@ -66,6 +86,25 @@ const Home = () => {
       setLoading(false);
     }
   };
+
+  // Top leaderboard teams filtered by active tab
+  const filteredLeaderboardTeams = useMemo(() => {
+    return teams
+      .filter((t) => t.game?.toLowerCase().includes(leaderboardGame.toLowerCase()))
+      .sort((a, b) => (b.points || 0) - (a.points || 0))
+      .slice(0, 5);
+  }, [teams, leaderboardGame]);
+
+  // Live or upcoming matches
+  const activeMatches = useMemo(() => {
+    return matches.filter((m) => m.status === 'live' || m.status === 'scheduled');
+  }, [matches]);
+
+  // Active titles list
+  const activeGameTitles = useMemo(() => {
+    const titles = Array.from(new Set(allTournaments.map((t) => t.game).filter(Boolean)));
+    return titles.length > 0 ? titles.join(' & ') : 'BGMI & Free Fire';
+  }, [allTournaments]);
 
   if (loading) {
     return <Loading message="Loading collegiate arena..." />;
@@ -82,357 +121,562 @@ const Home = () => {
   const winRate = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
 
   return (
-    <div className="min-h-screen py-4 sm:py-8 px-3.5 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 1. USER PROFILE / DASHBOARD SECTION (AUTHENTICATED) OR WELCOME BANNER (VISITOR) */}
-      {isAuthenticated ? (
-        <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/70 border border-slate-800 p-4 sm:p-6 md:p-8 shadow-2xl">
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 -mb-16 w-80 h-80 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative min-h-screen text-slate-100 overflow-x-hidden">
+      {/* ========================================================= */}
+      {/* 1. CINEMATIC LAYERED ESPORTS GAMING BACKGROUND */}
+      {/* ========================================================= */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        {/* Base dark canvas */}
+        <div className="absolute inset-0 bg-[#07090e]" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6">
-            <div className="flex items-center gap-3.5 sm:gap-6 min-w-0 flex-1">
-              <div className="relative shrink-0">
-                <img
-                  src={
-                    user?.avatar ||
-                    'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80'
-                  }
-                  alt={user?.name}
-                  className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
-                />
-                <div className="absolute -bottom-1.5 -right-1.5 sm:-bottom-2 sm:-right-2 px-1.5 sm:px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-[9px] sm:text-[10px] font-black tracking-wider text-slate-950 uppercase shadow-md">
-                  LVL {level}
-                </div>
+        {/* Ambient stadium lighting */}
+        <div
+          className="absolute inset-0 bg-cover bg-top opacity-30 mix-blend-screen"
+          style={{
+            backgroundImage: "url('/assets/gaming-hero-bg.png')",
+          }}
+        />
+
+        {/* Left Side: BGMI Soldier Character - CRYSTAL CLEAR & VIBRANT (shifted down 10px) */}
+        <div
+          className="absolute top-[42px] -left-10 sm:left-0 w-[340px] sm:w-[420px] lg:w-[480px] xl:w-[540px] h-[520px] bg-no-repeat bg-contain pointer-events-none transition-all duration-700 opacity-30 md:opacity-95"
+          style={{
+            backgroundImage: "url('/assets/bgmi-feathered.png')",
+            filter: 'drop-shadow(0 15px 35px rgba(0,0,0,0.9)) drop-shadow(0 0 35px rgba(245,158,11,0.2))',
+          }}
+        />
+
+        {/* Right Side: Free Fire Character - CRYSTAL CLEAR & VIBRANT (shifted down 10px) */}
+        <div
+          className="absolute top-[42px] -right-10 sm:right-0 w-[340px] sm:w-[420px] lg:w-[480px] xl:w-[540px] h-[520px] bg-no-repeat bg-contain bg-right-top pointer-events-none transition-all duration-700 opacity-30 md:opacity-95"
+          style={{
+            backgroundImage: "url('/assets/ff-feathered.png')",
+            filter: 'drop-shadow(0 15px 35px rgba(0,0,0,0.9)) drop-shadow(0 0 35px rgba(6,182,212,0.22))',
+          }}
+        />
+
+        {/* Center ambient lighting to emphasize depth */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_20%,rgba(6,182,212,0.1),transparent_70%)]" />
+
+        {/* Soft bottom blend to transition smoothly into the rest of the page */}
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#080a10] via-[#080a10]/90 to-transparent" />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="relative z-10 space-y-6 sm:space-y-8 pb-12 pt-2 sm:pt-4">
+
+        {/* CONTAINER FOR HOMEPAGE BODY */}
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 space-y-8 sm:space-y-10">
+          
+          {/* ========================================================= */}
+          {/* 3. HERO SECTION (OPEN ESPORTS ARENA DESIGN) */}
+          {/* ========================================================= */}
+          <section className="relative py-8 sm:py-14 md:py-16 text-center">
+            {/* Ambient central backdrop glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-64 bg-cyan-500/10 blur-3xl pointer-events-none rounded-full" />
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-36 bg-indigo-500/10 blur-2xl pointer-events-none rounded-full" />
+
+            <div className="relative z-10 max-w-3xl mx-auto space-y-4 sm:space-y-5">
+              {/* College Sub-heading */}
+              <div className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-mono font-bold tracking-[0.25em] text-cyan-400 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                <span>— UNIVERSITY OF ENGINEERING & MANAGEMENT, JAIPUR —</span>
               </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl min-[420px]:text-2xl sm:text-3xl font-black text-white font-mono tracking-tight truncate">
-                    {user?.name?.toUpperCase()}
-                  </h1>
-                  <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-mono shrink-0">
-                    {user?.role === 'admin' ? 'Arena Admin' : 'Collegiate Athlete'}
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-400 mt-1 flex items-center gap-1.5 sm:gap-2 truncate">
-                  <span className="font-mono text-cyan-400 shrink-0">@{user?.username}</span>
-                  <span className="w-1 h-1 rounded-full bg-slate-600 shrink-0" />
-                  <span className="text-slate-300 truncate">{user?.college || 'University of Engineering & Management (UEM)'}</span>
-                </p>
-
-                {/* XP Progress Bar */}
-                <div className="mt-2.5 sm:mt-3 flex items-center gap-2.5 sm:gap-3 max-w-sm">
-                  <div className="flex-1 bg-slate-800/80 rounded-full h-2 sm:h-2.5 overflow-hidden border border-slate-700/60">
-                    <div
-                      className="bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-400 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${Math.max(12, xpPercentage)}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] sm:text-[11px] font-mono font-bold text-cyan-300 shrink-0">
-                    {xp} / {nextLevelXp} XP
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <Link
-                to="/tournaments"
-                className="flex-1 sm:flex-none justify-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-1.5 text-center"
-              >
-                <Trophy className="w-4 h-4 text-slate-950 shrink-0" />
-                <span>Tournaments</span>
-              </Link>
-              <Link
-                to="/points-table"
-                className="flex-1 sm:flex-none justify-center px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-400 font-bold text-xs transition-all flex items-center gap-1.5 text-center"
-              >
-                <BarChart3 className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Points Table</span>
-              </Link>
-            </div>
-          </div>
-        </section>
-      ) : (
-        /* Visitor Welcome Header */
-        <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/80 border border-slate-800 p-5 sm:p-8 md:p-12 shadow-2xl text-center md:text-left">
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-10 -mb-20 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
-            <div className="max-w-2xl space-y-3 sm:space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-semibold">
-                <Sparkles className="w-3.5 h-3.5" /> UEM JAIPUR ESPORTS ARENA
-              </div>
-              <h1 className="text-2xl min-[420px]:text-3xl sm:text-5xl font-black text-white font-mono tracking-tight leading-tight">
-                COLLEGE GAMING CLUB
+              {/* Main Headline */}
+              <h1 className="text-3xl min-[480px]:text-4xl sm:text-6xl md:text-7xl font-black font-mono tracking-tight text-white leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+                UEMJ <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 drop-shadow-[0_0_25px_rgba(6,182,212,0.4)]">GAMING CLUB</span>
               </h1>
-              <p className="text-xs sm:text-sm md:text-base text-slate-300 leading-relaxed">
-                Official collegiate home for BGMI, Free Fire, and Valorant.
-                Compete in varsity leagues, check live standings on the Points Table, and claim campus glory.
+
+              {/* Subtitle */}
+              <p className="text-sm sm:text-lg md:text-xl font-mono text-slate-200 font-medium tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                {activeGameTitles} Campus Championships
               </p>
-              <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-2.5 sm:gap-3 pt-2 justify-center md:justify-start">
+
+              {/* Core Pillars */}
+              <div className="flex items-center justify-center gap-3 sm:gap-6 pt-1 text-[11px] sm:text-xs font-mono font-semibold text-slate-300 uppercase tracking-widest flex-wrap drop-shadow">
+                <span className="flex items-center gap-1.5 text-amber-400">
+                  <Trophy className="w-3.5 h-3.5" /> COMPETE
+                </span>
+                <span className="text-slate-600">•</span>
+                <span className="flex items-center gap-1.5 text-cyan-400">
+                  <Users className="w-3.5 h-3.5" /> CONNECT
+                </span>
+                <span className="text-slate-600">•</span>
+                <span className="flex items-center gap-1.5 text-indigo-400">
+                  <Sparkles className="w-3.5 h-3.5" /> BE LEGENDARY
+                </span>
+              </div>
+
+              {/* Primary Call to Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 pt-2">
                 <Link
-                  to="/register"
-                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 text-center"
+                  to="/tournaments"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs uppercase tracking-wider font-mono shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.03] active:scale-[0.98] transition-all"
                 >
-                  <Gamepad2 className="w-4 h-4 shrink-0" /> Join the Club as a College Student
+                  <Trophy className="w-4 h-4 text-slate-950" />
+                  <span>View Tournaments</span>
+                  <ArrowRight className="w-4 h-4 text-slate-950" />
                 </Link>
+
                 <Link
-                  to="/login"
-                  className="px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs uppercase tracking-wider transition-all text-center"
+                  to="/points-table"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-slate-950/70 hover:bg-slate-900/80 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 font-bold text-xs uppercase tracking-wider font-mono shadow-lg shadow-cyan-500/15 hover:shadow-cyan-500/30 hover:scale-[1.03] active:scale-[0.98] backdrop-blur-md transition-all"
                 >
-                  Sign In
+                  <BarChart3 className="w-4 h-4 text-cyan-400" />
+                  <span>Points Table</span>
                 </Link>
               </div>
-            </div>
 
-            <div className="hidden lg:flex flex-col gap-3 p-5 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 w-72 shrink-0">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800 font-mono text-cyan-400 font-bold">
-                <span>CAMPUS HIGHLIGHTS</span>
-                <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+              {/* Authenticated Student Athlete Pill Strip */}
+              {isAuthenticated && user && (
+                <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-left bg-slate-950/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-800/60 shadow-xl max-w-xl mx-auto">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={user?.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80'}
+                      alt={user?.name}
+                      className="w-10 h-10 rounded-xl object-cover border border-cyan-400/60"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-white font-mono">{user?.name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500 text-slate-950">
+                          LVL {level}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        {myTournaments.length} Arenas Registered • {xp} XP
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full sm:w-48 space-y-1">
+                    <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                      <span>XP Progress</span>
+                      <span className="text-cyan-400">{xpPercentage}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
+                        style={{ width: `${Math.max(10, xpPercentage)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ========================================================= */}
+          {/* 4. BASIC STATS OVERVIEW */}
+          {/* ========================================================= */}
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-cyan-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+                  {isAuthenticated ? 'My Tournaments' : 'Total Arenas'}
+                </span>
+                <Trophy className="w-4 h-4 text-cyan-400" />
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-900">
-                <span className="text-slate-400">Main Titles</span>
-                <span className="font-bold text-white">BGMI & Free Fire</span>
+              <div className="mt-2 text-2xl font-black text-white font-mono">
+                {isAuthenticated ? myTournaments.length : allTournaments.length}
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-900">
-                <span className="text-slate-400">Active Tournaments</span>
-                <span className="font-bold text-white font-mono">{allTournaments.length}</span>
+              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Collegiate registrations</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-indigo-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+                  Registered Teams
+                </span>
+                <Users className="w-4 h-4 text-indigo-400" />
               </div>
-              <div className="flex justify-between py-1">
-                <span className="text-slate-400">Live Games Now</span>
-                <span className="font-bold text-rose-400 font-mono">{runningTournaments.length}</span>
+              <div className="mt-2 text-2xl font-black text-white font-mono">
+                {teams.length}
               </div>
+              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Campus squads formed</p>
             </div>
-          </div>
-        </section>
-      )}
 
-      {/* 2. BASIC DASHBOARD STATISTICS */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
-        <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden group hover:border-cyan-500/40 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-              {isAuthenticated ? 'My Tournaments' : 'Tournaments'}
-            </span>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
-              <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-emerald-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+                  Live & Ongoing
+                </span>
+                <Radio className="w-4 h-4 text-rose-400 animate-pulse" />
+              </div>
+              <div className="mt-2 text-2xl font-black text-rose-400 font-mono">
+                {runningTournaments.length}
+              </div>
+              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Active competitions</p>
             </div>
-          </div>
-          <div className="mt-2 sm:mt-3 flex items-baseline gap-1.5 sm:gap-2">
-            <span className="text-xl sm:text-2xl md:text-3xl font-black text-white font-mono">
-              {isAuthenticated ? myTournaments.length : allTournaments.length}
-            </span>
-            <span className="text-[10px] sm:text-[11px] text-cyan-400 font-semibold font-mono">Arenas</span>
-          </div>
-          <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Collegiate registrations</p>
-        </div>
 
-        <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden group hover:border-indigo-500/40 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-              Matches Played
-            </span>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-              <Swords className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-amber-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+                  Varsity Titles
+                </span>
+                <Zap className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="mt-2 text-2xl font-black text-white font-mono">
+                {new Set(allTournaments.map((t) => t.game)).size || 2}
+              </div>
+              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Supported esports</p>
             </div>
-          </div>
-          <div className="mt-2 sm:mt-3 flex items-baseline gap-1.5 sm:gap-2">
-            <span className="text-xl sm:text-2xl md:text-3xl font-black text-white font-mono">
-              {matchesPlayed}
-            </span>
-            <span className="text-[10px] sm:text-[11px] text-indigo-400 font-semibold font-mono">Rounds</span>
-          </div>
-          <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Across campus scrims</p>
-        </div>
+          </section>
 
-        <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-              Victories
-            </span>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-              <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-          </div>
-          <div className="mt-2 sm:mt-3 flex items-baseline gap-1.5 sm:gap-2">
-            <span className="text-xl sm:text-2xl md:text-3xl font-black text-white font-mono">
-              {wins}
-            </span>
-            <span className="text-[10px] sm:text-[11px] text-emerald-400 font-semibold font-mono">
-              {winRate}% WR
-            </span>
-          </div>
-          <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Collegiate win ratio</p>
-        </div>
-
-        <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-              Club Rank XP
-            </span>
-            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-amber-950/60 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-          </div>
-          <div className="mt-2 sm:mt-3 flex items-baseline gap-1.5 sm:gap-2">
-            <span className="text-xl sm:text-2xl md:text-3xl font-black text-white font-mono">
-              {xp}
-            </span>
-            <span className="text-[10px] sm:text-[11px] text-amber-400 font-semibold font-mono">Tier II</span>
-          </div>
-          <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Earned via varsity events</p>
-        </div>
-      </section>
-
-      {/* 3. CURRENTLY RUNNING TOURNAMENTS / GAMES (LIVE / ONGOING) */}
-      <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <span className="flex h-3 w-3 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500" />
-            </span>
-            <h2 className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">
-              CURRENTLY RUNNING TOURNAMENTS / GAMES
-            </h2>
-          </div>
-          <Link
-            to="/tournaments"
-            className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-mono transition-colors"
-          >
-            All Tournaments <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {runningTournaments.length === 0 ? (
-          <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800/80 text-center space-y-3">
-            <Gamepad2 className="w-10 h-10 text-slate-600 mx-auto" />
-            <h3 className="text-base font-bold text-slate-200 font-mono">
-              No Tournaments Currently Running
-            </h3>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
-              There are no live or ongoing matches at this exact moment. Check upcoming tournament schedules or view open registrations.
-            </p>
-            <div className="pt-2">
+          {/* ========================================================= */}
+          {/* 5. FEATURED TOURNAMENT CARDS (MATCHES REFERENCE STYLE) */}
+          {/* ========================================================= */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm sm:text-base font-bold text-white font-mono uppercase tracking-wider">
+                  Featured Esports Arenas
+                </h2>
+              </div>
               <Link
                 to="/tournaments"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors"
+                className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
               >
-                Browse Upcoming Tournaments <ArrowRight className="w-3.5 h-3.5" />
+                <span>All Tournaments</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {runningTournaments.map((t) => (
-              <div
-                key={t._id}
-                className="group rounded-2xl bg-slate-900/70 border border-rose-500/30 overflow-hidden shadow-xl hover:border-rose-500/60 transition-all duration-300 flex flex-col justify-between"
-              >
-                <div className="relative h-48 w-full bg-slate-950 overflow-hidden">
-                  <img
-                    src={t.banner}
-                    alt={t.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
 
-                  {/* Status Badge */}
-                  <div className="absolute top-3 left-3">
-                    <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-rose-950/90 text-rose-400 border border-rose-500/50 backdrop-blur-md flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                      LIVE / ONGOING
-                    </span>
-                  </div>
-
-                  {/* Game Tag */}
-                  <div className="absolute top-3 right-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-950/90 text-cyan-300 border border-cyan-500/40 backdrop-blur-md font-mono">
-                      {t.game}
-                    </span>
-                  </div>
-
-                  {/* Title over banner bottom */}
-                  <div className="absolute bottom-3 left-4 right-4">
-                    <h3 className="text-lg font-black text-white font-mono drop-shadow truncate">
-                      {t.name}
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                  <p className="text-xs text-slate-300 line-clamp-2">
-                    {t.description}
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-slate-800 text-slate-400 font-mono">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                      <span>{new Date(t.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                      <span>{t.registeredTeams?.length || 0} / {t.maxTeams} Teams</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Link
-                      to={`/tournaments/${t.slug || t._id}`}
-                      className="flex-1 text-center py-2.5 px-4 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 text-rose-200 font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <span>Watch & Arena Details</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                </div>
+            {allTournaments.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800/80 text-center space-y-2">
+                <Gamepad2 className="w-10 h-10 text-slate-600 mx-auto" />
+                <h3 className="text-sm font-bold text-slate-200 font-mono">No Tournaments Available Yet</h3>
+                <p className="text-xs text-slate-400">
+                  New campus tournament brackets are being scheduled by the committee.
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                {allTournaments.slice(0, 4).map((t, idx) => {
+                  const isBGMI = t.game?.toLowerCase().includes('bgmi') || idx % 2 === 0;
+                  const isFreeFire = t.game?.toLowerCase().includes('free fire');
+                  const isLive = t.status === 'live' || t.status === 'ongoing';
+                  const isRegistrationOpen = t.status === 'registration-open';
 
-      {/* 4. QUICK PORTAL HUBS */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-2 sm:pt-4">
-        <Link
-          to="/tournaments"
-          className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-cyan-950/30 to-slate-900 border border-cyan-500/30 hover:border-cyan-500/60 transition-all group flex items-center justify-between gap-3"
-        >
-          <div className="space-y-1 min-w-0">
-            <span className="text-[10px] uppercase font-mono font-bold text-cyan-400">Campus Competitions</span>
-            <h3 className="text-base sm:text-lg font-black text-white font-mono group-hover:text-cyan-300 transition-colors truncate">
-              AVAILABLE TOURNAMENTS
-            </h3>
-            <p className="text-xs text-slate-400 line-clamp-2">
-              Browse open registrations, prize pools, and register your team squad.
-            </p>
-          </div>
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:translate-x-1 transition-transform shrink-0">
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </div>
-        </Link>
+                  const accentBorder = isBGMI
+                    ? 'border-amber-500/40 hover:border-amber-400 shadow-amber-500/10'
+                    : 'border-cyan-500/40 hover:border-cyan-400 shadow-cyan-500/10';
+                  const titleColor = isBGMI ? 'text-amber-400' : 'text-cyan-400';
+                  const tagBg = isBGMI
+                    ? 'bg-amber-950/80 text-amber-300 border-amber-500/30'
+                    : 'bg-cyan-950/80 text-cyan-300 border-cyan-500/30';
 
-        <Link
-          to="/points-table"
-          className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-amber-950/30 to-slate-900 border border-amber-500/30 hover:border-amber-500/60 transition-all group flex items-center justify-between gap-3"
-        >
-          <div className="space-y-1 min-w-0">
-            <span className="text-[10px] uppercase font-mono font-bold text-amber-400">Official Standings</span>
-            <h3 className="text-base sm:text-lg font-black text-white font-mono group-hover:text-amber-300 transition-colors truncate">
-              ESPORTS POINTS TABLE
-            </h3>
-            <p className="text-xs text-slate-400 line-clamp-2">
-              View BGMI, Free Fire, and collegiate team points and match victories.
-            </p>
-          </div>
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:translate-x-1 transition-transform shrink-0">
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </div>
-        </Link>
-      </section>
+                  // Smart artwork fallback to extracted reference cards
+                  const cardFallback = isBGMI
+                    ? '/assets/bgmi-card-art.png'
+                    : isFreeFire
+                    ? '/assets/ff-card-art.png'
+                    : bgmiFallbackBanner;
+
+                  return (
+                    <Link
+                      key={t._id}
+                      to={`/tournaments/${t.slug || t._id}`}
+                      className={`group relative rounded-2xl overflow-hidden bg-slate-900/80 border ${accentBorder} flex flex-col justify-between transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-0.5`}
+                    >
+                      {/* Banner Area with Reference Overlay Treatment */}
+                      <div className="relative h-44 sm:h-52 w-full overflow-hidden bg-slate-950">
+                        <img
+                          src={t.banner || cardFallback}
+                          alt={t.name}
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-85 group-hover:opacity-95"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = cardFallback;
+                          }}
+                        />
+
+                        {/* Cinematic Gradients */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/40 to-transparent" />
+
+                        {/* Top Badges */}
+                        <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2">
+                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider font-mono border ${tagBg}`}>
+                            {t.game || 'ESPORTS'}
+                          </span>
+
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider uppercase bg-slate-950/90 border border-slate-800 text-white backdrop-blur-md">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isLive
+                                  ? 'bg-emerald-400 animate-pulse'
+                                  : isRegistrationOpen
+                                  ? 'bg-cyan-400'
+                                  : 'bg-amber-400'
+                              }`}
+                            />
+                            {isLive ? 'LIVE NOW' : isRegistrationOpen ? 'REGISTRATION OPEN' : t.status?.toUpperCase()}
+                          </span>
+                        </div>
+
+                        {/* Title Info */}
+                        <div className="absolute bottom-3.5 left-3.5 right-3.5 space-y-1">
+                          <div className={`text-[10px] font-mono font-bold uppercase tracking-widest ${titleColor}`}>
+                            {t.game?.toUpperCase()} CHAMPIONSHIP
+                          </div>
+                          <h3 className="text-base sm:text-lg font-black text-white font-mono truncate group-hover:text-cyan-200 transition-colors">
+                            {t.name}
+                          </h3>
+                        </div>
+                      </div>
+
+                      {/* Card Bottom Stats Bar (Matches Reference Image) */}
+                      <div className="p-3.5 sm:p-4 bg-slate-950/95 border-t border-slate-800/80 grid grid-cols-4 gap-2 text-center text-[10px] sm:text-xs font-mono">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center justify-center gap-1 text-slate-400">
+                            <Shield className="w-3 h-3 text-cyan-400 shrink-0" />
+                            <span className="font-bold text-white text-xs sm:text-sm">
+                              {t.registeredTeams?.length || 0}
+                            </span>
+                          </div>
+                          <div className="text-[9px] text-slate-500 uppercase">Teams</div>
+                        </div>
+
+                        <div className="space-y-0.5 border-l border-slate-800/80">
+                          <div className="flex items-center justify-center gap-1 text-slate-400">
+                            <Users className="w-3 h-3 text-indigo-400 shrink-0" />
+                            <span className="font-bold text-white text-xs sm:text-sm">{t.maxTeams || 16}</span>
+                          </div>
+                          <div className="text-[9px] text-slate-500 uppercase">Max Cap</div>
+                        </div>
+
+                        <div className="space-y-0.5 border-l border-slate-800/80">
+                          <div className="flex items-center justify-center gap-1 text-slate-400">
+                            <Calendar className="w-3 h-3 text-amber-400 shrink-0" />
+                            <span className="font-bold text-white text-xs sm:text-sm truncate">
+                              {new Date(t.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          <div className="text-[9px] text-slate-500 uppercase">Date</div>
+                        </div>
+
+                        <div className="space-y-0.5 border-l border-slate-800/80 flex flex-col justify-center">
+                          <span className={`text-[10px] font-bold uppercase truncate ${titleColor}`}>
+                            {t.format || 'Standard'}
+                          </span>
+                          <span className="text-[9px] text-slate-500">Format</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* ========================================================= */}
+          {/* 6. CURRENT MATCHES / LIVE STATUS */}
+          {/* ========================================================= */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                </span>
+                <span className="text-xs font-bold text-rose-400 font-mono uppercase tracking-wider">
+                  LIVE MATCHES
+                </span>
+                <span className="text-slate-600 hidden sm:inline">•</span>
+                <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+                  Ongoing Collegiate Rounds
+                </span>
+              </div>
+
+              <Link
+                to="/tournaments"
+                className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
+              >
+                <span>View All Matches</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {activeMatches.length === 0 ? (
+              <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-slate-500" />
+                  <span>No matches currently running.</span>
+                </div>
+                <span className="text-[11px] text-slate-500">
+                  Scores and rounds update automatically as match results post.
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2.5">
+                {activeMatches.map((m) => (
+                  <div
+                    key={m._id}
+                    className="px-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-3 text-xs font-mono backdrop-blur-sm"
+                  >
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 text-[10px] font-bold">
+                      {m.tournament?.game || 'ESPORTS'}
+                    </span>
+                    <span className="font-semibold text-white">{m.round || 'Round 1'}</span>
+                    <span className="text-slate-400 text-[11px]">Match {m.matchNumber || 1}</span>
+                    <span
+                      className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                        m.status === 'live' ? 'text-rose-400 bg-rose-950/60' : 'text-amber-400 bg-amber-950/60'
+                      }`}
+                    >
+                      {m.status === 'live' ? '● LIVE' : '● SCHEDULED'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* ========================================================= */}
+          {/* 7. LEADERBOARD PREVIEW (TOP SQUADS FROM BACKEND) */}
+          {/* ========================================================= */}
+          <section className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800/80">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 text-white font-mono font-bold text-sm sm:text-base uppercase tracking-wide">
+                  <BarChart3 className="w-4 h-4 text-cyan-400" />
+                  <span>Leaderboard Preview</span>
+                </div>
+                <p className="text-xs text-slate-400 font-mono">
+                  Top Performing Campus Teams
+                </p>
+              </div>
+
+              {/* Game Selector & Full Table Link */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <div className="p-1 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-1 font-mono text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setLeaderboardGame('BGMI')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      leaderboardGame === 'BGMI'
+                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    BGMI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLeaderboardGame('Free Fire')}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      leaderboardGame === 'Free Fire'
+                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Free Fire
+                  </button>
+                </div>
+
+                <Link
+                  to="/points-table"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-cyan-400 hover:text-cyan-300 font-mono flex items-center gap-1 transition-all"
+                >
+                  <span>View Full Table</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Standings Grid */}
+            <div className="rounded-2xl bg-slate-900/70 border border-slate-800 p-4 sm:p-5 backdrop-blur-md">
+              {filteredLeaderboardTeams.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400 font-mono">
+                  No {leaderboardGame} team standings recorded yet. Points update as varsity matches conclude.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredLeaderboardTeams.map((team, idx) => {
+                    const rank = idx + 1;
+                    const badgeStyle =
+                      rank === 1
+                        ? 'text-amber-400 bg-amber-500/10 border-amber-500/30'
+                        : rank === 2
+                        ? 'text-slate-300 bg-slate-400/10 border-slate-400/30'
+                        : rank === 3
+                        ? 'text-amber-600 bg-amber-600/10 border-amber-600/30'
+                        : 'text-slate-400 bg-slate-800/40 border-slate-800';
+
+                    return (
+                      <div
+                        key={team._id}
+                        className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs font-mono hover:border-slate-700 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className={`w-7 h-7 rounded-lg border flex items-center justify-center font-bold text-xs shrink-0 ${badgeStyle}`}>
+                            {rank === 1 ? <Crown className="w-4 h-4 text-amber-400" /> : rank}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-white font-bold truncate">{team.name}</div>
+                            {team.tag && (
+                              <span className="text-[10px] text-slate-400 font-normal">[{team.tag}]</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="font-black text-amber-400 text-sm">{team.points || 0}</span>
+                          <span className="text-[10px] text-slate-500 ml-1">pts</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ========================================================= */}
+          {/* 8. QUICK PORTAL HUBS */}
+          {/* ========================================================= */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-2">
+            <Link
+              to="/tournaments"
+              className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-cyan-950/30 to-slate-900 border border-cyan-500/30 hover:border-cyan-500/60 transition-all group flex items-center justify-between gap-3 shadow-lg"
+            >
+              <div className="space-y-1 min-w-0">
+                <span className="text-[10px] uppercase font-mono font-bold text-cyan-400">Campus Competitions</span>
+                <h3 className="text-base sm:text-lg font-black text-white font-mono group-hover:text-cyan-300 transition-colors truncate">
+                  AVAILABLE TOURNAMENTS
+                </h3>
+                <p className="text-xs text-slate-400 line-clamp-2">
+                  Browse open registrations, battle arena rules, and register your team squad.
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:translate-x-1 transition-transform shrink-0">
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </Link>
+
+            <Link
+              to="/points-table"
+              className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-amber-950/30 to-slate-900 border border-amber-500/30 hover:border-amber-500/60 transition-all group flex items-center justify-between gap-3 shadow-lg"
+            >
+              <div className="space-y-1 min-w-0">
+                <span className="text-[10px] uppercase font-mono font-bold text-amber-400">Official Standings</span>
+                <h3 className="text-base sm:text-lg font-black text-white font-mono group-hover:text-amber-300 transition-colors truncate">
+                  ESPORTS POINTS TABLE
+                </h3>
+                <p className="text-xs text-slate-400 line-clamp-2">
+                  View varsity team points, match victories, kill statistics, and rankings.
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:translate-x-1 transition-transform shrink-0">
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </Link>
+          </section>
+
+        </div>
+      </div>
     </div>
   );
 };
