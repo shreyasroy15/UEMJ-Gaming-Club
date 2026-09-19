@@ -29,7 +29,7 @@ const Login = () => {
       const res = await login(email, password);
       if (res.success) {
         addToast(`Welcome back, ${res.user.name}!`, 'success');
-        if (res.user.role === 'admin') {
+        if (res.user.role === 'admin' || res.user.role === 'staff') {
           navigate('/admin', { replace: true });
         } else {
           navigate('/', { replace: true });

@@ -1,16 +1,23 @@
 import React, { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import Footer from '../components/Footer/Footer';
 import { prefetchAppResources } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const MainLayout = () => {
   const location = useLocation();
+  const { user, isAuthenticated, loading } = useAuth();
 
   // Prefetch data in background on initial layout load so subsequent pages load instantly
   useEffect(() => {
     prefetchAppResources();
   }, []);
+
+  // Admin and staff must ONLY access the Admin Panel, not the player/student home & tournament pages
+  if (!loading && isAuthenticated && (user?.role === 'admin' || user?.role === 'staff')) {
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <div className="relative min-h-screen flex flex-col bg-[#07090e] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 overflow-x-hidden">

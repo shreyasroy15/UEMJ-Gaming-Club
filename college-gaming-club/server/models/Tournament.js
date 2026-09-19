@@ -170,6 +170,11 @@ const tournamentSchema = new mongoose.Schema(
               type: Number,
               default: 25,
             },
+            status: {
+              type: String,
+              enum: ['upcoming', 'running'],
+              default: 'upcoming',
+            },
             teams: [
               {
                 type: mongoose.Schema.Types.ObjectId,

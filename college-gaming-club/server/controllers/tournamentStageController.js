@@ -42,6 +42,39 @@ exports.getTournamentStructure = async (req, res, next) => {
       .populate('winner', 'teamName teamTag')
       .sort({ matchNumber: 1, scheduledAt: 1 });
 
+    // If no stages exist, auto-initialize a default stage so lobbies can be added seamlessly
+    if (!tournament.stages || tournament.stages.length === 0) {
+      tournament.stages = [
+        {
+          name: 'Main Stage',
+          order: 1,
+          status: 'upcoming',
+          isFinal: false,
+          qualifiedTeams: allRegistrations.map((r) => r._id),
+          advancedTeams: [],
+          lobbies: [],
+        },
+      ];
+      await tournament.save();
+    }
+
+    // Flatten all lobbies for direct lobby-first navigation
+    const allLobbies = [];
+    (tournament.stages || []).forEach((stage) => {
+      (stage.lobbies || []).forEach((lobby) => {
+        allLobbies.push({
+          _id: lobby._id,
+          stageId: stage._id,
+          stageName: stage.name,
+          name: lobby.name,
+          maxTeams: lobby.maxTeams || 25,
+          status: lobby.status || 'upcoming',
+          order: lobby.order || 1,
+          teams: lobby.teams || [],
+        });
+      });
+    });
+
     res.status(200).json({
       success: true,
       tournament: {
@@ -53,6 +86,7 @@ exports.getTournamentStructure = async (req, res, next) => {
         maxTeams: tournament.maxTeams,
       },
       stages: tournament.stages || [],
+      lobbies: allLobbies,
       allRegistrations,
       matches,
     });
@@ -559,7 +593,35 @@ exports.updateLobbyMatch = async (req, res, next) => {
     if (notes !== undefined) match.notes = notes;
     if (teams !== undefined && Array.isArray(teams)) match.teams = teams;
 
+    // Automatic status logic: If Room ID & Password are provided, switch match to 'live' if scheduled
+    const hasCredentials = Boolean(
+      (match.roomId && match.roomId.trim()) ||
+      (match.roomPassword && match.roomPassword.trim())
+    );
+    if (hasCredentials && match.status === 'scheduled') {
+      match.status = 'live';
+    }
+
     await match.save();
+
+    // Automatic status logic: If Room ID & Password provided, switch parent lobby status to 'running'
+    if (hasCredentials && match.lobbyId) {
+      const tournament = await findTournament(req.params.id);
+      if (tournament && tournament.stages) {
+        let lobbyUpdated = false;
+        for (const stage of tournament.stages) {
+          const lobby = stage.lobbies && stage.lobbies.id(match.lobbyId);
+          if (lobby && lobby.status !== 'running') {
+            lobby.status = 'running';
+            lobbyUpdated = true;
+            break;
+          }
+        }
+        if (lobbyUpdated) {
+          await tournament.save();
+        }
+      }
+    }
 
     const populatedMatch = await Match.findById(match._id)
       .populate('teams', 'teamName teamTag teamType captain')
@@ -595,3 +657,332 @@ exports.deleteLobbyMatch = async (req, res, next) => {
     next(error);
   }
 };
+
+// ==========================================
+// DIRECT TOURNAMENT LOBBY ENDPOINTS
+// (Streamlined for esports organizer workflow)
+// ==========================================
+
+// @desc    Create a lobby directly in a tournament
+// @route   POST /api/tournaments/:id/lobbies
+// @access  Private (Admin / Staff)
+exports.createDirectLobby = async (req, res, next) => {
+  try {
+    const tournament = await findTournament(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    // Auto-create base stage if needed
+    if (!tournament.stages || tournament.stages.length === 0) {
+      tournament.stages = [
+        {
+          name: 'Main Stage',
+          order: 1,
+          status: 'upcoming',
+          isFinal: false,
+          qualifiedTeams: [],
+          advancedTeams: [],
+          lobbies: [],
+        },
+      ];
+    }
+
+    const stage = tournament.stages[0];
+    const { name, maxTeams, status = 'upcoming', teamIds = [] } = req.body;
+    const lobbyName = (name && name.trim()) || `Lobby ${(stage.lobbies?.length || 0) + 1}`;
+
+    const newLobby = {
+      name: lobbyName,
+      maxTeams: maxTeams ? Number(maxTeams) : 25,
+      status: status === 'running' ? 'running' : 'upcoming',
+      order: (stage.lobbies?.length || 0) + 1,
+      teams: Array.isArray(teamIds) ? teamIds : [],
+    };
+
+    stage.lobbies.push(newLobby);
+    await tournament.save();
+
+    const createdLobby = stage.lobbies[stage.lobbies.length - 1];
+
+    res.status(201).json({
+      success: true,
+      message: `Lobby "${createdLobby.name}" created successfully`,
+      lobby: createdLobby,
+      stageId: stage._id,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update a tournament lobby (rename, capacity, status)
+// @route   PUT /api/tournaments/:id/lobbies/:lobbyId
+// @access  Private (Admin / Staff)
+exports.updateDirectLobby = async (req, res, next) => {
+  try {
+    const tournament = await findTournament(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    let foundLobby = null;
+    for (const stage of tournament.stages || []) {
+      const lobby = stage.lobbies?.id(req.params.lobbyId);
+      if (lobby) {
+        foundLobby = lobby;
+        break;
+      }
+    }
+
+    if (!foundLobby) {
+      return res.status(404).json({ success: false, message: 'Lobby not found' });
+    }
+
+    const { name, maxTeams, status } = req.body;
+    if (name !== undefined) foundLobby.name = name.trim();
+    if (maxTeams !== undefined) foundLobby.maxTeams = Number(maxTeams);
+    if (status !== undefined) foundLobby.status = status;
+
+    await tournament.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Lobby "${foundLobby.name}" updated`,
+      lobby: foundLobby,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete a tournament lobby
+// @route   DELETE /api/tournaments/:id/lobbies/:lobbyId
+// @access  Private (Admin / Staff)
+exports.deleteDirectLobby = async (req, res, next) => {
+  try {
+    const tournament = await findTournament(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    let foundLobby = null;
+    for (const stage of tournament.stages || []) {
+      const lobby = stage.lobbies?.id(req.params.lobbyId);
+      if (lobby) {
+        foundLobby = lobby;
+        lobby.deleteOne();
+        break;
+      }
+    }
+
+    if (!foundLobby) {
+      return res.status(404).json({ success: false, message: 'Lobby not found' });
+    }
+
+    await Match.deleteMany({ tournament: tournament._id, lobbyId: req.params.lobbyId });
+    await tournament.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Lobby and associated matches deleted',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Assign teams to a tournament lobby
+// @route   POST /api/tournaments/:id/lobbies/:lobbyId/assign-teams
+// @access  Private (Admin / Staff)
+exports.assignTeamsToDirectLobby = async (req, res, next) => {
+  try {
+    const tournament = await findTournament(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    let foundLobby = null;
+    for (const stage of tournament.stages || []) {
+      const lobby = stage.lobbies?.id(req.params.lobbyId);
+      if (lobby) {
+        foundLobby = lobby;
+        break;
+      }
+    }
+
+    if (!foundLobby) {
+      return res.status(404).json({ success: false, message: 'Lobby not found' });
+    }
+
+    const { teamIds, mode = 'set' } = req.body;
+    if (!Array.isArray(teamIds)) {
+      return res.status(400).json({ success: false, message: 'teamIds array required' });
+    }
+
+    if (mode === 'append') {
+      const current = (foundLobby.teams || []).map(String);
+      foundLobby.teams = Array.from(new Set([...current, ...teamIds.map(String)]));
+    } else {
+      foundLobby.teams = teamIds;
+    }
+
+    await tournament.save();
+
+    // Sync teams to any scheduled matches in this lobby
+    await Match.updateMany(
+      { tournament: tournament._id, lobbyId: foundLobby._id, status: 'scheduled' },
+      { $set: { teams: foundLobby.teams } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Assigned ${foundLobby.teams.length} teams to ${foundLobby.name}`,
+      lobby: foundLobby,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Direct create match/round in a lobby
+// @route   POST /api/tournaments/:id/lobbies/:lobbyId/matches
+// @access  Private (Admin / Staff)
+exports.createDirectLobbyMatch = async (req, res, next) => {
+  try {
+    const tournament = await findTournament(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    let foundLobby = null;
+    let foundStage = null;
+    for (const stage of tournament.stages || []) {
+      const lobby = stage.lobbies?.id(req.params.lobbyId);
+      if (lobby) {
+        foundLobby = lobby;
+        foundStage = stage;
+        break;
+      }
+    }
+
+    if (!foundLobby) {
+      return res.status(404).json({ success: false, message: 'Lobby not found' });
+    }
+
+    const {
+      title,
+      map,
+      matchNumber,
+      scheduledAt,
+      status,
+      roomId,
+      roomPassword,
+      streamUrl,
+      notes,
+    } = req.body;
+
+    const existingCount = await Match.countDocuments({
+      tournament: tournament._id,
+      lobbyId: foundLobby._id,
+    });
+
+    const mNumber = matchNumber ? Number(matchNumber) : existingCount + 1;
+    const mTitle = (title && title.trim()) || `Round ${mNumber}`;
+
+    const hasCredentials = Boolean(roomId && roomId.trim() && roomPassword && roomPassword.trim());
+    const mStatus = hasCredentials ? 'live' : (status || 'scheduled');
+
+    if (hasCredentials && foundLobby.status !== 'running') {
+      foundLobby.status = 'running';
+      await tournament.save();
+    }
+
+    const match = await Match.create({
+      tournament: tournament._id,
+      stageId: foundStage._id,
+      lobbyId: foundLobby._id,
+      stageName: foundStage.name,
+      lobbyName: foundLobby.name,
+      matchNumber: mNumber,
+      title: mTitle,
+      map: map || 'Erangel',
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : new Date(),
+      status: mStatus,
+      roomId: roomId ? roomId.trim() : '',
+      roomPassword: roomPassword ? roomPassword.trim() : '',
+      streamUrl: streamUrl || '',
+      notes: notes || '',
+      teams: foundLobby.teams || [],
+    });
+
+    const populatedMatch = await Match.findById(match._id).populate(
+      'teams',
+      'teamName teamTag teamType captain'
+    );
+
+    res.status(201).json({
+      success: true,
+      message: `${populatedMatch.title} scheduled for ${foundLobby.name}`,
+      match: populatedMatch,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create a new lobby by selecting top teams across multiple lobbies (e.g. Finals Lobby)
+// @route   POST /api/tournaments/:id/lobbies/create-from-teams
+// @access  Private (Admin / Staff)
+exports.createLobbyFromSelectedTeams = async (req, res, next) => {
+  try {
+    const tournament = await findTournament(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    const { name, maxTeams, selectedTeamIds = [] } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Lobby name is required' });
+    }
+
+    if (!tournament.stages || tournament.stages.length === 0) {
+      tournament.stages = [
+        {
+          name: 'Main Stage',
+          order: 1,
+          status: 'upcoming',
+          isFinal: false,
+          qualifiedTeams: [],
+          advancedTeams: [],
+          lobbies: [],
+        },
+      ];
+    }
+
+    const stage = tournament.stages[0];
+    const uniqueTeamIds = Array.from(new Set(selectedTeamIds.map(String)));
+
+    const newLobby = {
+      name: name.trim(),
+      maxTeams: maxTeams ? Number(maxTeams) : Math.max(25, uniqueTeamIds.length),
+      status: 'upcoming',
+      order: (stage.lobbies?.length || 0) + 1,
+      teams: uniqueTeamIds,
+    };
+
+    stage.lobbies.push(newLobby);
+    await tournament.save();
+
+    const createdLobby = stage.lobbies[stage.lobbies.length - 1];
+
+    res.status(201).json({
+      success: true,
+      message: `Created "${createdLobby.name}" with ${uniqueTeamIds.length} qualified teams!`,
+      lobby: createdLobby,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

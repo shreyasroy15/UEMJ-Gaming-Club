@@ -32,6 +32,12 @@ const {
   createLobbyMatch,
   updateLobbyMatch,
   deleteLobbyMatch,
+  createDirectLobby,
+  updateDirectLobby,
+  deleteDirectLobby,
+  assignTeamsToDirectLobby,
+  createDirectLobbyMatch,
+  createLobbyFromSelectedTeams,
 } = require('../controllers/tournamentStageController');
 
 // Nested form routes: /api/tournaments/:id/form
@@ -43,7 +49,15 @@ router.post('/:id/deregister', protect, deregisterFromTournament);
 router.get('/:id/public-teams', getPublicTeams);
 router.get('/:id/admin-registrations', protect, staffOnly, getAdminRegistrations);
 
-// Dynamic Stages, Lobbies, Matches & Qualification Routes
+// Direct Tournament Lobby Routes (Esports Manager Flow)
+router.post('/:id/lobbies', protect, staffOnly, createDirectLobby);
+router.put('/:id/lobbies/:lobbyId', protect, staffOnly, updateDirectLobby);
+router.delete('/:id/lobbies/:lobbyId', protect, staffOnly, deleteDirectLobby);
+router.post('/:id/lobbies/:lobbyId/assign-teams', protect, staffOnly, assignTeamsToDirectLobby);
+router.post('/:id/lobbies/:lobbyId/matches', protect, staffOnly, createDirectLobbyMatch);
+router.post('/:id/lobbies/create-from-teams', protect, staffOnly, createLobbyFromSelectedTeams);
+
+// Dynamic Stages, Lobbies, Matches & Qualification Routes (Backwards Compatibility)
 router.get('/:id/stages-structure', protect, staffOnly, getTournamentStructure);
 router.post('/:id/stages', protect, staffOnly, createStage);
 router.put('/:id/stages/:stageId', protect, staffOnly, updateStage);

@@ -345,7 +345,7 @@ const Navbar = () => {
                           </div>
 
                           <div className="py-1.5 space-y-1">
-                            {user.role === 'admin' ? (
+                            {user.role === 'admin' || user.role === 'staff' ? (
                               <Link
                                 to="/admin"
                                 onClick={() => setProfileDropdownOpen(false)}
