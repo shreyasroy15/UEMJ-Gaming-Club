@@ -102,7 +102,7 @@ const tournamentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['upcoming', 'registration-open', 'ongoing', 'live', 'completed', 'cancelled'],
+      enum: ['upcoming', 'registration-open', 'ongoing', 'live', 'on-hold', 'completed', 'cancelled'],
       default: 'upcoming',
     },
     createdBy: {
@@ -172,7 +172,7 @@ const tournamentSchema = new mongoose.Schema(
             },
             status: {
               type: String,
-              enum: ['upcoming', 'running'],
+              enum: ['upcoming', 'running', 'on-hold', 'completed'],
               default: 'upcoming',
             },
             teams: [

@@ -2,6 +2,7 @@ const Tournament = require('../models/Tournament');
 const TournamentRegistration = require('../models/TournamentRegistration');
 const Match = require('../models/Match');
 const mongoose = require('mongoose');
+const { sendMatchNotification } = require('../utils/notificationHelper');
 
 // Helper to resolve tournament by ID or slug
 const findTournament = async (paramId) => {
@@ -40,6 +41,7 @@ exports.getTournamentStructure = async (req, res, next) => {
     const matches = await Match.find({ tournament: tournament._id })
       .populate('teams', 'teamName teamTag teamType captain')
       .populate('winner', 'teamName teamTag')
+      .populate('results.team', 'teamName teamTag captain')
       .sort({ matchNumber: 1, scheduledAt: 1 });
 
     // If no stages exist, auto-initialize a default stage so lobbies can be added seamlessly
@@ -604,20 +606,26 @@ exports.updateLobbyMatch = async (req, res, next) => {
 
     await match.save();
 
-    // Automatic status logic: If Room ID & Password provided, switch parent lobby status to 'running'
-    if (hasCredentials && match.lobbyId) {
+    // Automatic status logic: If Room ID & Password provided, switch parent lobby status to 'running' and tournament to 'ongoing'
+    if (hasCredentials) {
       const tournament = await findTournament(req.params.id);
-      if (tournament && tournament.stages) {
-        let lobbyUpdated = false;
-        for (const stage of tournament.stages) {
-          const lobby = stage.lobbies && stage.lobbies.id(match.lobbyId);
-          if (lobby && lobby.status !== 'running') {
-            lobby.status = 'running';
-            lobbyUpdated = true;
-            break;
+      if (tournament) {
+        let changed = false;
+        if (match.lobbyId && tournament.stages) {
+          for (const stage of tournament.stages) {
+            const lobby = stage.lobbies && stage.lobbies.id(match.lobbyId);
+            if (lobby && lobby.status !== 'running') {
+              lobby.status = 'running';
+              changed = true;
+              break;
+            }
           }
         }
-        if (lobbyUpdated) {
+        if (tournament.status === 'upcoming' || tournament.status === 'registration-open' || tournament.status === 'on-hold') {
+          tournament.status = 'ongoing';
+          changed = true;
+        }
+        if (changed) {
           await tournament.save();
         }
       }
@@ -626,6 +634,32 @@ exports.updateLobbyMatch = async (req, res, next) => {
     const populatedMatch = await Match.findById(match._id)
       .populate('teams', 'teamName teamTag teamType captain')
       .populate('winner', 'teamName teamTag');
+
+    // Send notifications to participating squads
+    const tournamentForNotif = await findTournament(req.params.id);
+    if (tournamentForNotif) {
+      let notifTitle = `⏱️ Match Updated: ${populatedMatch.stageName || populatedMatch.round} Match #${populatedMatch.matchNumber}`;
+      let notifMessage = `Match schedule/details have been updated. Map: ${populatedMatch.map || 'Erangel'}. Tap to view fixtures.`;
+      let notifType = 'match_update';
+
+      if (roomId || roomPassword) {
+        notifTitle = `🔑 Lobby Credentials Released: ${populatedMatch.stageName || populatedMatch.round} ${populatedMatch.lobbyName ? '• ' + populatedMatch.lobbyName : ''}`;
+        notifMessage = `Room ID: ${populatedMatch.roomId}. Lobby room password has been released. Tap to view and copy credentials.`;
+        notifType = 'match_credentials';
+      } else if (populatedMatch.status === 'live') {
+        notifTitle = `🔴 Match Is Now LIVE: ${populatedMatch.stageName || populatedMatch.round} Match #${populatedMatch.matchNumber}`;
+        notifMessage = `Match #${populatedMatch.matchNumber} is now live! Join your assigned room in-game.`;
+        notifType = 'match_live';
+      }
+
+      sendMatchNotification({
+        match: populatedMatch,
+        tournament: tournamentForNotif,
+        title: notifTitle,
+        message: notifMessage,
+        type: notifType,
+      }).catch((e) => console.error('Match notification error:', e));
+    }
 
     res.status(200).json({
       success: true,
@@ -893,9 +927,19 @@ exports.createDirectLobbyMatch = async (req, res, next) => {
     const hasCredentials = Boolean(roomId && roomId.trim() && roomPassword && roomPassword.trim());
     const mStatus = hasCredentials ? 'live' : (status || 'scheduled');
 
-    if (hasCredentials && foundLobby.status !== 'running') {
-      foundLobby.status = 'running';
-      await tournament.save();
+    if (hasCredentials) {
+      let changed = false;
+      if (foundLobby.status !== 'running') {
+        foundLobby.status = 'running';
+        changed = true;
+      }
+      if (tournament.status === 'upcoming' || tournament.status === 'registration-open' || tournament.status === 'on-hold') {
+        tournament.status = 'ongoing';
+        changed = true;
+      }
+      if (changed) {
+        await tournament.save();
+      }
     }
 
     const match = await Match.create({
@@ -920,6 +964,18 @@ exports.createDirectLobbyMatch = async (req, res, next) => {
       'teams',
       'teamName teamTag teamType captain'
     );
+
+    sendMatchNotification({
+      match: populatedMatch,
+      tournament,
+      title: hasCredentials
+        ? `🔑 Match Credentials: ${populatedMatch.stageName} • ${populatedMatch.lobbyName}`
+        : `🎮 New Match Scheduled: ${populatedMatch.stageName} • Match #${populatedMatch.matchNumber}`,
+      message: hasCredentials
+        ? `Room ID: ${populatedMatch.roomId}. Lobby room password has been released. Tap to view.`
+        : `Match #${populatedMatch.matchNumber} scheduled for ${populatedMatch.lobbyName}. Map: ${populatedMatch.map}. Tap to view fixtures.`,
+      type: hasCredentials ? 'match_credentials' : 'match_update',
+    }).catch((e) => console.error('Match schedule notification error:', e));
 
     res.status(201).json({
       success: true,
@@ -985,4 +1041,101 @@ exports.createLobbyFromSelectedTeams = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Record round results, team rankings, kills, bonus and points
+// @route   POST /api/tournaments/:id/matches/:matchId/results
+// @access  Private (Admin / Staff)
+exports.recordMatchResults = async (req, res, next) => {
+  try {
+    const match = await Match.findById(req.params.matchId);
+    if (!match) {
+      return res.status(404).json({ success: false, message: 'Match not found' });
+    }
+
+    const { results, status = 'completed' } = req.body;
+    if (!Array.isArray(results)) {
+      return res.status(400).json({ success: false, message: 'results array is required' });
+    }
+
+    // Format results
+    const formattedResults = results.map((r) => ({
+      team: r.team?._id || r.team || r.teamId,
+      teamName: r.teamName || '',
+      teamTag: r.teamTag || '',
+      position: Number(r.position) || 0,
+      kills: Number(r.kills) || 0,
+      positionPoints: Number(r.positionPoints) || 0,
+      killPoints: Number(r.killPoints) || 0,
+      bonusPoints: Number(r.bonusPoints) || 0,
+      totalPoints:
+        Number(r.totalPoints) ||
+        Number(r.positionPoints || 0) + Number(r.killPoints || 0) + Number(r.bonusPoints || 0),
+    }));
+
+    match.results = formattedResults;
+    match.status = status;
+
+    // Automatically set match.winner to the 1st place team
+    const winnerEntry = formattedResults.find((r) => r.position === 1);
+    if (winnerEntry && winnerEntry.team) {
+      match.winner = winnerEntry.team;
+    }
+
+    await match.save();
+
+    // Recalculate and update cumulative points in TournamentRegistration for all teams in tournament
+    const allCompletedMatches = await Match.find({
+      tournament: match.tournament,
+      status: 'completed',
+    });
+
+    const teamCumulativeMap = {};
+    allCompletedMatches.forEach((m) => {
+      (m.results || []).forEach((resItem) => {
+        if (!resItem.team) return;
+        const tid = resItem.team.toString();
+        if (!teamCumulativeMap[tid]) {
+          teamCumulativeMap[tid] = { totalPoints: 0, matchesPlayed: 0 };
+        }
+        teamCumulativeMap[tid].totalPoints += Number(resItem.totalPoints || 0);
+        teamCumulativeMap[tid].matchesPlayed += 1;
+      });
+    });
+
+    // Update each registered team's cumulative points
+    const updatePromises = Object.entries(teamCumulativeMap).map(([tid, stats]) =>
+      TournamentRegistration.findByIdAndUpdate(tid, {
+        $set: { points: stats.totalPoints, matchesPlayed: stats.matchesPlayed },
+      })
+    );
+    await Promise.all(updatePromises);
+
+    const populatedMatch = await Match.findById(match._id)
+      .populate('teams', 'teamName teamTag teamType captain')
+      .populate('winner', 'teamName teamTag')
+      .populate('results.team', 'teamName teamTag captain');
+
+    // Send notifications to squads with direct link to Points Table
+    const tournamentForNotif = await findTournament(req.params.id);
+    if (tournamentForNotif) {
+      sendMatchNotification({
+        match: populatedMatch,
+        tournament: tournamentForNotif,
+        title: `🏆 Match Results Recorded: ${populatedMatch.stageName || populatedMatch.round} Match #${populatedMatch.matchNumber}`,
+        message: `Results for Match #${populatedMatch.matchNumber} in ${populatedMatch.lobbyName || 'Lobby'} have been recorded! Check updated standings.`,
+        type: 'match_results',
+        customLink: `/tournaments/${tournamentForNotif.slug || tournamentForNotif._id}?tab=leaderboard`,
+      }).catch((e) => console.error('Results notification error:', e));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Results recorded for ${populatedMatch.title || 'Round'} successfully!`,
+      match: populatedMatch,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

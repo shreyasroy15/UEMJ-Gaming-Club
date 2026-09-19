@@ -243,9 +243,20 @@ const Tournaments = () => {
                         </span>
                         <h3 className="text-sm font-bold text-white font-mono truncate">{t.name || 'Tournament'}</h3>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-800 shrink-0">
-                        ✓ Registered
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {t.status === 'ongoing' || t.status === 'live' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 animate-pulse">
+                            ● Running
+                          </span>
+                        ) : t.status === 'on-hold' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-950/90 text-amber-300 border border-amber-500/50">
+                            ⏸️ On Hold
+                          </span>
+                        ) : null}
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-800 shrink-0">
+                          ✓ Registered
+                        </span>
+                      </div>
                     </div>
 
                     <div className="text-xs text-slate-300 space-y-1 py-2 border-y border-slate-900 font-mono">
@@ -315,12 +326,13 @@ const Tournaments = () => {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
               >
                 <option value="all">All Statuses</option>
-                <option value="upcoming">Upcoming</option>
+                <option value="ongoing">● Running / Live</option>
+                <option value="on-hold">⏸️ On Hold</option>
                 <option value="registration-open">Registration Open</option>
-                <option value="ongoing">Ongoing</option>
+                <option value="upcoming">Upcoming</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>

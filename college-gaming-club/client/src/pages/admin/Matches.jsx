@@ -38,7 +38,43 @@ import {
   Award,
   Sliders,
   ExternalLink,
+  Zap,
+  Minus,
+  Save,
+  Flame,
 } from 'lucide-react';
+
+// Official Esports Pointing System Presets
+const SCORING_PRESETS = {
+  bgmi: {
+    key: 'bgmi',
+    name: 'BGMI Official (BGIS / BMPS 10-Pts)',
+    description: '1st: 10, 2nd: 6, 3rd: 5, 4th: 4, 5th: 3, 6th: 2, 7th: 1, 8th: 1, 9th+: 0 | 1 pt/kill',
+    positionPoints: { 1: 10, 2: 6, 3: 5, 4: 4, 5: 3, 6: 2, 7: 1, 8: 1 },
+    killPoint: 1,
+  },
+  freefire: {
+    key: 'freefire',
+    name: 'Free Fire Official (FFWS 12-Pts)',
+    description: '1st: 12, 2nd: 9, 3rd: 8, 4th: 7, 5th: 6, 6th: 5, 7th: 4, 8th: 3, 9th: 2, 10th: 1 | 1 pt/kill',
+    positionPoints: { 1: 12, 2: 9, 3: 8, 4: 7, 5: 6, 6: 5, 7: 4, 8: 3, 9: 2, 10: 1 },
+    killPoint: 1,
+  },
+  classic: {
+    key: 'classic',
+    name: 'Classic 15-Point System',
+    description: '1st: 15, 2nd: 12, 3rd: 10, 4th: 8, 5th: 6, 6th: 4, 7th: 2, 8th-12th: 1 | 1 pt/kill',
+    positionPoints: { 1: 15, 2: 12, 3: 10, 4: 8, 5: 6, 6: 4, 7: 2, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1 },
+    killPoint: 1,
+  },
+  custom: {
+    key: 'custom',
+    name: 'Custom Point Rules',
+    description: 'Custom points distribution per position configured by admin',
+    positionPoints: { 1: 10, 2: 9, 3: 8, 4: 7, 5: 6, 6: 5, 7: 4, 8: 3 },
+    killPoint: 1,
+  },
+};
 
 const AdminMatches = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -101,6 +137,17 @@ const AdminMatches = () => {
     winner: '',
   });
 
+  // Match Results & Points Entry State
+  const [pointsModalOpen, setPointsModalOpen] = useState(false);
+  const [selectedRoundForPoints, setSelectedRoundForPoints] = useState(null);
+  const [selectedPresetKey, setSelectedPresetKey] = useState('bgmi');
+  const [customPositionPoints, setCustomPositionPoints] = useState({
+    1: 10, 2: 9, 3: 8, 4: 7, 5: 6, 6: 5, 7: 4, 8: 3, 9: 2, 10: 1,
+  });
+  const [customKillPoint, setCustomKillPoint] = useState(1);
+  const [showCustomConfig, setShowCustomConfig] = useState(false);
+  const [roundResultsData, setRoundResultsData] = useState([]);
+
   // Quick Room Credentials Drawer / Inline editing
   const [quickCredsMatch, setQuickCredsMatch] = useState(null);
   const [quickRoomId, setQuickRoomId] = useState('');
@@ -125,7 +172,6 @@ const AdminMatches = () => {
       const list = res.data.tournaments || [];
       setTournaments(list);
 
-      // If URL already had a specific tournament query param, select it
       if (queryTournament && list.some((t) => t._id === queryTournament)) {
         setSelectedTournamentId(queryTournament);
       }
@@ -175,7 +221,7 @@ const AdminMatches = () => {
   const filteredTournaments = useMemo(() => {
     if (showAllTournaments) return tournaments;
     return tournaments.filter((t) =>
-      ['live', 'ongoing', 'upcoming', 'registration-open'].includes(t.status)
+      ['live', 'ongoing', 'upcoming', 'registration-open', 'on-hold'].includes(t.status)
     );
   }, [tournaments, showAllTournaments]);
 
@@ -190,7 +236,6 @@ const AdminMatches = () => {
     if (structure.lobbies && structure.lobbies.length > 0) {
       return structure.lobbies;
     }
-    // Fallback extraction from stages
     const result = [];
     (structure.stages || []).forEach((stage) => {
       (stage.lobbies || []).forEach((l) => {
@@ -272,7 +317,7 @@ const AdminMatches = () => {
     return matchesByLobby[activeLobby._id.toString()] || [];
   }, [activeLobby, matchesByLobby]);
 
-  // Standings / Points Table for a given lobby
+  // Standings / Points Table for a given lobby (aggregates results from all completed rounds)
   const computeLobbyStandings = (lobbyId) => {
     const targetLobby = allLobbies.find((l) => l._id.toString() === lobbyId.toString());
     if (!targetLobby) return [];
@@ -292,7 +337,8 @@ const AdminMatches = () => {
         matchesPlayed: 0,
         wins: 0,
         kills: 0,
-        placementPoints: 0,
+        positionPoints: 0,
+        bonusPoints: 0,
         totalPoints: 0,
       };
     });
@@ -302,19 +348,35 @@ const AdminMatches = () => {
         const wid = m.winner._id ? m.winner._id.toString() : m.winner.toString();
         if (pointsMap[wid]) {
           pointsMap[wid].wins += 1;
-          pointsMap[wid].placementPoints += 15; // standard 1st place
-          pointsMap[wid].totalPoints += 15;
         }
       }
-      (m.teams || []).forEach((tm) => {
-        const tid = tm._id ? tm._id.toString() : tm.toString();
-        if (pointsMap[tid]) {
-          pointsMap[tid].matchesPlayed += 1;
-        }
-      });
+
+      if (m.results && m.results.length > 0) {
+        m.results.forEach((r) => {
+          const tid = r.team?._id ? r.team._id.toString() : r.team?.toString() || r.teamId;
+          if (tid && pointsMap[tid]) {
+            pointsMap[tid].matchesPlayed += 1;
+            pointsMap[tid].kills += Number(r.kills || 0);
+            pointsMap[tid].positionPoints += Number(r.positionPoints || 0);
+            pointsMap[tid].bonusPoints += Number(r.bonusPoints || 0);
+            pointsMap[tid].totalPoints += Number(r.totalPoints || 0);
+          }
+        });
+      } else {
+        (m.teams || []).forEach((tm) => {
+          const tid = tm._id ? tm._id.toString() : tm.toString();
+          if (pointsMap[tid]) {
+            pointsMap[tid].matchesPlayed += 1;
+          }
+        });
+      }
     });
 
-    return Object.values(pointsMap).sort((a, b) => b.totalPoints - a.totalPoints);
+    return Object.values(pointsMap).sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return b.kills - a.kills;
+    });
   };
 
   const activeLobbyStandings = useMemo(() => {
@@ -437,22 +499,37 @@ const AdminMatches = () => {
     }
   };
 
-  // Quick toggle status for a lobby
-  const handleToggleLobbyStatus = async (lobby) => {
-    const newStatus = lobby.status === 'running' ? 'upcoming' : 'running';
+  const handleUpdateTournamentStatus = async (newStatus) => {
+    if (!selectedTournamentId) return;
+    try {
+      await API.patch(`/tournaments/${selectedTournamentId}/status`, { status: newStatus });
+      addToast(`Tournament status updated to "${newStatus.toUpperCase()}"`, 'success');
+      setTournaments((prev) =>
+        prev.map((t) => (t._id === selectedTournamentId ? { ...t, status: newStatus } : t))
+      );
+      setStructure((prev) => ({
+        ...prev,
+        tournament: prev.tournament ? { ...prev.tournament, status: newStatus } : prev.tournament,
+      }));
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to update tournament status', 'error');
+    }
+  };
+
+  const handleSetLobbyStatus = async (lobby, newStatus) => {
     try {
       await API.put(`/tournaments/${selectedTournamentId}/lobbies/${lobby._id}`, {
         status: newStatus,
       });
-      addToast(`Lobby status set to ${newStatus.toUpperCase()}`, 'success');
+      addToast(`Lobby "${lobby.name}" status set to "${newStatus.toUpperCase()}"`, 'success');
       fetchTournamentStructure(selectedTournamentId);
     } catch (err) {
       console.error(err);
-      addToast('Failed to toggle lobby status', 'error');
+      addToast('Failed to update lobby status', 'error');
     }
   };
 
-  // Assign selected teams to a target lobby
   const handleAssignSelectedToLobby = async (targetLobbyId) => {
     if (!targetLobbyId) {
       addToast('Please select a target lobby', 'warning');
@@ -484,7 +561,6 @@ const AdminMatches = () => {
     }
   };
 
-  // Remove a single team from a lobby
   const handleRemoveTeamFromLobby = async (lobby, teamId) => {
     const updatedTeamIds = (lobby.teams || [])
       .map((t) => (t._id ? t._id.toString() : t.toString()))
@@ -696,8 +772,11 @@ const AdminMatches = () => {
         roomPassword: quickRoomPassword.trim(),
       });
       addToast(
-        'Room ID & Password saved! Lobby and Round automatically switched to RUNNING status.',
+        'Room ID & Password saved! Tournament & Lobby automatically switched to RUNNING status.',
         'success'
+      );
+      setTournaments((prev) =>
+        prev.map((t) => (t._id === selectedTournamentId ? { ...t, status: 'ongoing' } : t))
       );
       setQuickCredsMatch(null);
       fetchTournamentStructure(selectedTournamentId);
@@ -713,6 +792,216 @@ const AdminMatches = () => {
     if (!text) return;
     navigator.clipboard.writeText(text);
     addToast(`${label} copied to clipboard!`, 'info');
+  };
+
+  // ==========================================
+  // MATCH RESULTS & POINTS TABLE ENTRY LOGIC
+  // ==========================================
+  const getPositionPointsForRank = (pos, presetKey = selectedPresetKey) => {
+    if (!pos || pos <= 0) return 0;
+    if (presetKey === 'custom') {
+      return Number(customPositionPoints[pos] || 0);
+    }
+    const preset = SCORING_PRESETS[presetKey] || SCORING_PRESETS.bgmi;
+    return Number(preset.positionPoints[pos] || 0);
+  };
+
+  const getKillPointsValue = (kills, presetKey = selectedPresetKey) => {
+    const k = Math.max(0, Number(kills || 0));
+    const rate = presetKey === 'custom' ? Number(customKillPoint || 1) : (SCORING_PRESETS[presetKey]?.killPoint || 1);
+    return k * rate;
+  };
+
+  // Open points entry modal for a specific round
+  const handleOpenPointsEntryModal = (roundToEdit) => {
+    if (!roundToEdit) {
+      // Pick first round if available
+      if (activeLobbyMatches.length > 0) {
+        roundToEdit = activeLobbyMatches[0];
+      } else {
+        addToast('Please schedule at least one round first in this lobby', 'warning');
+        return;
+      }
+    }
+
+    setSelectedRoundForPoints(roundToEdit);
+
+    // Auto-detect preset by game name
+    const gameName = selectedTournament?.game?.toLowerCase() || '';
+    if (gameName.includes('free fire')) {
+      setSelectedPresetKey('freefire');
+    } else {
+      setSelectedPresetKey('bgmi');
+    }
+
+    // Populate teams data for this round
+    const lobbyTeams = activeLobby?.teams || [];
+    const existingResults = roundToEdit.results || [];
+
+    const initialized = lobbyTeams.map((tm) => {
+      const tid = tm._id ? tm._id.toString() : tm.toString();
+      const fullTeam = registeredTeams.find((rt) => rt._id.toString() === tid) || tm;
+      const foundRes = existingResults.find(
+        (r) => (r.team?._id ? r.team._id.toString() : r.team?.toString() || r.teamId) === tid
+      );
+
+      const pos = foundRes?.position || 0;
+      const kills = foundRes?.kills || 0;
+      const bonus = foundRes?.bonusPoints || 0;
+      const posPts = foundRes?.positionPoints !== undefined ? foundRes.positionPoints : getPositionPointsForRank(pos);
+      const killPts = foundRes?.killPoints !== undefined ? foundRes.killPoints : getKillPointsValue(kills);
+      const total = foundRes?.totalPoints !== undefined ? foundRes.totalPoints : posPts + killPts + bonus;
+
+      return {
+        teamId: tid,
+        teamName: fullTeam.teamName || 'Team',
+        teamTag: fullTeam.teamTag || '',
+        captain: fullTeam.captain?.name || fullTeam.leader || 'N/A',
+        position: pos,
+        kills,
+        bonusPoints: bonus,
+        positionPoints: posPts,
+        killPoints: killPts,
+        totalPoints: total,
+      };
+    });
+
+    setRoundResultsData(initialized);
+    setPointsModalOpen(true);
+  };
+
+  // Next available sequential position for Tap-to-Rank
+  const nextAvailablePosition = useMemo(() => {
+    const used = new Set(roundResultsData.map((r) => Number(r.position)).filter((p) => p > 0));
+    let next = 1;
+    while (used.has(next)) {
+      next += 1;
+    }
+    return next;
+  }, [roundResultsData]);
+
+  // Sequential Tap-to-Rank on a team card
+  const handleTapTeamRank = (teamId) => {
+    setRoundResultsData((prev) => {
+      return prev.map((item) => {
+        if (item.teamId !== teamId) return item;
+
+        // If currently unranked (0), assign next available rank
+        // If already ranked, clear it back to 0 so admin can redo
+        const newPos = item.position === 0 ? nextAvailablePosition : 0;
+        const posPts = getPositionPointsForRank(newPos);
+        const killPts = getKillPointsValue(item.kills);
+        const total = posPts + killPts + item.bonusPoints;
+
+        return {
+          ...item,
+          position: newPos,
+          positionPoints: posPts,
+          killPoints: killPts,
+          totalPoints: total,
+        };
+      });
+    });
+  };
+
+  // Manual Override of Position Number (e.g. if mistakenly ranked)
+  const handleOverridePosition = (teamId, newPosVal) => {
+    const parsedPos = Math.max(0, Number(newPosVal) || 0);
+    setRoundResultsData((prev) => {
+      return prev.map((item) => {
+        if (item.teamId !== teamId) return item;
+        const posPts = getPositionPointsForRank(parsedPos);
+        const killPts = getKillPointsValue(item.kills);
+        const total = posPts + killPts + item.bonusPoints;
+        return {
+          ...item,
+          position: parsedPos,
+          positionPoints: posPts,
+          killPoints: killPts,
+          totalPoints: total,
+        };
+      });
+    });
+  };
+
+  // Update Kills for a team
+  const handleUpdateKills = (teamId, deltaOrValue) => {
+    setRoundResultsData((prev) => {
+      return prev.map((item) => {
+        if (item.teamId !== teamId) return item;
+        let newKills = typeof deltaOrValue === 'number' ? Math.max(0, item.kills + deltaOrValue) : Math.max(0, Number(deltaOrValue) || 0);
+        const killPts = getKillPointsValue(newKills);
+        const total = item.positionPoints + killPts + item.bonusPoints;
+        return {
+          ...item,
+          kills: newKills,
+          killPoints: killPts,
+          totalPoints: total,
+        };
+      });
+    });
+  };
+
+  // Update Bonus Points for a team
+  const handleUpdateBonus = (teamId, deltaOrValue) => {
+    setRoundResultsData((prev) => {
+      return prev.map((item) => {
+        if (item.teamId !== teamId) return item;
+        let newBonus = typeof deltaOrValue === 'number' ? item.bonusPoints + deltaOrValue : Number(deltaOrValue) || 0;
+        const total = item.positionPoints + item.killPoints + newBonus;
+        return {
+          ...item,
+          bonusPoints: newBonus,
+          totalPoints: total,
+        };
+      });
+    });
+  };
+
+  // Change scoring system preset
+  const handlePresetChange = (presetKey) => {
+    setSelectedPresetKey(presetKey);
+    // Recalculate points for all teams under new preset
+    setRoundResultsData((prev) => {
+      return prev.map((item) => {
+        const posPts = getPositionPointsForRank(item.position, presetKey);
+        const killPts = getKillPointsValue(item.kills, presetKey);
+        const total = posPts + killPts + item.bonusPoints;
+        return {
+          ...item,
+          positionPoints: posPts,
+          killPoints: killPts,
+          totalPoints: total,
+        };
+      });
+    });
+    addToast(`Switched to ${SCORING_PRESETS[presetKey]?.name}`, 'info');
+  };
+
+  // Save Round Results to Server
+  const handleSaveMatchResults = async () => {
+    if (!selectedRoundForPoints) return;
+    try {
+      setSubmitting(true);
+      await API.post(
+        `/tournaments/${selectedTournamentId}/matches/${selectedRoundForPoints._id}/results`,
+        {
+          results: roundResultsData,
+          status: 'completed',
+        }
+      );
+      addToast(
+        `Results and points saved for ${selectedRoundForPoints.title || 'Round'}! Standings updated.`,
+        'success'
+      );
+      setPointsModalOpen(false);
+      fetchTournamentStructure(selectedTournamentId);
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to save match results', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ==========================================
@@ -799,7 +1088,6 @@ const AdminMatches = () => {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 group-hover:bg-cyan-500/10 rounded-full blur-2xl transition-all" />
 
                   <div>
-                    {/* Status & Game Header */}
                     <div className="flex items-center justify-between gap-2 mb-4">
                       <span className="px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-slate-800 border border-slate-700 text-purple-300">
                         {t.game || 'Esports'}
@@ -810,20 +1098,22 @@ const AdminMatches = () => {
                           <Radio className="w-3.5 h-3.5" />
                           RUNNING NOW
                         </span>
+                      ) : t.status === 'on-hold' ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          ⏸️ ON HOLD
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
                           <Clock className="w-3.5 h-3.5" />
-                          UPCOMING
+                          {t.status === 'registration-open' ? 'REGISTRATION OPEN' : 'UPCOMING'}
                         </span>
                       )}
                     </div>
 
-                    {/* Tournament Name */}
                     <h3 className="text-xl font-black text-white group-hover:text-cyan-400 transition-colors line-clamp-2 mb-3">
                       {t.name}
                     </h3>
 
-                    {/* Quick Stats */}
                     <div className="grid grid-cols-2 gap-3 py-3 my-2 border-y border-slate-800/80 text-xs">
                       <div>
                         <span className="text-slate-500 block mb-0.5">Registered Teams</span>
@@ -840,7 +1130,6 @@ const AdminMatches = () => {
                     </div>
                   </div>
 
-                  {/* Open Manager CTA Button */}
                   <div className="pt-4 flex items-center justify-between text-cyan-400 font-bold text-xs uppercase tracking-wider group-hover:translate-x-1 transition-transform">
                     <span>Manage Lobbies & Rounds</span>
                     <ArrowRight className="w-4 h-4" />
@@ -880,19 +1169,85 @@ const AdminMatches = () => {
               <span className="px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-purple-900/40 border border-purple-500/30 text-purple-300">
                 {selectedTournament?.game || 'Esports'}
               </span>
-              {selectedTournament?.status === 'live' || selectedTournament?.status === 'ongoing' ? (
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse">
-                  ● Live
-                </span>
-              ) : (
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                  Upcoming
-                </span>
-              )}
+
+              {/* Interactive Tournament Status Selector */}
+              <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/90 p-1 rounded-xl">
+                <span className="text-[11px] font-mono font-bold text-slate-400 pl-1.5 pr-0.5">Status:</span>
+                <select
+                  value={selectedTournament?.status || 'upcoming'}
+                  onChange={(e) => handleUpdateTournamentStatus(e.target.value)}
+                  className={`text-xs font-bold font-mono uppercase px-2.5 py-1 rounded-lg outline-none cursor-pointer transition border ${
+                    selectedTournament?.status === 'live' || selectedTournament?.status === 'ongoing'
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-500/60 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                      : selectedTournament?.status === 'on-hold'
+                      ? 'bg-amber-950 text-amber-300 border-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
+                      : selectedTournament?.status === 'registration-open'
+                      ? 'bg-cyan-950 text-cyan-300 border-cyan-500/50'
+                      : selectedTournament?.status === 'completed'
+                      ? 'bg-slate-800 text-slate-300 border-slate-600'
+                      : 'bg-slate-900 text-slate-300 border-slate-700'
+                  }`}
+                >
+                  <option value="ongoing">🟢 Running / Live</option>
+                  <option value="on-hold">⏸️ On Hold</option>
+                  <option value="registration-open">📝 Registration Open</option>
+                  <option value="upcoming">⏳ Upcoming</option>
+                  <option value="completed">🏁 Completed</option>
+                  <option value="cancelled">❌ Cancelled</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Fast Status Quick-Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] font-mono text-slate-400">Quick status:</span>
+              <button
+                type="button"
+                onClick={() => handleUpdateTournamentStatus('ongoing')}
+                className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono transition cursor-pointer flex items-center gap-1 ${
+                  selectedTournament?.status === 'ongoing' || selectedTournament?.status === 'live'
+                    ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                }`}
+              >
+                ● Running
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUpdateTournamentStatus('on-hold')}
+                className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono transition cursor-pointer flex items-center gap-1 ${
+                  selectedTournament?.status === 'on-hold'
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-md shadow-amber-400/20'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                }`}
+              >
+                ⏸️ On Hold
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUpdateTournamentStatus('registration-open')}
+                className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono transition cursor-pointer ${
+                  selectedTournament?.status === 'registration-open'
+                    ? 'bg-cyan-400 text-slate-950 font-black shadow-md shadow-cyan-400/20'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                }`}
+              >
+                Registration Open
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUpdateTournamentStatus('completed')}
+                className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold font-mono transition cursor-pointer ${
+                  selectedTournament?.status === 'completed'
+                    ? 'bg-purple-400 text-slate-950 font-black shadow-md shadow-purple-400/20'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                }`}
+              >
+                Completed
+              </button>
             </div>
           </div>
 
-          {/* Quick tournament switcher & refresh */}
           <div className="flex items-center gap-3">
             <select
               value={selectedTournamentId}
@@ -945,7 +1300,6 @@ const AdminMatches = () => {
       {/* SECTION 1: REGISTERED TEAMS ROSTER (CARD FORMAT IN ROWS: 2, 3, OR 4 CARDS) */}
       {/* ========================================================================= */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
-        {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -960,7 +1314,6 @@ const AdminMatches = () => {
             </p>
           </div>
 
-          {/* Quick Selection Shortcuts */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={selectAllUnassigned}
@@ -991,7 +1344,6 @@ const AdminMatches = () => {
           </div>
         </div>
 
-        {/* Filter & Search Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -1022,7 +1374,7 @@ const AdminMatches = () => {
           </div>
         </div>
 
-        {/* Floating Bulk Action Bar (when 1 or more teams are selected) */}
+        {/* Bulk Selection Bar */}
         {selectedTeamIds.length > 0 && (
           <div className="sticky top-4 z-20 bg-gradient-to-r from-cyan-950/90 via-slate-900/95 to-purple-950/90 border border-cyan-500/50 rounded-2xl p-4 shadow-2xl backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
             <div className="flex items-center gap-3">
@@ -1082,7 +1434,7 @@ const AdminMatches = () => {
           </div>
         )}
 
-        {/* Registered Teams Grid: 2, 3, or 4 cards per row */}
+        {/* Teams Grid: 2, 3, or 4 per row */}
         {displayedTeams.length === 0 ? (
           <div className="py-12 text-center text-slate-500 text-xs">
             No registered teams found matching your filter criteria.
@@ -1106,7 +1458,6 @@ const AdminMatches = () => {
                   }`}
                 >
                   <div>
-                    {/* Header: Checkbox & Lobby Badge */}
                     <div className="flex items-center justify-between gap-2 mb-3">
                       <div className="flex items-center gap-2">
                         <div
@@ -1126,7 +1477,6 @@ const AdminMatches = () => {
                         )}
                       </div>
 
-                      {/* Assignment Badge */}
                       {isAssigned ? (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 truncate max-w-[120px]">
                           ● {team.assignedLobbyName}
@@ -1138,19 +1488,16 @@ const AdminMatches = () => {
                       )}
                     </div>
 
-                    {/* Team Name */}
                     <h4 className="text-sm font-black text-white group-hover:text-cyan-300 transition-colors truncate">
                       {team.teamName}
                     </h4>
 
-                    {/* Captain & Info */}
                     <p className="text-xs text-slate-400 mt-1 truncate">
                       <span className="text-slate-500">Captain:</span>{' '}
                       {team.captain?.name || team.leader || 'N/A'}
                     </p>
                   </div>
 
-                  {/* Footer info: Player count & Quick Roster view */}
                   <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
                     <span>{team.players?.length || 1} Players</span>
                     <button
@@ -1246,10 +1593,17 @@ const AdminMatches = () => {
                   >
                     <span className="font-bold text-sm">{lobby.name}</span>
 
-                    {/* Status badge: Only upcoming or running */}
-                    {isRunning ? (
+                    {lobby.status === 'running' ? (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 animate-pulse">
                         ● Running
+                      </span>
+                    ) : lobby.status === 'on-hold' ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        ⏸️ On Hold
+                      </span>
+                    ) : lobby.status === 'completed' ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700">
+                        Completed
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-slate-700 text-slate-300">
@@ -1257,7 +1611,6 @@ const AdminMatches = () => {
                       </span>
                     )}
 
-                    {/* Teams capacity count */}
                     <span className="px-2 py-0.5 rounded-md bg-slate-900 text-cyan-400 font-mono text-[10px]">
                       {lobby.teams?.length || 0}/{lobby.maxTeams} Teams
                     </span>
@@ -1271,23 +1624,31 @@ const AdminMatches = () => {
         {/* Selected Lobby Details & Controls */}
         {activeLobby && (
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
-            {/* Lobby Top Action Bar */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-800">
               <div className="flex flex-wrap items-center gap-3">
                 <h3 className="text-xl font-black text-white font-gaming">{activeLobby.name}</h3>
 
-                {/* Status Toggle Button */}
-                <button
-                  onClick={() => handleToggleLobbyStatus(activeLobby)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border transition ${
-                    activeLobby.status === 'running'
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30'
-                      : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20'
-                  }`}
-                  title="Click to toggle status between Upcoming and Running"
-                >
-                  {activeLobby.status === 'running' ? '● Status: RUNNING' : 'Status: UPCOMING'}
-                </button>
+                <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700 p-1 rounded-xl">
+                  <span className="text-[11px] font-mono text-slate-400 pl-1.5 pr-0.5 font-bold">Lobby:</span>
+                  <select
+                    value={activeLobby.status || 'upcoming'}
+                    onChange={(e) => handleSetLobbyStatus(activeLobby, e.target.value)}
+                    className={`text-xs font-bold font-mono uppercase px-2.5 py-1 rounded-lg outline-none cursor-pointer transition border ${
+                      activeLobby.status === 'running'
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-500/60 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                        : activeLobby.status === 'on-hold'
+                        ? 'bg-amber-950 text-amber-300 border-amber-500/60'
+                        : activeLobby.status === 'completed'
+                        ? 'bg-slate-800 text-slate-300 border-slate-600'
+                        : 'bg-slate-900 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    <option value="running">🟢 Running</option>
+                    <option value="on-hold">⏸️ On Hold</option>
+                    <option value="upcoming">⏳ Upcoming</option>
+                    <option value="completed">🏁 Completed</option>
+                  </select>
+                </div>
 
                 <span className="text-xs text-slate-400">
                   Capacity: <strong className="text-white">{activeLobby.teams?.length || 0}</strong>{' '}
@@ -1295,7 +1656,6 @@ const AdminMatches = () => {
                 </span>
               </div>
 
-              {/* Lobby Actions */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleOpenEditLobby(activeLobby)}
@@ -1387,7 +1747,6 @@ const AdminMatches = () => {
                           className="bg-slate-800/70 border border-slate-700/80 rounded-xl p-5 space-y-4 shadow-lg flex flex-col justify-between"
                         >
                           <div>
-                            {/* Round Title & Status */}
                             <div className="flex items-center justify-between gap-2 mb-2">
                               <span className="text-xs font-mono font-bold text-cyan-400">
                                 Match #{match.matchNumber}
@@ -1496,13 +1855,21 @@ const AdminMatches = () => {
                           </div>
 
                           {/* Round Card Actions */}
-                          <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between">
+                          <div className="pt-3 border-t border-slate-700/60 flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleOpenEditRound(match)}
                                 className="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition"
                               >
-                                Edit Round
+                                Edit
+                              </button>
+
+                              <button
+                                onClick={() => handleOpenPointsEntryModal(match)}
+                                className="px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition flex items-center gap-1"
+                              >
+                                <Zap className="w-3 h-3 text-cyan-400" />
+                                <span>{match.status === 'completed' ? 'Edit Points' : 'Enter Points'}</span>
                               </button>
                             </div>
 
@@ -1524,15 +1891,26 @@ const AdminMatches = () => {
 
             {/* SUB-TAB 2: LOBBY STANDINGS & TEAMS */}
             {lobbyTab === 'standings' && (
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-800/40 p-4 rounded-xl border border-slate-800">
                   <div>
-                    <h4 className="text-sm font-bold text-white">
-                      Teams in {activeLobby.name} ({activeLobby.teams?.length || 0})
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      {activeLobby.name} - Points Table & Standings ({activeLobby.teams?.length || 0} Teams)
                     </h4>
-                    <p className="text-xs text-slate-400">
-                      Standings and points calculated from completed rounds in this lobby.
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Cumulative standings calculated automatically from completed rounds in this lobby.
                     </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleOpenPointsEntryModal(activeLobbyMatches[0] || null)}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg shadow-cyan-500/20 flex items-center gap-1.5 transition"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-current" />
+                      ⚡ Enter / Update Match Round Points
+                    </button>
                   </div>
                 </div>
 
@@ -1545,44 +1923,83 @@ const AdminMatches = () => {
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-800/80 text-slate-400 uppercase tracking-wider font-mono text-[11px]">
                         <tr>
-                          <th className="p-3">Rank</th>
-                          <th className="p-3">Team</th>
-                          <th className="p-3">Captain</th>
-                          <th className="p-3 text-center">Rounds Played</th>
-                          <th className="p-3 text-center">Wins</th>
-                          <th className="p-3 text-center">Total Points</th>
-                          <th className="p-3 text-right">Action</th>
+                          <th className="p-3.5 text-center w-14">Rank</th>
+                          <th className="p-3.5">Team</th>
+                          <th className="p-3.5">Captain</th>
+                          <th className="p-3.5 text-center">Rounds Played</th>
+                          <th className="p-3.5 text-center">Wins (🍗)</th>
+                          <th className="p-3.5 text-center">Total Kills</th>
+                          <th className="p-3.5 text-center">Placement Pts</th>
+                          <th className="p-3.5 text-center">Bonus Pts</th>
+                          <th className="p-3.5 text-center font-bold text-white">Total Points</th>
+                          <th className="p-3.5 text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800 bg-slate-900/60 font-medium">
-                        {activeLobbyStandings.map((team, idx) => (
-                          <tr key={team.teamId} className="hover:bg-slate-800/40 transition-colors">
-                            <td className="p-3 font-mono font-bold text-cyan-400">#{idx + 1}</td>
-                            <td className="p-3">
-                              <span className="text-white font-bold block">{team.teamName}</span>
-                              {team.teamTag && (
-                                <span className="text-[10px] text-slate-400">[{team.teamTag}]</span>
-                              )}
-                            </td>
-                            <td className="p-3 text-slate-400">{team.captain || 'N/A'}</td>
-                            <td className="p-3 text-center font-mono">{team.matchesPlayed}</td>
-                            <td className="p-3 text-center font-mono text-amber-400 font-bold">
-                              {team.wins}
-                            </td>
-                            <td className="p-3 text-center font-mono text-emerald-400 font-bold text-sm">
-                              {team.totalPoints}
-                            </td>
-                            <td className="p-3 text-right">
-                              <button
-                                onClick={() => handleRemoveTeamFromLobby(activeLobby, team.teamId)}
-                                className="text-xs text-rose-400 hover:text-rose-300 font-semibold"
-                                title="Remove team from this lobby"
-                              >
-                                Remove
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {activeLobbyStandings.map((team, idx) => {
+                          const isTop1 = idx === 0;
+
+                          return (
+                            <tr
+                              key={team.teamId}
+                              className={`hover:bg-slate-800/40 transition-colors ${
+                                isTop1 ? 'bg-amber-500/5' : ''
+                              }`}
+                            >
+                              <td className="p-3.5 text-center font-mono font-black">
+                                {isTop1 ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 text-xs">
+                                    🥇
+                                  </span>
+                                ) : idx === 1 ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-400/20 text-slate-300 border border-slate-400/40 text-xs">
+                                    🥈
+                                  </span>
+                                ) : idx === 2 ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700/20 text-amber-600 border border-amber-700/40 text-xs">
+                                    🥉
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500">#{idx + 1}</span>
+                                )}
+                              </td>
+                              <td className="p-3.5">
+                                <span className="text-white font-bold block">{team.teamName}</span>
+                                {team.teamTag && (
+                                  <span className="text-[10px] text-slate-400">[{team.teamTag}]</span>
+                                )}
+                              </td>
+                              <td className="p-3.5 text-slate-400">{team.captain || 'N/A'}</td>
+                              <td className="p-3.5 text-center font-mono">{team.matchesPlayed}</td>
+                              <td className="p-3.5 text-center font-mono text-amber-400 font-bold">
+                                {team.wins}
+                              </td>
+                              <td className="p-3.5 text-center font-mono text-rose-400 font-bold">
+                                {team.kills}
+                              </td>
+                              <td className="p-3.5 text-center font-mono text-cyan-400 font-bold">
+                                {team.positionPoints}
+                              </td>
+                              <td className="p-3.5 text-center font-mono text-purple-400 font-bold">
+                                {team.bonusPoints || 0}
+                              </td>
+                              <td className="p-3.5 text-center font-mono text-emerald-400 font-black text-sm">
+                                <span className="px-2.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">
+                                  {team.totalPoints} PTS
+                                </span>
+                              </td>
+                              <td className="p-3.5 text-right">
+                                <button
+                                  onClick={() => handleRemoveTeamFromLobby(activeLobby, team.teamId)}
+                                  className="text-xs text-rose-400 hover:text-rose-300 font-semibold"
+                                  title="Remove team from this lobby"
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1684,7 +2101,6 @@ const AdminMatches = () => {
         size="xl"
       >
         <form onSubmit={handleCreateLobbyFromTopTeams} className="space-y-6">
-          {/* Header configuration */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-800/40 p-4 rounded-xl border border-slate-800">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
@@ -1730,7 +2146,6 @@ const AdminMatches = () => {
                   className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between space-y-3"
                 >
                   <div className="space-y-2">
-                    {/* Column Header */}
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                       <div>
                         <h4 className="font-bold text-white text-sm">{lobby.name}</h4>
@@ -1739,7 +2154,6 @@ const AdminMatches = () => {
                         </span>
                       </div>
 
-                      {/* Quick Select Buttons */}
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
@@ -1758,7 +2172,6 @@ const AdminMatches = () => {
                       </div>
                     </div>
 
-                    {/* Teams in Column */}
                     {standings.length === 0 ? (
                       <p className="text-slate-500 text-xs py-4 text-center">No teams in lobby</p>
                     ) : (
@@ -1808,7 +2221,6 @@ const AdminMatches = () => {
             })}
           </div>
 
-          {/* Bottom Action Bar */}
           <div className="flex items-center justify-between pt-4 border-t border-slate-800">
             <span className="text-xs text-cyan-400 font-bold">
               Total Teams Selected: {selectedQualifyTeamIds.length}
@@ -1905,7 +2317,6 @@ const AdminMatches = () => {
             </div>
           </div>
 
-          {/* Room ID & Password */}
           <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-800 space-y-3">
             <h5 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
               Live Room Credentials (Optional)
@@ -1962,7 +2373,334 @@ const AdminMatches = () => {
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL 4: QUICK ROOM CREDENTIALS DRAWER */}
+      {/* MODAL 4: INTERACTIVE CARD-BASED MATCH RESULTS & POINTS TABLE ENTRY */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={pointsModalOpen}
+        onClose={() => setPointsModalOpen(false)}
+        title={`Enter Match Results: ${selectedRoundForPoints?.title || 'Round'} (${activeLobby?.name || 'Lobby'})`}
+        size="xl"
+      >
+        <div className="space-y-6">
+          {/* Preset Selector Bar */}
+          <div className="p-4 bg-slate-800/60 rounded-xl border border-slate-800 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+                  Scoring System Preset
+                </span>
+                <p className="text-[11px] text-slate-400">
+                  {SCORING_PRESETS[selectedPresetKey]?.description}
+                </p>
+              </div>
+
+              {/* Presets Toggle Pills */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {Object.values(SCORING_PRESETS).map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    onClick={() => handlePresetChange(p.key)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                      selectedPresetKey === p.key
+                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                        : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                    }`}
+                  >
+                    {p.name.split(' (')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom points editor if Custom is chosen */}
+            {selectedPresetKey === 'custom' && (
+              <div className="pt-3 border-t border-slate-700 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-white">Custom Position Points (1st - 10th):</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400">Kill Point Rate:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={customKillPoint}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setCustomKillPoint(val);
+                        // recalculate
+                        setRoundResultsData((prev) =>
+                          prev.map((item) => {
+                            const killPts = item.kills * val;
+                            return {
+                              ...item,
+                              killPoints: killPts,
+                              totalPoints: item.positionPoints + killPts + item.bonusPoints,
+                            };
+                          })
+                        );
+                      }}
+                      className="w-14 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-white text-center font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((pos) => (
+                    <div key={pos} className="text-center">
+                      <span className="text-[10px] text-slate-500 block">#{pos}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={customPositionPoints[pos] || 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setCustomPositionPoints((prev) => ({ ...prev, [pos]: val }));
+                          // recalculate
+                          setRoundResultsData((prev) =>
+                            prev.map((item) => {
+                              if (item.position !== pos) return item;
+                              return {
+                                ...item,
+                                positionPoints: val,
+                                totalPoints: val + item.killPoints + item.bonusPoints,
+                              };
+                            })
+                          );
+                        }}
+                        className="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-xs text-center font-bold text-cyan-400"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Interactive Tap-to-Rank Banner */}
+          <div className="p-3 bg-gradient-to-r from-cyan-950/60 to-purple-950/60 rounded-xl border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-cyan-500 text-slate-950 font-black text-sm">
+                #{nextAvailablePosition}
+              </span>
+              <div>
+                <span className="text-white font-bold block">
+                  Tap-to-Rank is ACTIVE! Next tap assigns: <strong>#{nextAvailablePosition} Place</strong>
+                </span>
+                <span className="text-slate-400 text-[11px]">
+                  Tap any unranked team card to rank them. Tap again to clear. You can also manually
+                  type any position box below to override.
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                // Clear all ranks
+                setRoundResultsData((prev) =>
+                  prev.map((i) => ({
+                    ...i,
+                    position: 0,
+                    positionPoints: 0,
+                    totalPoints: i.killPoints + i.bonusPoints,
+                  }))
+                );
+                addToast('Cleared all team ranks', 'info');
+              }}
+              className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs font-semibold whitespace-nowrap"
+            >
+              Reset Ranks
+            </button>
+          </div>
+
+          {/* Teams Card Grid: 2, 3, or 4 per row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[55vh] overflow-y-auto pr-1">
+            {roundResultsData.map((item) => {
+              const isRanked = item.position > 0;
+              const isWinner = item.position === 1;
+
+              return (
+                <div
+                  key={item.teamId}
+                  onClick={() => handleTapTeamRank(item.teamId)}
+                  className={`group relative rounded-xl p-4 transition-all duration-200 cursor-pointer border flex flex-col justify-between select-none ${
+                    isWinner
+                      ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
+                      : isRanked
+                      ? 'bg-cyan-950/30 border-cyan-500/60 shadow-md shadow-cyan-500/10'
+                      : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600'
+                  }`}
+                >
+                  <div>
+                    {/* Card Header: Position & Winner Badge */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        {/* Position input / badge */}
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700"
+                        >
+                          <span className="text-[10px] text-slate-400 font-mono pl-1">POS:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={item.position || ''}
+                            placeholder="-"
+                            onChange={(e) => handleOverridePosition(item.teamId, e.target.value)}
+                            className="w-8 bg-transparent text-center text-xs font-black text-white focus:outline-none focus:text-cyan-400"
+                          />
+                        </div>
+
+                        {item.teamTag && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-cyan-400 border border-slate-700">
+                            [{item.teamTag}]
+                          </span>
+                        )}
+                      </div>
+
+                      {isWinner ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                          <Crown className="w-3 h-3 text-amber-400" />
+                          Winner (1st)
+                        </span>
+                      ) : isRanked ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                          #{item.position} Place
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 italic">Tap to rank</span>
+                      )}
+                    </div>
+
+                    <h4 className="text-sm font-black text-white group-hover:text-cyan-300 transition-colors truncate">
+                      {item.teamName}
+                    </h4>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      Captain: {item.captain}
+                    </p>
+                  </div>
+
+                  {/* Kills & Bonus Controls (Click propagation stopped so typing doesn't toggle card) */}
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-3 pt-3 border-t border-slate-700/60 space-y-2.5 text-xs"
+                  >
+                    {/* Kills Input */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-rose-400" />
+                        Total Kills:
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateKills(item.teamId, -1)}
+                          className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.kills}
+                          onChange={(e) => handleUpdateKills(item.teamId, e.target.value)}
+                          className="w-10 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateKills(item.teamId, 1)}
+                          className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bonus Points Input */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                        <Award className="w-3 h-3 text-purple-400" />
+                        Bonus Pts:
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateBonus(item.teamId, -1)}
+                          className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <input
+                          type="number"
+                          value={item.bonusPoints}
+                          onChange={(e) => handleUpdateBonus(item.teamId, e.target.value)}
+                          className="w-10 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateBonus(item.teamId, 1)}
+                          className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Live Calculation Pill */}
+                    <div className="pt-2 border-t border-slate-700/40 flex items-center justify-between font-mono text-[11px]">
+                      <span className="text-slate-400">
+                        {item.positionPoints} pos + {item.killPoints} kills
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
+                        {item.totalPoints} PTS
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Modal Footer */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-800">
+            <div className="text-xs text-slate-400">
+              Ranked:{' '}
+              <strong className="text-white">
+                {roundResultsData.filter((r) => r.position > 0).length}
+              </strong>{' '}
+              / {roundResultsData.length} Teams | Winner:{' '}
+              <strong className="text-amber-400">
+                {roundResultsData.find((r) => r.position === 1)?.teamName || 'None'}
+              </strong>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setPointsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveMatchResults}
+                disabled={submitting}
+                className="px-6 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{submitting ? 'Saving Results...' : 'Save & Update Standings'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 5: QUICK ROOM CREDENTIALS DRAWER */}
       {/* ========================================================================= */}
       <Modal
         isOpen={Boolean(quickCredsMatch)}
@@ -2020,7 +2758,7 @@ const AdminMatches = () => {
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL 5: ROSTER INSPECTOR */}
+      {/* MODAL 6: ROSTER INSPECTOR */}
       {/* ========================================================================= */}
       <Modal
         isOpen={rosterModalOpen}

@@ -11,14 +11,17 @@ const TournamentCard = ({ tournament, onRegisterClick, isRegistered = false }) =
   const statusColors = {
     upcoming: 'bg-cyan-950/80 text-cyan-400 border-cyan-500/40',
     'registration-open': 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40',
-    ongoing: 'bg-rose-950/80 text-rose-400 border-rose-500/40 animate-pulse',
-    live: 'bg-rose-950/80 text-rose-400 border-rose-500/40 animate-pulse',
+    ongoing: 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse',
+    live: 'bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse',
+    'on-hold': 'bg-amber-950/90 text-amber-300 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]',
     completed: 'bg-slate-800 text-slate-400 border-slate-700',
     cancelled: 'bg-red-950/80 text-red-400 border-red-800',
   };
 
   const getStatusLabel = (status) => {
-    if (status === 'live' || status === 'ongoing') return '● LIVE NOW';
+    if (status === 'live') return '● LIVE NOW';
+    if (status === 'ongoing') return '● RUNNING';
+    if (status === 'on-hold') return '⏸️ ON HOLD';
     if (status === 'registration-open') return 'Registration Open';
     if (status === 'upcoming') return 'Upcoming';
     if (status === 'completed') return 'Completed';

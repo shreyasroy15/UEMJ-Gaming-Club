@@ -24,6 +24,7 @@ const AdminLayout = () => {
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, end: true },
     { name: 'Tournaments', path: '/admin/tournaments', icon: Trophy },
     { name: 'Matches', path: '/admin/matches', icon: Swords },
+    { name: 'Points Table', path: '/admin/points-table', icon: Trophy },
     { name: 'Teams', path: '/admin/teams', icon: Shield },
     { name: 'Announcements', path: '/admin/announcements', icon: Megaphone },
     { name: 'Gallery', path: '/admin/gallery', icon: Image },

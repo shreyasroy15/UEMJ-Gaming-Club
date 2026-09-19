@@ -22,7 +22,11 @@ exports.getTournaments = async (req, res, next) => {
     let query = {};
 
     if (status && status !== 'all') {
-      query.status = status;
+      if (status === 'ongoing' || status === 'live') {
+        query.status = { $in: ['ongoing', 'live'] };
+      } else {
+        query.status = status;
+      }
     }
 
     if (game && game !== 'all') {
@@ -81,17 +85,92 @@ exports.getTournamentById = async (req, res, next) => {
       });
     }
 
-    // Also fetch matches for this tournament
+    // Populate lobbies and teams in stages
+    await tournament.populate({
+      path: 'stages.lobbies.teams stages.qualifiedTeams stages.winner',
+      select: 'teamName teamTag teamLogo captain players status points matchesPlayed',
+      populate: [
+        { path: 'captain', select: 'name username avatar' },
+      ],
+    });
+
+    // Also fetch matches for this tournament populated with teams and results
     const matches = await Match.find({ tournament: tournament._id })
       .populate('teamA', 'name tag logo')
       .populate('teamB', 'name tag logo')
-      .populate('winner', 'name tag logo')
-      .sort({ roundIndex: 1, matchNumber: 1 });
+      .populate({
+        path: 'teams',
+        select: 'teamName teamTag teamLogo captain leader players points matchesPlayed',
+        populate: [
+          { path: 'captain', select: 'name username avatar' },
+          { path: 'leader', select: 'name username avatar' },
+        ],
+      })
+      .populate('winner', 'name tag logo teamName teamTag teamLogo')
+      .populate({
+        path: 'results.team',
+        select: 'teamName teamTag teamLogo captain points matchesPlayed',
+        populate: { path: 'captain', select: 'name username avatar' },
+      })
+      .sort({ matchNumber: 1, scheduledAt: 1 });
+
+    // Determine authorization for lobby passwords
+    const isStaffUser = req.user && (req.user.role === 'admin' || req.user.role === 'staff' || req.user.role === 'coordinator');
+    const currentUserId = req.user?._id?.toString();
+
+    const sanitizedMatches = matches.map((m) => {
+      const matchObj = m.toObject();
+
+      let isAssignedToThisLobby = Boolean(isStaffUser);
+      if (!isAssignedToThisLobby && currentUserId && matchObj.teams) {
+        isAssignedToThisLobby = matchObj.teams.some((team) => {
+          if (!team) return false;
+          const capId = (team.captain?._id || team.captain)?.toString();
+          const leadId = (team.leader?._id || team.leader)?.toString();
+          if (capId === currentUserId || leadId === currentUserId) return true;
+          if (team.players && Array.isArray(team.players)) {
+            return team.players.some(
+              (p) => (p.user?._id || p.user)?.toString() === currentUserId
+            );
+          }
+          return false;
+        });
+      }
+
+      // Password security: ONLY show roomPassword to players of squads in that lobby or staff
+      if (!isAssignedToThisLobby) {
+        matchObj.roomPassword = '';
+        matchObj.isPasswordLocked = true;
+      } else {
+        matchObj.isPasswordLocked = false;
+      }
+
+      matchObj.isAssignedToThisLobby = isAssignedToThisLobby;
+      return matchObj;
+    });
+
+    // Extract unified allLobbies
+    const allLobbies = [];
+    (tournament.stages || []).forEach((stage) => {
+      (stage.lobbies || []).forEach((l) => {
+        allLobbies.push({
+          _id: l._id,
+          stageId: stage._id,
+          stageName: stage.name,
+          name: l.name,
+          maxTeams: l.maxTeams || 25,
+          status: l.status || 'upcoming',
+          order: l.order || 1,
+          teams: l.teams || [],
+        });
+      });
+    });
 
     res.status(200).json({
       success: true,
       tournament,
-      matches,
+      matches: sanitizedMatches,
+      lobbies: allLobbies,
     });
   } catch (error) {
     next(error);
@@ -190,6 +269,40 @@ exports.updateTournament = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
+      tournament,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Quick update tournament status (ongoing/running, on-hold, registration-open, upcoming, completed)
+// @route   PATCH /api/tournaments/:id/status
+// @access  Private (Admin / Staff)
+exports.updateTournamentStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const allowed = ['upcoming', 'registration-open', 'ongoing', 'live', 'on-hold', 'completed', 'cancelled'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status "${status}". Allowed values: ${allowed.join(', ')}`,
+      });
+    }
+
+    const tournament = await Tournament.findByIdAndUpdate(
+      req.params.id,
+      { $set: { status } },
+      { new: true, runValidators: true }
+    );
+
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Tournament status updated to "${status}"`,
       tournament,
     });
   } catch (error) {

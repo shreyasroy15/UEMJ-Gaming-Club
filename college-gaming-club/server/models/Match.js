@@ -78,6 +78,46 @@ const matchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'TournamentRegistration',
     },
+    results: [
+      {
+        team: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'TournamentRegistration',
+        },
+        teamName: {
+          type: String,
+          default: '',
+        },
+        teamTag: {
+          type: String,
+          default: '',
+        },
+        position: {
+          type: Number,
+          default: 0,
+        },
+        kills: {
+          type: Number,
+          default: 0,
+        },
+        positionPoints: {
+          type: Number,
+          default: 0,
+        },
+        killPoints: {
+          type: Number,
+          default: 0,
+        },
+        bonusPoints: {
+          type: Number,
+          default: 0,
+        },
+        totalPoints: {
+          type: Number,
+          default: 0,
+        },
+      },
+    ],
     scheduledAt: {
       type: Date,
       default: Date.now,

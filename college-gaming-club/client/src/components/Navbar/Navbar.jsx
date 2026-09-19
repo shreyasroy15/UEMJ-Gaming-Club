@@ -18,6 +18,9 @@ import {
   Check,
   User,
   LogIn,
+  Key,
+  CheckCheck,
+  Clock,
 } from 'lucide-react';
 import API from '../../services/api';
 
@@ -27,9 +30,12 @@ const Navbar = () => {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Tournament Invitations Notification
+  // Tournament Invitations & Notifications
   const [invitations, setInvitations] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [invitationsOpen, setInvitationsOpen] = useState(false);
+  const [activeNotifTab, setActiveNotifTab] = useState('updates'); // 'updates' | 'invites'
   const [respondingId, setRespondingId] = useState(null);
   
   const profileMenuRef = useRef(null);
@@ -76,15 +82,75 @@ const Navbar = () => {
     }
   };
 
+  // Fetch match notifications
+  const fetchNotifications = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await API.get('/notifications/my');
+      if (res.data?.success) {
+        setNotifications(res.data.notifications || []);
+        setUnreadNotifCount(res.data.unreadCount || 0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchInvitations();
-      const interval = setInterval(fetchInvitations, 25000);
+      fetchNotifications();
+      const interval = setInterval(() => {
+        fetchInvitations();
+        fetchNotifications();
+      }, 20000);
       return () => clearInterval(interval);
     } else {
       setInvitations([]);
+      setNotifications([]);
+      setUnreadNotifCount(0);
     }
   }, [isAuthenticated]);
+
+  const handleNotificationClick = async (notif) => {
+    try {
+      if (!notif.isRead) {
+        API.patch(`/notifications/${notif._id}/read`).catch(() => {});
+        setNotifications((prev) =>
+          prev.map((n) => (n._id === notif._id ? { ...n, isRead: true } : n))
+        );
+        setUnreadNotifCount((prev) => Math.max(0, prev - 1));
+      }
+      setInvitationsOpen(false);
+      if (notif.link) {
+        navigate(notif.link);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await API.patch('/notifications/read-all');
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadNotifCount(0);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const formatTimeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Math.max(0, Date.now() - new Date(dateStr).getTime());
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
 
   const handleAcceptInvite = async (inviteId) => {
     try {
@@ -229,80 +295,230 @@ const Navbar = () => {
               <div className="flex items-center gap-2 sm:gap-2.5">
                 {isAuthenticated ? (
                   <div className="flex items-center gap-2">
-                    {/* Tournament Invitations Bell */}
+                    {/* Notifications & Tournament Invitations Bell */}
                     <div className="relative" ref={invitationsRef}>
-                      <button
-                        onClick={() => setInvitationsOpen(!invitationsOpen)}
-                        className="relative p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white transition-all cursor-pointer"
-                        title="Tournament Invitations"
-                      >
-                        <Bell className="w-4 h-4 text-cyan-400" />
-                        {invitations.length > 0 && (
-                          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[9px] font-black text-white flex items-center justify-center animate-pulse">
-                            {invitations.length}
-                          </span>
-                        )}
-                      </button>
+                      {(() => {
+                        const totalAlerts = (unreadNotifCount || 0) + (invitations?.length || 0);
+                        return (
+                          <button
+                            onClick={() => {
+                              const nextOpen = !invitationsOpen;
+                              setInvitationsOpen(nextOpen);
+                              if (nextOpen) {
+                                if (unreadNotifCount > 0) setActiveNotifTab('updates');
+                                else if (invitations.length > 0) setActiveNotifTab('invites');
+                              }
+                            }}
+                            className="relative p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+                            title="Match Updates & Invitations"
+                          >
+                            <Bell className="w-4 h-4 text-cyan-400" />
+                            {totalAlerts > 0 && (
+                              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-[9px] font-black text-white flex items-center justify-center animate-pulse">
+                                {totalAlerts}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })()}
 
-                      {/* Invitations Dropdown */}
+                      {/* Notifications Dropdown */}
                       {invitationsOpen && (
-                        <div className="absolute right-0 mt-3 w-80 sm:w-88 rounded-3xl bg-[#090e1f]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.1)] p-3 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3">
-                          <div className="flex items-center justify-between pb-2 border-b border-white/10">
-                            <span className="text-xs font-mono font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                              <Bell className="w-3.5 h-3.5 text-cyan-400" /> Tournament Invites
-                            </span>
-                            <span className="text-[10px] font-mono text-cyan-400 font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
-                              {invitations.length} Pending
-                            </span>
+                        <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl bg-[#090e1f]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.1)] p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3">
+                          {/* Tabs Header */}
+                          <div className="flex items-center justify-between pb-2 border-b border-white/10 gap-2">
+                            <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-xl border border-white/10">
+                              <button
+                                type="button"
+                                onClick={() => setActiveNotifTab('updates')}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                  activeNotifTab === 'updates'
+                                    ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                                    : 'text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                <Bell className="w-3 h-3" />
+                                <span>Updates</span>
+                                {unreadNotifCount > 0 && (
+                                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                                    activeNotifTab === 'updates' ? 'bg-slate-950 text-cyan-300' : 'bg-rose-500 text-white'
+                                  }`}>
+                                    {unreadNotifCount}
+                                  </span>
+                                )}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setActiveNotifTab('invites')}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                  activeNotifTab === 'invites'
+                                    ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                                    : 'text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                <span>Invites</span>
+                                {invitations.length > 0 && (
+                                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                                    activeNotifTab === 'invites' ? 'bg-slate-950 text-cyan-300' : 'bg-rose-500 text-white'
+                                  }`}>
+                                    {invitations.length}
+                                  </span>
+                                )}
+                              </button>
+                            </div>
+
+                            {activeNotifTab === 'updates' && unreadNotifCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={handleMarkAllRead}
+                                className="text-[10px] font-mono font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Mark all as read"
+                              >
+                                <CheckCheck className="w-3 h-3" />
+                                <span>Mark read</span>
+                              </button>
+                            )}
                           </div>
 
-                          {invitations.length === 0 ? (
-                            <p className="text-xs text-slate-400 text-center py-4">
-                              No active tournament invitations.
-                            </p>
-                          ) : (
-                            <div className="max-h-72 overflow-y-auto space-y-2.5 pr-1">
-                              {invitations.map((inv) => (
-                                <div
-                                  key={inv._id}
-                                  className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <img
-                                      src={inv.sender?.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'}
-                                      alt={inv.sender?.name}
-                                      className="w-8 h-8 rounded-lg object-cover border border-slate-700"
-                                    />
-                                    <div className="min-w-0">
-                                      <p className="text-xs font-bold text-white truncate">
-                                        Team {inv.registration?.teamName || 'Squad'}
-                                      </p>
-                                      <p className="text-[10px] text-slate-400 truncate">
-                                        Invited by @{inv.sender?.username} for {inv.tournament?.name}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-2 pt-1">
-                                    <button
-                                      disabled={respondingId === inv._id}
-                                      onClick={() => handleAcceptInvite(inv._id)}
-                                      className="py-1.5 px-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono font-bold text-[11px] uppercase transition-all flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer"
-                                    >
-                                      <Check className="w-3 h-3" />
-                                      {respondingId === inv._id ? 'Joining...' : 'Accept'}
-                                    </button>
-                                    <button
-                                      disabled={respondingId === inv._id}
-                                      onClick={() => handleDeclineInvite(inv._id)}
-                                      className="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-semibold text-[11px] uppercase transition-all disabled:opacity-50 cursor-pointer"
-                                    >
-                                      Decline
-                                    </button>
-                                  </div>
+                          {/* Tab 1: Match & Tournament Updates */}
+                          {activeNotifTab === 'updates' && (
+                            <>
+                              {notifications.length === 0 ? (
+                                <div className="py-6 text-center space-y-1.5">
+                                  <Gamepad2 className="w-7 h-7 text-slate-600 mx-auto" />
+                                  <p className="text-xs font-semibold text-slate-300">No match updates yet</p>
+                                  <p className="text-[10px] text-slate-500">
+                                    Room ID, passwords and match updates will appear here.
+                                  </p>
                                 </div>
-                              ))}
-                            </div>
+                              ) : (
+                                <div className="max-h-80 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                  {notifications.map((notif) => {
+                                    const isMatchCreds = notif.type === 'match_credentials';
+                                    const isLive = notif.type === 'match_live';
+                                    const isResults = notif.type === 'match_results' || notif.type === 'tournament_results';
+
+                                    return (
+                                      <div
+                                        key={notif._id}
+                                        onClick={() => handleNotificationClick(notif)}
+                                        className={`p-2.5 rounded-2xl border transition-all cursor-pointer group select-none ${
+                                          !notif.isRead
+                                            ? 'bg-cyan-950/30 hover:bg-cyan-950/50 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]'
+                                            : 'bg-slate-900/60 hover:bg-slate-900/90 border-slate-800'
+                                        }`}
+                                      >
+                                        <div className="flex items-start gap-2.5">
+                                          <div
+                                            className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
+                                              isMatchCreds
+                                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                                : isLive
+                                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                                : isResults
+                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                                : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                            }`}
+                                          >
+                                            {isMatchCreds ? (
+                                              <Key className="w-3.5 h-3.5" />
+                                            ) : isLive ? (
+                                              <Flame className="w-3.5 h-3.5 animate-pulse" />
+                                            ) : isResults ? (
+                                              <Trophy className="w-3.5 h-3.5" />
+                                            ) : (
+                                              <Gamepad2 className="w-3.5 h-3.5" />
+                                            )}
+                                          </div>
+
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-1">
+                                              <span
+                                                className={`text-xs font-bold truncate ${
+                                                  !notif.isRead ? 'text-white' : 'text-slate-300'
+                                                }`}
+                                              >
+                                                {notif.title}
+                                              </span>
+                                              <span className="text-[9px] font-mono text-slate-500 shrink-0">
+                                                {formatTimeAgo(notif.createdAt)}
+                                              </span>
+                                            </div>
+                                            <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5 leading-relaxed">
+                                              {notif.message}
+                                            </p>
+                                            <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                                              <span className="text-[9px] font-mono text-cyan-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                                                <span>View match & credentials</span>
+                                                <ArrowRight className="w-2.5 h-2.5" />
+                                              </span>
+                                              {!notif.isRead && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {/* Tab 2: Tournament Invitations */}
+                          {activeNotifTab === 'invites' && (
+                            <>
+                              {invitations.length === 0 ? (
+                                <p className="text-xs text-slate-400 text-center py-5">
+                                  No active tournament invitations.
+                                </p>
+                              ) : (
+                                <div className="max-h-72 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
+                                  {invitations.map((inv) => (
+                                    <div
+                                      key={inv._id}
+                                      className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <img
+                                          src={inv.sender?.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'}
+                                          alt={inv.sender?.name}
+                                          className="w-8 h-8 rounded-lg object-cover border border-slate-700"
+                                        />
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-bold text-white truncate">
+                                            Team {inv.registration?.teamName || 'Squad'}
+                                          </p>
+                                          <p className="text-[10px] text-slate-400 truncate">
+                                            Invited by @{inv.sender?.username} for {inv.tournament?.name}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-2 pt-1">
+                                        <button
+                                          disabled={respondingId === inv._id}
+                                          onClick={() => handleAcceptInvite(inv._id)}
+                                          className="py-1.5 px-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono font-bold text-[11px] uppercase transition-all flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer"
+                                        >
+                                          <Check className="w-3 h-3" />
+                                          {respondingId === inv._id ? 'Joining...' : 'Accept'}
+                                        </button>
+                                        <button
+                                          disabled={respondingId === inv._id}
+                                          onClick={() => handleDeclineInvite(inv._id)}
+                                          className="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-semibold text-[11px] uppercase transition-all disabled:opacity-50 cursor-pointer"
+                                        >
+                                          Decline
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )}

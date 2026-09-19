@@ -1149,6 +1149,8 @@ exports.getPublicTeams = async (req, res, next) => {
         },
         status: reg.status,
         teamType: reg.teamType || 'UEM Student Team',
+        points: reg.points || 0,
+        matchesPlayed: reg.matchesPlayed || 0,
         teamResponses: safeTeamResponses,
         players: safePlayers,
         registeredAt: reg.createdAt,

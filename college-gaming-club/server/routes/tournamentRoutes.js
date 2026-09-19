@@ -5,11 +5,12 @@ const {
   getTournamentById,
   createTournament,
   updateTournament,
+  updateTournamentStatus,
   deleteTournament,
   registerTeam,
   generateBracket,
 } = require('../controllers/tournamentController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, optionalAuth } = require('../middleware/authMiddleware');
 const { staffOnly, adminOnly } = require('../middleware/adminMiddleware');
 const formRoutes = require('./formRoutes');
 const {
@@ -38,6 +39,7 @@ const {
   assignTeamsToDirectLobby,
   createDirectLobbyMatch,
   createLobbyFromSelectedTeams,
+  recordMatchResults,
 } = require('../controllers/tournamentStageController');
 
 // Nested form routes: /api/tournaments/:id/form
@@ -72,6 +74,7 @@ router.post('/:id/stages/:stageId/advance-teams', protect, staffOnly, manualAdva
 router.put('/:id/stages/:stageId/override-teams', protect, staffOnly, overrideStageTeams);
 
 router.post('/:id/stages/:stageId/lobbies/:lobbyId/matches', protect, staffOnly, createLobbyMatch);
+router.post('/:id/matches/:matchId/results', protect, staffOnly, recordMatchResults);
 router.put('/:id/matches/:matchId', protect, staffOnly, updateLobbyMatch);
 router.delete('/:id/matches/:matchId', protect, staffOnly, deleteLobbyMatch);
 
@@ -82,9 +85,12 @@ router
 
 router
   .route('/:id')
-  .get(getTournamentById)
+  .get(optionalAuth, getTournamentById)
   .put(protect, staffOnly, updateTournament)
+  .patch(protect, staffOnly, updateTournamentStatus)
   .delete(protect, adminOnly, deleteTournament);
+
+router.patch('/:id/status', protect, staffOnly, updateTournamentStatus);
 
 router.post('/:id/register', protect, registerTeam);
 router.post('/:id/generate-bracket', protect, staffOnly, generateBracket);
