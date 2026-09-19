@@ -53,6 +53,30 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Request logging middleware for clear terminal visibility
+app.use((req, res, next) => {
+  const start = Date.now();
+  const method = req.method;
+  const url = req.originalUrl || req.url;
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    const statusColor =
+      status >= 500
+        ? '\x1b[31m' // red
+        : status >= 400
+        ? '\x1b[33m' // yellow
+        : status >= 300
+        ? '\x1b[36m' // cyan
+        : '\x1b[32m'; // green
+    const reset = '\x1b[0m';
+    console.log(`[API ${new Date().toLocaleTimeString()}] ${method.padEnd(6)} ${url} -> ${statusColor}${status}${reset} (${duration}ms)`);
+  });
+
+  next();
+});
+
 // Root & Health Check routes
 app.get('/', (req, res) => {
   res.json({

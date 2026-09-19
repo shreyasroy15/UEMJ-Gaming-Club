@@ -37,7 +37,7 @@ const Register = () => {
 
       if (res.success) {
         addToast(`Registration successful! Welcome, ${res.user.name}`, 'success');
-        navigate('/dashboard');
+        navigate('/');
       } else {
         addToast(res.message || 'Registration failed', 'error');
       }

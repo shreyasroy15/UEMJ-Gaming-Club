@@ -19,7 +19,8 @@ exports.getMatches = async (req, res, next) => {
       .populate('tournament', 'name game banner status')
       .populate('teamA', 'name tag logo')
       .populate('teamB', 'name tag logo')
-      .populate('winner', 'name tag logo')
+      .populate('teams', 'teamName teamTag teamType captain')
+      .populate('winner', 'name tag logo teamName teamTag')
       .sort({ scheduledAt: 1 });
 
     res.status(200).json({

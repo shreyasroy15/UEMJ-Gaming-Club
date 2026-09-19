@@ -26,6 +26,11 @@ import {
   LogIn,
   UserPlus,
   CheckCircle2,
+  Lock,
+  Key,
+  Copy,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 const TournamentDetails = () => {
@@ -630,69 +635,130 @@ const TournamentDetails = () => {
               />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {matches.map((match) => (
-                  <div
-                    key={match._id}
-                    onClick={() => handleMatchClick(match)}
-                    className={`p-4 rounded-2xl border transition-all ${
-                      isStaff ? 'cursor-pointer hover:border-cyan-400' : ''
-                    } ${
-                      match.status === 'live'
-                        ? 'bg-rose-950/30 border-rose-500/50 shadow-lg'
-                        : 'bg-slate-900/60 border-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
-                      <span className="font-mono font-bold">{match.round} • Match #{match.matchNumber}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
-                          match.status === 'live'
-                            ? 'bg-rose-500/20 text-rose-400 animate-pulse'
-                            : match.status === 'completed'
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : 'bg-slate-800 text-slate-400'
-                        }`}
-                      >
-                        {match.status}
-                      </span>
-                    </div>
+                {matches.map((match) => {
+                  const isLobbyMatch = Boolean(match.lobbyName || match.stageName || (match.teams && match.teams.length > 0));
+                  const isAuthorized =
+                    isStaff ||
+                    (userSquad &&
+                      (match.teams || []).some(
+                        (t) => (t._id || t).toString() === userSquad._id?.toString()
+                      ));
 
-                    {/* Teams Score row */}
-                    <div className="flex items-center justify-between gap-2 sm:gap-4">
-                      <div className="flex-1 flex items-center gap-2 sm:gap-3 min-w-0">
-                        <img
-                          src={match.teamA?.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
-                          alt={match.teamA?.name || 'TBD'}
-                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shrink-0"
-                        />
-                        <span className="text-xs sm:text-sm font-bold text-white font-mono truncate">
-                          {match.teamA?.name || 'TBD'}
+                  return (
+                    <div
+                      key={match._id}
+                      onClick={() => handleMatchClick(match)}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        isStaff ? 'cursor-pointer hover:border-cyan-400' : ''
+                      } ${
+                        match.status === 'live'
+                          ? 'bg-rose-950/30 border-rose-500/50 shadow-lg'
+                          : 'bg-slate-900/60 border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
+                        <span className="font-mono font-bold text-white">
+                          {match.stageName || match.round || 'Round 1'} • {match.lobbyName ? `${match.lobbyName} • ` : ''}Match #{match.matchNumber}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold font-mono ${
+                            match.status === 'live'
+                              ? 'bg-rose-500/20 text-rose-400 animate-pulse'
+                              : match.status === 'completed'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}
+                        >
+                          {match.status}
                         </span>
                       </div>
 
-                      <div className="px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-xl bg-slate-950 border border-slate-800 font-mono font-black text-xs sm:text-sm text-cyan-300 shrink-0">
-                        {match.scoreA ?? 0} : {match.scoreB ?? 0}
-                      </div>
+                      {isLobbyMatch ? (
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between text-xs font-mono text-slate-300">
+                            <span>Map: <strong className="text-cyan-300">{match.map || 'Erangel'}</strong></span>
+                            <span>{new Date(match.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                          </div>
 
-                      <div className="flex-1 flex items-center justify-end gap-2 sm:gap-3 text-right min-w-0">
-                        <span className="text-xs sm:text-sm font-bold text-white font-mono truncate">
-                          {match.teamB?.name || 'TBD'}
-                        </span>
-                        <img
-                          src={match.teamB?.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
-                          alt={match.teamB?.name || 'TBD'}
-                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shrink-0"
-                        />
-                      </div>
+                          {/* Participating Squads */}
+                          <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80">
+                            <span className="text-[10px] uppercase font-mono font-bold text-slate-400 block mb-1">
+                              Participating Squads ({match.teams?.length || 0})
+                            </span>
+                            <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                              {(match.teams || []).map((t, tIdx) => (
+                                <span
+                                  key={tIdx}
+                                  className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-300"
+                                >
+                                  {t.teamName || t.name || 'Team'}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Room Credentials (Private to authorized participants & admin) */}
+                          <div className="p-2.5 rounded-xl bg-slate-950 border border-cyan-500/20 flex items-center justify-between gap-2 text-xs font-mono">
+                            {isAuthorized ? (
+                              <div className="flex flex-wrap items-center justify-between w-full gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <Key className="w-3.5 h-3.5 text-cyan-400" />
+                                  <span className="text-slate-400 text-[11px]">Room:</span>
+                                  <span className="text-cyan-300 font-bold">{match.roomId || 'Pending'}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                                  <span className="text-slate-400 text-[11px]">Pass:</span>
+                                  <span className="text-amber-300 font-bold">{match.roomPassword || 'Pending'}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                                <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <span>Room credentials visible to participating squads & admins</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Legacy 1v1 Score row */
+                        <div className="flex items-center justify-between gap-2 sm:gap-4">
+                          <div className="flex-1 flex items-center gap-2 sm:gap-3 min-w-0">
+                            <img
+                              src={match.teamA?.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
+                              alt={match.teamA?.name || 'TBD'}
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shrink-0"
+                            />
+                            <span className="text-xs sm:text-sm font-bold text-white font-mono truncate">
+                              {match.teamA?.name || 'TBD'}
+                            </span>
+                          </div>
+
+                          <div className="px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-xl bg-slate-950 border border-slate-800 font-mono font-black text-xs sm:text-sm text-cyan-300 shrink-0">
+                            {match.scoreA ?? 0} : {match.scoreB ?? 0}
+                          </div>
+
+                          <div className="flex-1 flex items-center justify-end gap-2 sm:gap-3 text-right min-w-0">
+                            <span className="text-xs sm:text-sm font-bold text-white font-mono truncate">
+                              {match.teamB?.name || 'TBD'}
+                            </span>
+                            <img
+                              src={match.teamB?.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
+                              alt={match.teamB?.name || 'TBD'}
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shrink-0"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {match.winner && (
+                        <div className="mt-3 pt-2 border-t border-slate-800/80 text-xs text-amber-400 flex items-center justify-center gap-1 font-mono">
+                          <Trophy className="w-3.5 h-3.5" /> Winner: <strong>{match.winner?.teamName || match.winner?.name}</strong>
+                        </div>
+                      )}
                     </div>
-
-                    {match.winner && (
-                      <div className="mt-3 pt-2 border-t border-slate-800/80 text-xs text-amber-400 flex items-center justify-center gap-1 font-mono">
-                        <Trophy className="w-3.5 h-3.5" /> Winner: <strong>{match.winner?.name}</strong>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

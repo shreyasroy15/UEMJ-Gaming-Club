@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Swords,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -354,6 +355,15 @@ const AdminTournaments = () => {
                         className="p-1.5 rounded-lg bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-800/60 transition-colors inline-block align-middle cursor-pointer"
                       >
                         <FileCode className="w-3.5 h-3.5" />
+                      </Link>
+
+                      {/* Manage Stages, Lobbies & Matches */}
+                      <Link
+                        to={`/admin/matches?tournament=${t._id}`}
+                        title="Manage Stages, Lobbies & Match Fixtures"
+                        className="p-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition-colors inline-block align-middle cursor-pointer"
+                      >
+                        <Swords className="w-3.5 h-3.5" />
                       </Link>
 
                       {/* View & Verify Teams */}

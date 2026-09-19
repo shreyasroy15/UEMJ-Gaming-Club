@@ -117,6 +117,69 @@ const tournamentSchema = new mongoose.Schema(
       type: String,
       default: 'https://twitch.tv',
     },
+    stages: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        order: {
+          type: Number,
+          default: 1,
+        },
+        status: {
+          type: String,
+          enum: ['upcoming', 'ongoing', 'completed'],
+          default: 'upcoming',
+        },
+        isFinal: {
+          type: Boolean,
+          default: false,
+        },
+        winner: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'TournamentRegistration',
+        },
+        // Eligible teams allowed to be assigned in this stage's lobbies
+        qualifiedTeams: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'TournamentRegistration',
+          },
+        ],
+        // Teams marked/advanced by Admin to qualify for the next stage (with manual override)
+        advancedTeams: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'TournamentRegistration',
+          },
+        ],
+        lobbies: [
+          {
+            name: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+            order: {
+              type: Number,
+              default: 1,
+            },
+            maxTeams: {
+              type: Number,
+              default: 25,
+            },
+            teams: [
+              {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'TournamentRegistration',
+              },
+            ],
+          },
+        ],
+      },
+    ],
   },
   {
     timestamps: true,

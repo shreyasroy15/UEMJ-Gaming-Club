@@ -29,12 +29,11 @@ const Login = () => {
       const res = await login(email, password);
       if (res.success) {
         addToast(`Welcome back, ${res.user.name}!`, 'success');
-        let destination = from;
-        if (destination === '/') {
-          if (res.user.role === 'admin') destination = '/admin';
-          else destination = '/dashboard';
+        if (res.user.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/', { replace: true });
         }
-        navigate(destination, { replace: true });
       } else {
         addToast(res.message || 'Invalid credentials', 'error');
       }

@@ -45,7 +45,7 @@ const Navbar = () => {
     { label: 'About', href: '/about' },
   ];
 
-  const dashboardPath = user?.role === 'admin' ? '/admin' : '/dashboard';
+  const profilePath = user?.role === 'admin' ? '/admin' : '/profile';
 
   const handleLogout = () => {
     logout();
@@ -345,7 +345,7 @@ const Navbar = () => {
                           </div>
 
                           <div className="py-1.5 space-y-1">
-                            {user.role === 'admin' && (
+                            {user.role === 'admin' ? (
                               <Link
                                 to="/admin"
                                 onClick={() => setProfileDropdownOpen(false)}
@@ -353,15 +353,15 @@ const Navbar = () => {
                               >
                                 <Shield className="w-4 h-4 text-fuchsia-400 shrink-0" /> Admin Panel
                               </Link>
+                            ) : (
+                              <Link
+                                to="/profile"
+                                onClick={() => setProfileDropdownOpen(false)}
+                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-cyan-300 hover:bg-cyan-950/50 rounded-xl transition-colors"
+                              >
+                                <User className="w-4 h-4 text-cyan-400 shrink-0" /> Player Profile
+                              </Link>
                             )}
-
-                            <Link
-                              to="/dashboard"
-                              onClick={() => setProfileDropdownOpen(false)}
-                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-cyan-300 hover:bg-cyan-950/50 rounded-xl transition-colors"
-                            >
-                              <LayoutDashboard className="w-4 h-4 text-cyan-400 shrink-0" /> Player Dashboard
-                            </Link>
                           </div>
 
                           <div className="pt-1 border-t border-white/10">
@@ -450,7 +450,7 @@ const Navbar = () => {
                       </span>
                     </div>
 
-                    {user.role === 'admin' && (
+                    {user.role === 'admin' ? (
                       <Link
                         to="/admin"
                         onClick={() => setMobileMenuOpen(false)}
@@ -458,15 +458,15 @@ const Navbar = () => {
                       >
                         <Shield className="w-4 h-4 text-fuchsia-400" /> Open Admin Panel
                       </Link>
+                    ) : (
+                      <Link
+                        to="/profile"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm text-cyan-300 bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/40 font-bold transition-colors"
+                      >
+                        <User className="w-4 h-4 text-cyan-400" /> Player Profile
+                      </Link>
                     )}
-
-                    <Link
-                      to="/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm text-cyan-300 bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/40 font-bold transition-colors"
-                    >
-                      <LayoutDashboard className="w-4 h-4 text-cyan-400" /> Open Player Dashboard
-                    </Link>
 
                     <button
                       onClick={() => {

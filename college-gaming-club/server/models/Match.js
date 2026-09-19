@@ -7,9 +7,46 @@ const matchSchema = new mongoose.Schema(
       ref: 'Tournament',
       required: true,
     },
+    stageId: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+    lobbyId: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+    stageName: {
+      type: String,
+      default: '',
+    },
+    lobbyName: {
+      type: String,
+      default: '',
+    },
+    title: {
+      type: String,
+      default: 'Match',
+    },
+    map: {
+      type: String,
+      default: 'Erangel',
+    },
+    roomId: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    roomPassword: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    teams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'TournamentRegistration',
+      },
+    ],
     round: {
       type: String,
-      required: true,
       default: 'Round 1',
     },
     roundIndex: {
@@ -19,6 +56,7 @@ const matchSchema = new mongoose.Schema(
     matchNumber: {
       type: Number,
       required: true,
+      default: 1,
     },
     teamA: {
       type: mongoose.Schema.Types.ObjectId,
@@ -38,7 +76,7 @@ const matchSchema = new mongoose.Schema(
     },
     winner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Team',
+      ref: 'TournamentRegistration',
     },
     scheduledAt: {
       type: Date,
