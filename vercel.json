@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "college-gaming-club/client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "college-gaming-club/server/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api(.*)",
+      "dest": "college-gaming-club/server/server.js"
+    },
+    {
+      "src": "^/assets/(.*)",
+      "dest": "college-gaming-club/client/assets/$1"
+    },
+    {
+      "src": "^/(.*\\.[a-zA-Z0-9]+)$",
+      "dest": "college-gaming-club/client/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "college-gaming-club/client/index.html"
+    }
+  ]
+}

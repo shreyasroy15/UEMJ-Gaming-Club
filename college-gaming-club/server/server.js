@@ -54,6 +54,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Ensure Database is connected for serverless environments
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection error in middleware:', err);
+    next(err);
+  }
+});
+
 // Request logging middleware for clear terminal visibility
 app.use((req, res, next) => {
   const start = Date.now();
