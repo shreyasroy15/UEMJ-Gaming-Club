@@ -9,6 +9,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -29,12 +31,12 @@ jobs:
         run: npm run build
 
       - name: Check Vercel Secrets
-        if: ${{ secrets.VERCEL_TOKEN == '' }}
+        if: env.VERCEL_TOKEN == ''
         run: |
           echo "::notice ::VERCEL_TOKEN secret is not set in GitHub repository secrets. If you deploy directly via Vercel GitHub integration, Vercel builds automatically from git commits. To enable GitHub Actions Vercel CLI deployment, add VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID in GitHub Settings -> Secrets and variables -> Actions."
 
       - name: Deploy to Vercel
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        if: env.VERCEL_TOKEN != ''
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
