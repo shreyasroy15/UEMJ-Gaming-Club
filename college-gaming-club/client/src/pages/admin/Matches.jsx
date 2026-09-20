@@ -2373,331 +2373,377 @@ const AdminMatches = () => {
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL 4: INTERACTIVE CARD-BASED MATCH RESULTS & POINTS TABLE ENTRY */}
+      {/* FULL-SCREEN OVERLAY: INTERACTIVE MATCH RESULTS & POINTS ENTRY */}
       {/* ========================================================================= */}
-      <Modal
-        isOpen={pointsModalOpen}
-        onClose={() => setPointsModalOpen(false)}
-        title={`Enter Match Results: ${selectedRoundForPoints?.title || 'Round'} (${activeLobby?.name || 'Lobby'})`}
-        size="xl"
-      >
-        <div className="space-y-6">
-          {/* Preset Selector Bar */}
-          <div className="p-4 bg-slate-800/60 rounded-xl border border-slate-800 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-                  Scoring System Preset
-                </span>
-                <p className="text-[11px] text-slate-400">
-                  {SCORING_PRESETS[selectedPresetKey]?.description}
-                </p>
+      {pointsModalOpen && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
+          {/* STICKY HEADER */}
+          <header className="sticky top-0 bg-slate-950 border-b border-slate-800 px-6 py-4 space-y-4 flex-shrink-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-2xl font-black text-white font-mono mb-1 truncate">
+                  ENTER MATCH RESULTS
+                </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-slate-400">
+                  <span className="font-mono">
+                    {selectedRoundForPoints?.title || 'Round'}
+                  </span>
+                  <span className="hidden sm:inline text-slate-700">•</span>
+                  <span className="text-slate-500">
+                    {structure.tournament?.name}
+                  </span>
+                  <span className="hidden sm:inline text-slate-700">•</span>
+                  <span className="font-mono text-cyan-400">
+                    {activeLobby?.name || 'Lobby'}
+                  </span>
+                </div>
               </div>
 
-              {/* Presets Toggle Pills */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                {Object.values(SCORING_PRESETS).map((p) => (
-                  <button
-                    key={p.key}
-                    type="button"
-                    onClick={() => handlePresetChange(p.key)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
-                      selectedPresetKey === p.key
-                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                        : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
-                    }`}
-                  >
-                    {p.name.split(' (')[0]}
-                  </button>
-                ))}
-              </div>
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setPointsModalOpen(false)}
+                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition flex-shrink-0"
+                aria-label="Close"
+              >
+                <span className="text-xl">✕</span>
+              </button>
             </div>
 
-            {/* Custom points editor if Custom is chosen */}
-            {selectedPresetKey === 'custom' && (
-              <div className="pt-3 border-t border-slate-700 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-white">Custom Position Points (1st - 10th):</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400">Kill Point Rate:</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={customKillPoint}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setCustomKillPoint(val);
-                        // recalculate
-                        setRoundResultsData((prev) =>
-                          prev.map((item) => {
-                            const killPts = item.kills * val;
-                            return {
-                              ...item,
-                              killPoints: killPts,
-                              totalPoints: item.positionPoints + killPts + item.bonusPoints,
-                            };
-                          })
-                        );
-                      }}
-                      className="w-14 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-white text-center font-bold"
-                    />
-                  </div>
+            {/* Scoring System Info */}
+            <div className="p-3 bg-slate-800/60 rounded-lg border border-slate-800">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="text-xs">
+                  <span className="text-slate-400 block mb-1">SCORING SYSTEM:</span>
+                  <p className="text-slate-300 font-mono text-[11px]">
+                    {SCORING_PRESETS[selectedPresetKey]?.description}
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((pos) => (
-                    <div key={pos} className="text-center">
-                      <span className="text-[10px] text-slate-500 block">#{pos}</span>
+                {/* Presets Toggle Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 flex-shrink-0">
+                  {Object.values(SCORING_PRESETS).map((p) => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => handlePresetChange(p.key)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                        selectedPresetKey === p.key
+                          ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                          : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                      }`}
+                    >
+                      {p.name.split(' (')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom points editor if Custom is chosen */}
+              {selectedPresetKey === 'custom' && (
+                <div className="pt-3 border-t border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between text-xs gap-3">
+                    <span className="font-bold text-white">Custom Position Points (1st - 10th):</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-slate-400">Kill Point Rate:</span>
                       <input
                         type="number"
                         min="0"
-                        value={customPositionPoints[pos] || 0}
+                        max="10"
+                        value={customKillPoint}
                         onChange={(e) => {
                           const val = Number(e.target.value);
-                          setCustomPositionPoints((prev) => ({ ...prev, [pos]: val }));
-                          // recalculate
+                          setCustomKillPoint(val);
                           setRoundResultsData((prev) =>
                             prev.map((item) => {
-                              if (item.position !== pos) return item;
+                              const killPts = item.kills * val;
                               return {
                                 ...item,
-                                positionPoints: val,
-                                totalPoints: val + item.killPoints + item.bonusPoints,
+                                killPoints: killPts,
+                                totalPoints: item.positionPoints + killPts + item.bonusPoints,
                               };
                             })
                           );
                         }}
-                        className="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-xs text-center font-bold text-cyan-400"
+                        className="w-14 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-white text-center font-bold"
                       />
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Interactive Tap-to-Rank Banner */}
-          <div className="p-3 bg-gradient-to-r from-cyan-950/60 to-purple-950/60 rounded-xl border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-cyan-500 text-slate-950 font-black text-sm">
-                #{nextAvailablePosition}
-              </span>
-              <div>
-                <span className="text-white font-bold block">
-                  Tap-to-Rank is ACTIVE! Next tap assigns: <strong>#{nextAvailablePosition} Place</strong>
-                </span>
-                <span className="text-slate-400 text-[11px]">
-                  Tap any unranked team card to rank them. Tap again to clear. You can also manually
-                  type any position box below to override.
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                // Clear all ranks
-                setRoundResultsData((prev) =>
-                  prev.map((i) => ({
-                    ...i,
-                    position: 0,
-                    positionPoints: 0,
-                    totalPoints: i.killPoints + i.bonusPoints,
-                  }))
-                );
-                addToast('Cleared all team ranks', 'info');
-              }}
-              className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs font-semibold whitespace-nowrap"
-            >
-              Reset Ranks
-            </button>
-          </div>
-
-          {/* Teams Card Grid: 2, 3, or 4 per row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[55vh] overflow-y-auto pr-1">
-            {roundResultsData.map((item) => {
-              const isRanked = item.position > 0;
-              const isWinner = item.position === 1;
-
-              return (
-                <div
-                  key={item.teamId}
-                  onClick={() => handleTapTeamRank(item.teamId)}
-                  className={`group relative rounded-xl p-4 transition-all duration-200 cursor-pointer border flex flex-col justify-between select-none ${
-                    isWinner
-                      ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
-                      : isRanked
-                      ? 'bg-cyan-950/30 border-cyan-500/60 shadow-md shadow-cyan-500/10'
-                      : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600'
-                  }`}
-                >
-                  <div>
-                    {/* Card Header: Position & Winner Badge */}
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        {/* Position input / badge */}
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700"
-                        >
-                          <span className="text-[10px] text-slate-400 font-mono pl-1">POS:</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={item.position || ''}
-                            placeholder="-"
-                            onChange={(e) => handleOverridePosition(item.teamId, e.target.value)}
-                            className="w-8 bg-transparent text-center text-xs font-black text-white focus:outline-none focus:text-cyan-400"
-                          />
-                        </div>
-
-                        {item.teamTag && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-cyan-400 border border-slate-700">
-                            [{item.teamTag}]
-                          </span>
-                        )}
-                      </div>
-
-                      {isWinner ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                          <Crown className="w-3 h-3 text-amber-400" />
-                          Winner (1st)
-                        </span>
-                      ) : isRanked ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                          #{item.position} Place
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-slate-500 italic">Tap to rank</span>
-                      )}
-                    </div>
-
-                    <h4 className="text-sm font-black text-white group-hover:text-cyan-300 transition-colors truncate">
-                      {item.teamName}
-                    </h4>
-                    <p className="text-[11px] text-slate-400 truncate">
-                      Captain: {item.captain}
-                    </p>
                   </div>
 
-                  {/* Kills & Bonus Controls (Click propagation stopped so typing doesn't toggle card) */}
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-3 pt-3 border-t border-slate-700/60 space-y-2.5 text-xs"
-                  >
-                    {/* Kills Input */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                        <Flame className="w-3 h-3 text-rose-400" />
-                        Total Kills:
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateKills(item.teamId, -1)}
-                          className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
+                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((pos) => (
+                      <div key={pos} className="text-center">
+                        <span className="text-[10px] text-slate-500 block">#{pos}</span>
                         <input
                           type="number"
                           min="0"
-                          value={item.kills}
-                          onChange={(e) => handleUpdateKills(item.teamId, e.target.value)}
-                          className="w-10 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-white"
+                          value={customPositionPoints[pos] || 0}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setCustomPositionPoints((prev) => ({ ...prev, [pos]: val }));
+                            setRoundResultsData((prev) =>
+                              prev.map((item) => {
+                                if (item.position !== pos) return item;
+                                return {
+                                  ...item,
+                                  positionPoints: val,
+                                  totalPoints: val + item.killPoints + item.bonusPoints,
+                                };
+                              })
+                            );
+                          }}
+                          className="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-xs text-center font-bold text-cyan-400"
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateKills(item.teamId, 1)}
-                          className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
                       </div>
-                    </div>
-
-                    {/* Bonus Points Input */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                        <Award className="w-3 h-3 text-purple-400" />
-                        Bonus Pts:
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateBonus(item.teamId, -1)}
-                          className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <input
-                          type="number"
-                          value={item.bonusPoints}
-                          onChange={(e) => handleUpdateBonus(item.teamId, e.target.value)}
-                          className="w-10 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-white"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateBonus(item.teamId, 1)}
-                          className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Live Calculation Pill */}
-                    <div className="pt-2 border-t border-slate-700/40 flex items-center justify-between font-mono text-[11px]">
-                      <span className="text-slate-400">
-                        {item.positionPoints} pos + {item.killPoints} kills
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
-                        {item.totalPoints} PTS
-                      </span>
-                    </div>
+                    ))}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Modal Footer */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-800">
-            <div className="text-xs text-slate-400">
-              Ranked:{' '}
-              <strong className="text-white">
-                {roundResultsData.filter((r) => r.position > 0).length}
-              </strong>{' '}
-              / {roundResultsData.length} Teams | Winner:{' '}
-              <strong className="text-amber-400">
-                {roundResultsData.find((r) => r.position === 1)?.teamName || 'None'}
-              </strong>
+              )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setPointsModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
-              >
-                Cancel
-              </button>
+            {/* Tap-to-Rank Banner */}
+            <div className="p-3 bg-gradient-to-r from-cyan-950/60 to-purple-950/60 rounded-lg border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-cyan-500 text-slate-950 font-black text-xs">
+                  #{nextAvailablePosition}
+                </span>
+                <div>
+                  <span className="text-white font-bold block">
+                    Tap-to-Rank ACTIVE: Next rank = <strong>#{nextAvailablePosition}</strong>
+                  </span>
+                  <span className="text-slate-400 text-[10px]">
+                    Tap card to rank • Tap again to clear • Type position to override
+                  </span>
+                </div>
+              </div>
 
               <button
                 type="button"
-                onClick={handleSaveMatchResults}
-                disabled={submitting}
-                className="px-6 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2"
+                onClick={() => {
+                  setRoundResultsData((prev) =>
+                    prev.map((i) => ({
+                      ...i,
+                      position: 0,
+                      positionPoints: 0,
+                      totalPoints: i.killPoints + i.bonusPoints,
+                    }))
+                  );
+                  addToast('Cleared all team ranks', 'info');
+                }}
+                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs font-semibold whitespace-nowrap flex-shrink-0"
               >
-                <Save className="w-4 h-4" />
-                <span>{submitting ? 'Saving Results...' : 'Save & Update Standings'}</span>
+                Reset Ranks
               </button>
             </div>
-          </div>
+          </header>
+
+          {/* SCROLLABLE MAIN AREA */}
+          <main className="flex-1 overflow-y-auto px-6 py-6">
+            {/* Teams Card Grid: Responsive columns */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-max">
+              {roundResultsData.map((item) => {
+                const isRanked = item.position > 0;
+                const isWinner = item.position === 1;
+
+                return (
+                  <div
+                    key={item.teamId}
+                    onClick={() => handleTapTeamRank(item.teamId)}
+                    className={`group relative rounded-xl p-4 transition-all duration-200 cursor-pointer border flex flex-col justify-between select-none ${
+                      isWinner
+                        ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
+                        : isRanked
+                        ? 'bg-cyan-950/30 border-cyan-500/60 shadow-md shadow-cyan-500/10'
+                        : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600'
+                    }`}
+                  >
+                    <div>
+                      {/* Card Header: Position & Winner Badge */}
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {/* Position input / badge */}
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700 flex-shrink-0"
+                          >
+                            <span className="text-[10px] text-slate-400 font-mono pl-1">POS:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={item.position || ''}
+                              placeholder="-"
+                              onChange={(e) => handleOverridePosition(item.teamId, e.target.value)}
+                              className="w-8 bg-transparent text-center text-xs font-black text-white focus:outline-none focus:text-cyan-400"
+                            />
+                          </div>
+
+                          {item.teamTag && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-cyan-400 border border-slate-700 truncate">
+                              [{item.teamTag}]
+                            </span>
+                          )}
+                        </div>
+
+                        {isWinner ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
+                            <Crown className="w-3 h-3 text-amber-400" />
+                            1st
+                          </span>
+                        ) : isRanked ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex-shrink-0 whitespace-nowrap">
+                            #{item.position}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 italic flex-shrink-0 whitespace-nowrap">Tap</span>
+                        )}
+                      </div>
+
+                      <h4 className="text-sm font-black text-white group-hover:text-cyan-300 transition-colors truncate mb-1">
+                        {item.teamName}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 truncate">
+                        Captain: {item.captain}
+                      </p>
+                    </div>
+
+                    {/* Kills & Bonus Controls */}
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 pt-3 border-t border-slate-700/60 space-y-2.5 text-xs"
+                    >
+                      {/* Kills Input */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                          <Flame className="w-3 h-3 text-rose-400" />
+                          Kills:
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateKills(item.teamId, -1)}
+                            className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.kills}
+                            onChange={(e) => handleUpdateKills(item.teamId, e.target.value)}
+                            className="w-10 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateKills(item.teamId, 1)}
+                            className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Bonus Points Input */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                          <Award className="w-3 h-3 text-purple-400" />
+                          Bonus:
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateBonus(item.teamId, -1)}
+                            className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <input
+                            type="number"
+                            value={item.bonusPoints}
+                            onChange={(e) => handleUpdateBonus(item.teamId, e.target.value)}
+                            className="w-10 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateBonus(item.teamId, 1)}
+                            className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Live Calculation Pill */}
+                      <div className="pt-2 border-t border-slate-700/40 flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-400">
+                          {item.positionPoints}p + {item.killPoints}k
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
+                          {item.totalPoints} PTS
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </main>
+
+          {/* STICKY FOOTER */}
+          <footer className="sticky bottom-0 bg-slate-950 border-t border-slate-800 px-6 py-4 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="text-xs text-slate-400 space-y-1 sm:space-y-0">
+                <div>
+                  Ranked:{' '}
+                  <strong className="text-white">
+                    {roundResultsData.filter((r) => r.position > 0).length}
+                  </strong>{' '}
+                  / {roundResultsData.length}
+                </div>
+                <div className="sm:ml-4 sm:inline">
+                  Winner:{' '}
+                  <strong className="text-amber-400">
+                    {roundResultsData.find((r) => r.position === 1)?.teamName || 'None'}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setPointsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveMatchResults}
+                  disabled={submitting}
+                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{submitting ? 'Saving...' : 'Save & Update'}</span>
+                </button>
+              </div>
+            </div>
+          </footer>
+
+          {/* Close on Escape key */}
+          {typeof window !== 'undefined' && (
+            <div
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setPointsModalOpen(false);
+                }
+              }}
+              tabIndex={0}
+              style={{ display: 'none' }}
+            />
+          )}
         </div>
-      </Modal>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL 5: QUICK ROOM CREDENTIALS DRAWER */}
