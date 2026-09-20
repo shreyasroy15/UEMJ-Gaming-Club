@@ -301,21 +301,6 @@ const Leaderboard = () => {
             <Trophy className="w-3.5 h-3.5" />
             <span>Tournaments</span>
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode('global');
-              if (games.length === 0) fetchGames();
-            }}
-            className={`px-3.5 py-2 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'global'
-                ? 'bg-cyan-500 text-slate-950 shadow-md font-black'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Club Roster</span>
-          </button>
         </div>
       </div>
 

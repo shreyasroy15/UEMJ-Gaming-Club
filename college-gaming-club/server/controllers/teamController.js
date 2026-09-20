@@ -87,6 +87,21 @@ exports.createTeam = async (req, res, next) => {
       });
     }
 
+    // Check if user is already in a team for this game
+    const existingPlayerTeam = await Team.findOne({
+      game,
+      $or: [
+        { captain: req.user.id },
+        { 'members.user': req.user.id },
+      ],
+    });
+    if (existingPlayerTeam) {
+      return res.status(400).json({
+        success: false,
+        message: `You are already a member/captain of team "${existingPlayerTeam.name}" for ${game}. A player cannot be in multiple teams for the same game.`,
+      });
+    }
+
     const team = await Team.create({
       name,
       tag: tag || name.substring(0, 4).toUpperCase(),
@@ -257,6 +272,22 @@ exports.addMember = async (req, res, next) => {
       });
     }
 
+    // Check if player is already in any team for this game
+    const existingPlayerTeam = await Team.findOne({
+      game: team.game,
+      $or: [
+        { captain: player._id },
+        { 'members.user': player._id },
+      ],
+    });
+
+    if (existingPlayerTeam) {
+      return res.status(400).json({
+        success: false,
+        message: `${player.name} is already a member/captain of team "${existingPlayerTeam.name}" for ${team.game}. A player cannot be in multiple teams for the same game.`,
+      });
+    }
+
     team.members.push({
       user: player._id,
       role: role || 'starter',
@@ -418,3 +449,38 @@ exports.transferCaptain = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Verify / Unverify team (Admin/Staff only)
+// @route   PUT /api/teams/:id/verify
+// @access  Private/Staff
+exports.verifyTeam = async (req, res, next) => {
+  try {
+    const team = await Team.findById(req.params.id);
+
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found',
+      });
+    }
+
+    const { isVerified } = req.body;
+    team.isVerified = isVerified !== undefined ? isVerified : !team.isVerified;
+    team.verifiedAt = team.isVerified ? new Date() : null;
+
+    await team.save();
+
+    const populatedTeam = await Team.findById(team._id)
+      .populate('captain', 'name username avatar college')
+      .populate('members.user', 'name username avatar college');
+
+    res.status(200).json({
+      success: true,
+      message: `Team ${team.isVerified ? 'verified' : 'unverified'} successfully`,
+      team: populatedTeam,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

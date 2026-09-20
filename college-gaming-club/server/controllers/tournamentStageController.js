@@ -360,6 +360,22 @@ exports.assignTeamsToLobby = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'teamIds array is required' });
     }
 
+    // Check if any team is unverified
+    if (teamIds.length > 0) {
+      const unverifiedRegistrations = await TournamentRegistration.find({
+        _id: { $in: teamIds },
+        status: { $ne: 'verified' },
+      });
+
+      if (unverifiedRegistrations.length > 0) {
+        const names = unverifiedRegistrations.map((t) => t.teamName).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `Unverified teams cannot be assigned to lobbies: ${names}. Please verify all teams before assigning.`,
+        });
+      }
+    }
+
     lobby.teams = teamIds;
     await tournament.save();
 
@@ -854,6 +870,21 @@ exports.assignTeamsToDirectLobby = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'teamIds array required' });
     }
 
+    if (teamIds.length > 0) {
+      const unverifiedRegistrations = await TournamentRegistration.find({
+        _id: { $in: teamIds },
+        status: { $ne: 'verified' },
+      });
+
+      if (unverifiedRegistrations.length > 0) {
+        const names = unverifiedRegistrations.map((t) => t.teamName).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `Unverified teams cannot be assigned to lobbies: ${names}. Please verify all teams before assigning.`,
+        });
+      }
+    }
+
     if (mode === 'append') {
       const current = (foundLobby.teams || []).map(String);
       foundLobby.teams = Array.from(new Set([...current, ...teamIds.map(String)]));
@@ -1002,6 +1033,23 @@ exports.createLobbyFromSelectedTeams = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Lobby name is required' });
     }
 
+    const uniqueTeamIds = Array.from(new Set(selectedTeamIds.map(String)));
+
+    if (uniqueTeamIds.length > 0) {
+      const unverifiedRegistrations = await TournamentRegistration.find({
+        _id: { $in: uniqueTeamIds },
+        status: { $ne: 'verified' },
+      });
+
+      if (unverifiedRegistrations.length > 0) {
+        const names = unverifiedRegistrations.map((t) => t.teamName).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `Unverified teams cannot be assigned to lobbies: ${names}. Please verify all teams before creating the lobby.`,
+        });
+      }
+    }
+
     if (!tournament.stages || tournament.stages.length === 0) {
       tournament.stages = [
         {
@@ -1017,7 +1065,6 @@ exports.createLobbyFromSelectedTeams = async (req, res, next) => {
     }
 
     const stage = tournament.stages[0];
-    const uniqueTeamIds = Array.from(new Set(selectedTeamIds.map(String)));
 
     const newLobby = {
       name: name.trim(),

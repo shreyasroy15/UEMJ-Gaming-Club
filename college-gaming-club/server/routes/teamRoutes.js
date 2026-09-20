@@ -10,8 +10,10 @@ const {
   removeMember,
   leaveTeam,
   transferCaptain,
+  verifyTeam,
 } = require('../controllers/teamController');
 const { protect } = require('../middleware/authMiddleware');
+const { staffOnly } = require('../middleware/adminMiddleware');
 
 router.route('/').get(getTeams).post(protect, createTeam);
 
@@ -21,6 +23,7 @@ router
   .put(protect, updateTeam)
   .delete(protect, deleteTeam);
 
+router.put('/:id/verify', protect, staffOnly, verifyTeam);
 router.post('/:id/members', protect, addMember);
 router.delete('/:id/members/:userId', protect, removeMember);
 router.post('/:id/leave', protect, leaveTeam);

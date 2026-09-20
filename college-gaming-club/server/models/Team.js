@@ -65,6 +65,13 @@ const teamSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

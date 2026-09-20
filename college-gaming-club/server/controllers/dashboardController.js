@@ -4,6 +4,7 @@ const Tournament = require('../models/Tournament');
 const Match = require('../models/Match');
 const Game = require('../models/Game');
 const Event = require('../models/Event');
+const TournamentRegistration = require('../models/TournamentRegistration');
 
 // @desc    Get aggregated stats for Admin Dashboard
 // @route   GET /api/dashboard/stats
@@ -23,14 +24,17 @@ exports.getDashboardStats = async (req, res, next) => {
       games,
     ] = await Promise.all([
       User.countDocuments(),
-      Team.countDocuments(),
+      TournamentRegistration.countDocuments({ status: { $ne: 'rejected' } }),
       Tournament.countDocuments(),
       Tournament.countDocuments({ status: 'live' }),
       Match.countDocuments({ status: 'live' }),
       Event.countDocuments({ date: { $gte: new Date() } }),
       User.find().select('-password').sort({ createdAt: -1 }).limit(5),
       Tournament.find().sort({ createdAt: -1 }).limit(5),
-      Team.find().sort({ points: -1, wins: -1 }).limit(5),
+      TournamentRegistration.find({ status: { $ne: 'rejected' } })
+        .populate('captain', 'name username')
+        .sort({ createdAt: -1 })
+        .limit(5),
       Game.find(),
     ]);
 

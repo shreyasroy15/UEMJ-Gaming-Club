@@ -17,24 +17,23 @@ const API = axios.create({
   withCredentials: true,
 });
 
-// Fast In-Memory SWR (Stale-While-Revalidate) Cache & In-Flight Request Deduplication
-const apiCache = new Map();
-const inflightRequests = new Map();
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds cache TTL
+// Simple in-memory cache
+const cache = new Map();
+const CACHE_TTL = 60000; // 60 seconds
 
 export const clearApiCache = (urlPrefix = null) => {
   if (!urlPrefix) {
-    apiCache.clear();
+    cache.clear();
   } else {
-    for (const key of apiCache.keys()) {
+    for (const key of cache.keys()) {
       if (key.startsWith(urlPrefix) || key.includes(urlPrefix)) {
-        apiCache.delete(key);
+        cache.delete(key);
       }
     }
   }
 };
 
-// Prefetch common endpoints concurrently in the background for instant page transitions
+// Prefetch common endpoints
 export const prefetchAppResources = () => {
   const commonEndpoints = ['/tournaments', '/games', '/teams', '/matches'];
   setTimeout(() => {
@@ -44,70 +43,7 @@ export const prefetchAppResources = () => {
   }, 100);
 };
 
-// Intercept original GET to serve cached data instantly and revalidate in background
-const originalGet = API.get.bind(API);
-
-API.get = function (url, config = {}) {
-  // Bypass cache if explicitly requested
-  if (config.skipCache) {
-    return originalGet(url, config);
-  }
-
-  const paramKey = config.params ? JSON.stringify(config.params) : '';
-  const cacheKey = `${url}?${paramKey}`;
-  const now = Date.now();
-  const cached = apiCache.get(cacheKey);
-
-  // Return fresh cache instantly if available
-  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-    // Revalidate in background if older than 12s
-    if (now - cached.timestamp > 12000 && !inflightRequests.has(cacheKey)) {
-      const bgPromise = originalGet(url, config)
-        .then((res) => {
-          if (res.status === 200 && res.data) {
-            apiCache.set(cacheKey, { data: res.data, response: res, timestamp: Date.now() });
-          }
-          return res;
-        })
-        .catch(() => {})
-        .finally(() => {
-          inflightRequests.delete(cacheKey);
-        });
-      inflightRequests.set(cacheKey, bgPromise);
-    }
-
-    return Promise.resolve({
-      ...cached.response,
-      data: cached.data,
-      fromCache: true,
-    });
-  }
-
-  // Deduplicate inflight requests to avoid duplicate fetches
-  if (inflightRequests.has(cacheKey)) {
-    return inflightRequests.get(cacheKey);
-  }
-
-  const reqPromise = originalGet(url, config)
-    .then((res) => {
-      if (res.status === 200 && res.data) {
-        apiCache.set(cacheKey, {
-          data: res.data,
-          response: { status: res.status, statusText: res.statusText, headers: res.headers },
-          timestamp: Date.now(),
-        });
-      }
-      return res;
-    })
-    .finally(() => {
-      inflightRequests.delete(cacheKey);
-    });
-
-  inflightRequests.set(cacheKey, reqPromise);
-  return reqPromise;
-};
-
-// Interceptor to attach JWT token to every request
+// Interceptor to attach JWT token
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('gaming_club_token');
@@ -119,7 +55,7 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: invalidate cache on data mutations and handle 401
+// Response interceptor
 API.interceptors.response.use(
   (response) => {
     const method = response.config?.method?.toLowerCase();

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Lock, Mail, User, Sparkles, ArrowRight, Eye, EyeOff } from 'lucide-react';
@@ -17,6 +17,9 @@ const Register = () => {
   const { register } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname || '/';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,7 +40,8 @@ const Register = () => {
 
       if (res.success) {
         addToast(`Registration successful! Welcome, ${res.user.name}`, 'success');
-        navigate('/');
+        // Navigate to intended destination or default
+        navigate(from && from !== '/register' ? from : '/', { replace: true });
       } else {
         addToast(res.message || 'Registration failed', 'error');
       }

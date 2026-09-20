@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../services/api';
 import Loading from '../../components/Loading/Loading';
+import Avatar from '../../components/Avatar/Avatar';
 import {
   Users,
   Shield,
@@ -176,7 +177,7 @@ const Dashboard = () => {
             <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
               <Shield className="w-4 h-4 text-amber-400" /> Leaderboard Top Teams
             </h3>
-            <Link to="/admin/teams" className="text-xs text-cyan-400 hover:underline shrink-0">
+            <Link to="/admin/teams?tab=all-teams" className="text-xs text-cyan-400 hover:underline shrink-0">
               Manage →
             </Link>
           </div>
@@ -194,11 +195,13 @@ const Dashboard = () => {
                     <span className="font-mono font-bold text-amber-400 w-5 text-center">
                       #{idx + 1}
                     </span>
-                    <img
-                      src={team.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
-                      alt={team.name}
-                      className="w-7 h-7 rounded-lg object-cover"
-                    />
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
+                      {team.logo ? (
+                        <img src={team.logo} alt={team.name} className="w-full h-full object-cover" />
+                      ) : (
+                        team.name?.charAt(0).toUpperCase()
+                      )}
+                    </div>
                     <div className="truncate">
                       <span className="font-bold text-white block truncate">{team.name}</span>
                       <span className="text-[10px] text-slate-400">{team.game}</span>
@@ -238,11 +241,7 @@ const Dashboard = () => {
                   className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs"
                 >
                   <div className="flex items-center gap-2.5 truncate pr-2">
-                    <img
-                      src={u.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=100&q=80'}
-                      alt={u.name}
-                      className="w-7 h-7 rounded-full object-cover border border-slate-700"
-                    />
+                    <Avatar user={u} size="sm" className="shrink-0" />
                     <div className="truncate">
                       <span className="font-bold text-white block truncate">{u.name}</span>
                       <span className="text-[10px] text-slate-400">@{u.username} • {u.college}</span>

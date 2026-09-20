@@ -29,11 +29,9 @@ const Login = () => {
       const res = await login(email.trim(), password);
       if (res.success) {
         addToast(`Welcome back, ${res.user.name}!`, 'success');
-        if (res.user.role === 'admin' || res.user.role === 'staff') {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/', { replace: true });
-        }
+        // Navigate to intended destination or default based on role
+        const defaultRoute = res.user.role === 'admin' || res.user.role === 'staff' ? '/admin' : '/';
+        navigate(from && from !== '/login' ? from : defaultRoute, { replace: true });
       } else {
         addToast(res.message || 'Invalid credentials', 'error');
       }

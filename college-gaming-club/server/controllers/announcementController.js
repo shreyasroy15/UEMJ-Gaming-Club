@@ -1,4 +1,6 @@
 const Announcement = require('../models/Announcement');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 // Helper slugify
 const slugify = (text) =>
@@ -100,6 +102,28 @@ exports.createAnnouncement = async (req, res, next) => {
       'name username avatar'
     );
 
+    // Dispatch batch notifications to all users if status is 'published'
+    if (announcement.status === 'published') {
+      try {
+        const allUsers = await User.find({}).select('_id');
+        if (allUsers.length > 0) {
+          const notifications = allUsers.map((u) => ({
+            recipient: u._id,
+            sender: req.user.id,
+            title: `📢 New Announcement: ${announcement.title}`,
+            message: announcement.content.substring(0, 120) + '...',
+            type: 'tournament_announcement',
+            link: `/news/${announcement.slug || announcement._id}`,
+            isRead: false,
+          }));
+          await Notification.insertMany(notifications);
+        }
+      } catch (notificationError) {
+        console.error('Error dispatching announcements:', notificationError);
+        // Don't fail the request if notifications fail
+      }
+    }
+
     res.status(201).json({
       success: true,
       announcement: populated,
@@ -123,10 +147,33 @@ exports.updateAnnouncement = async (req, res, next) => {
       });
     }
 
+    const wasPublished = announcement.status === 'published';
     announcement = await Announcement.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     }).populate('author', 'name username avatar');
+
+    // If status changed to 'published' and wasn't before, dispatch notifications
+    if (!wasPublished && announcement.status === 'published') {
+      try {
+        const allUsers = await User.find({}).select('_id');
+        if (allUsers.length > 0) {
+          const notifications = allUsers.map((u) => ({
+            recipient: u._id,
+            sender: req.user.id,
+            title: `📢 New Announcement: ${announcement.title}`,
+            message: announcement.content.substring(0, 120) + '...',
+            type: 'tournament_announcement',
+            link: `/news/${announcement.slug || announcement._id}`,
+            isRead: false,
+          }));
+          await Notification.insertMany(notifications);
+        }
+      } catch (notificationError) {
+        console.error('Error dispatching announcements:', notificationError);
+        // Don't fail the request if notifications fail
+      }
+    }
 
     res.status(200).json({
       success: true,

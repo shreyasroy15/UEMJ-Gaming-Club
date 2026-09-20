@@ -324,7 +324,7 @@ const Navbar = () => {
 
                       {/* Notifications Dropdown */}
                       {invitationsOpen && (
-                        <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl bg-[#090e1f]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.1)] p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3">
+                        <div className="fixed left-3 right-3 top-auto sm:absolute sm:left-auto sm:right-0 sm:w-96 max-w-sm mt-3 rounded-3xl bg-[#090e1f]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.1)] p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3 max-h-[70vh] overflow-y-auto sm:max-h-none sm:overflow-visible">
                           {/* Tabs Header */}
                           <div className="flex items-center justify-between pb-2 border-b border-white/10 gap-2">
                             <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-xl border border-white/10">
