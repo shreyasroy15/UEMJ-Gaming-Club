@@ -26,7 +26,7 @@ const Login = () => {
 
     try {
       setSubmitting(true);
-      const res = await login(email, password);
+      const res = await login(email.trim(), password);
       if (res.success) {
         addToast(`Welcome back, ${res.user.name}!`, 'success');
         if (res.user.role === 'admin' || res.user.role === 'staff') {
@@ -73,6 +73,9 @@ const Login = () => {
               <input
                 type="text"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@uemjgaming.club"

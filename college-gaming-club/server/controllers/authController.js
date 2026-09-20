@@ -100,9 +100,11 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    const identifier = email.trim().toLowerCase();
+
     // Check for user (by email or username)
     const user = await User.findOne({
-      $or: [{ email: email.toLowerCase() }, { username: email.toLowerCase() }],
+      $or: [{ email: identifier }, { username: identifier }],
     }).select('+password');
 
     if (!user) {

@@ -134,8 +134,8 @@ app.use(errorHandler);
 
 // Start Server
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Gaming Club Server running on http://localhost:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Gaming Club Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
