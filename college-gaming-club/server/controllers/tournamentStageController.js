@@ -364,7 +364,7 @@ exports.assignTeamsToLobby = async (req, res, next) => {
     if (teamIds.length > 0) {
       const unverifiedRegistrations = await TournamentRegistration.find({
         _id: { $in: teamIds },
-        status: { $ne: 'verified' },
+        isVerified: false,
       });
 
       if (unverifiedRegistrations.length > 0) {
@@ -1038,7 +1038,7 @@ exports.createLobbyFromSelectedTeams = async (req, res, next) => {
     if (uniqueTeamIds.length > 0) {
       const unverifiedRegistrations = await TournamentRegistration.find({
         _id: { $in: uniqueTeamIds },
-        status: { $ne: 'verified' },
+        isVerified: false,
       });
 
       if (unverifiedRegistrations.length > 0) {

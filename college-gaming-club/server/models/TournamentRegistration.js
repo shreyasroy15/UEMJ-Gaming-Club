@@ -107,6 +107,13 @@ const tournamentRegistrationSchema = new mongoose.Schema(
       enum: ['incomplete', 'complete', 'verified', 'rejected'],
       default: 'incomplete',
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedAt: {
+      type: Date,
+    },
     verificationNotes: {
       type: String,
       default: '',

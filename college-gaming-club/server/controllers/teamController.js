@@ -455,7 +455,19 @@ exports.transferCaptain = async (req, res, next) => {
 // @access  Private/Staff
 exports.verifyTeam = async (req, res, next) => {
   try {
-    const team = await Team.findById(req.params.id);
+    const { isVerified } = req.body;
+    const teamId = req.params.id;
+
+    // Try to find as Team model first
+    let team = await Team.findById(teamId);
+    let isTournamentRegistration = false;
+
+    // If not found, try as TournamentRegistration
+    if (!team) {
+      const TournamentRegistration = require('../models/TournamentRegistration');
+      team = await TournamentRegistration.findById(teamId);
+      isTournamentRegistration = true;
+    }
 
     if (!team) {
       return res.status(404).json({
@@ -464,15 +476,24 @@ exports.verifyTeam = async (req, res, next) => {
       });
     }
 
-    const { isVerified } = req.body;
+    // Update verification status
     team.isVerified = isVerified !== undefined ? isVerified : !team.isVerified;
     team.verifiedAt = team.isVerified ? new Date() : null;
 
     await team.save();
 
-    const populatedTeam = await Team.findById(team._id)
-      .populate('captain', 'name username avatar college')
-      .populate('members.user', 'name username avatar college');
+    // Populate for response
+    let populatedTeam = team;
+    if (isTournamentRegistration) {
+      const TournamentRegistration = require('../models/TournamentRegistration');
+      populatedTeam = await TournamentRegistration.findById(team._id)
+        .populate('captain', 'name username avatar college')
+        .populate('players.user', 'name username avatar college');
+    } else {
+      populatedTeam = await Team.findById(team._id)
+        .populate('captain', 'name username avatar college')
+        .populate('members.user', 'name username avatar college');
+    }
 
     res.status(200).json({
       success: true,
