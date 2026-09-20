@@ -111,9 +111,9 @@ exports.createAnnouncement = async (req, res, next) => {
             recipient: u._id,
             sender: req.user.id,
             title: `📢 New Announcement: ${announcement.title}`,
-            message: announcement.content.substring(0, 120) + '...',
+            message: (announcement.content || '').substring(0, 120) + ((announcement.content || '').length > 120 ? '...' : ''),
             type: 'tournament_announcement',
-            link: `/news/${announcement.slug || announcement._id}`,
+            link: '/news',
             isRead: false,
           }));
           await Notification.insertMany(notifications);
@@ -162,9 +162,9 @@ exports.updateAnnouncement = async (req, res, next) => {
             recipient: u._id,
             sender: req.user.id,
             title: `📢 New Announcement: ${announcement.title}`,
-            message: announcement.content.substring(0, 120) + '...',
+            message: (announcement.content || '').substring(0, 120) + ((announcement.content || '').length > 120 ? '...' : ''),
             type: 'tournament_announcement',
-            link: `/news/${announcement.slug || announcement._id}`,
+            link: '/news',
             isRead: false,
           }));
           await Notification.insertMany(notifications);

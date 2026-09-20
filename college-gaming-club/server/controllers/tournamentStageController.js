@@ -2,7 +2,7 @@ const Tournament = require('../models/Tournament');
 const TournamentRegistration = require('../models/TournamentRegistration');
 const Match = require('../models/Match');
 const mongoose = require('mongoose');
-const { sendMatchNotification } = require('../utils/notificationHelper');
+const { sendMatchNotification, sendLobbyAssignmentNotification } = require('../utils/notificationHelper');
 
 // Helper to resolve tournament by ID or slug
 const findTournament = async (paramId) => {
@@ -400,6 +400,14 @@ exports.assignTeamsToLobby = async (req, res, next) => {
       { tournament: tournament._id, lobbyId: lobby._id, status: 'scheduled' },
       { $set: { teams: teamIds } }
     );
+
+    // Notify assigned teams about lobby placement and scheduled round timings
+    sendLobbyAssignmentNotification({
+      tournament,
+      lobby,
+      stageName: stage.name,
+      teamIds,
+    }).catch((e) => console.error('Lobby assignment notification error:', e));
 
     res.status(200).json({
       success: true,
@@ -916,6 +924,14 @@ exports.assignTeamsToDirectLobby = async (req, res, next) => {
       { $set: { teams: foundLobby.teams } }
     );
 
+    // Notify assigned teams about lobby placement and scheduled round timings
+    sendLobbyAssignmentNotification({
+      tournament,
+      lobby: foundLobby,
+      stageName: foundStage?.name,
+      teamIds: foundLobby.teams,
+    }).catch((e) => console.error('Lobby assignment notification error:', e));
+
     res.status(200).json({
       success: true,
       message: `Assigned ${foundLobby.teams.length} teams to ${foundLobby.name}`,
@@ -1094,6 +1110,14 @@ exports.createLobbyFromSelectedTeams = async (req, res, next) => {
     await tournament.save();
 
     const createdLobby = stage.lobbies[stage.lobbies.length - 1];
+
+    // Notify assigned teams about lobby placement and scheduled round timings
+    sendLobbyAssignmentNotification({
+      tournament,
+      lobby: createdLobby,
+      stageName: stage.name,
+      teamIds: uniqueTeamIds,
+    }).catch((e) => console.error('Lobby assignment notification error:', e));
 
     res.status(201).json({
       success: true,

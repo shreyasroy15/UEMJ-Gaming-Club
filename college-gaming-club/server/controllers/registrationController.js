@@ -1225,7 +1225,13 @@ exports.getAdminRegistrations = async (req, res, next) => {
 // @access  Private (Admin / Staff)
 exports.verifyRegistration = async (req, res, next) => {
   try {
-    const { status, identityProofStatus, verificationNotes } = req.body;
+    const { status, identityProofStatus } = req.body;
+    const verificationNotes =
+      req.body.verificationNotes !== undefined
+        ? req.body.verificationNotes
+        : req.body.reason !== undefined
+        ? req.body.reason
+        : undefined;
 
     const registration = await TournamentRegistration.findById(req.params.id)
       .populate('tournament', 'name slug game')
@@ -1252,6 +1258,10 @@ exports.verifyRegistration = async (req, res, next) => {
         registration.verifiedAt = new Date();
       } else if (status === 'rejected') {
         registration.isVerified = false;
+        if (!registration.identityProof) {
+          registration.identityProof = {};
+        }
+        registration.identityProof.status = 'rejected';
       }
     }
 
@@ -1278,9 +1288,10 @@ exports.verifyRegistration = async (req, res, next) => {
 
     if (verificationNotes !== undefined) {
       registration.verificationNotes = verificationNotes;
-      if (registration.identityProof) {
-        registration.identityProof.verificationNotes = verificationNotes;
+      if (!registration.identityProof) {
+        registration.identityProof = {};
       }
+      registration.identityProof.verificationNotes = verificationNotes;
     }
 
     await registration.save();
@@ -1320,7 +1331,7 @@ exports.verifyRegistration = async (req, res, next) => {
         registration,
         tournament: registration.tournament,
         status: effectiveStatus,
-        reason: verificationNotes || registration.verificationNotes || '',
+        reason: verificationNotes || registration.verificationNotes || req.body.reason || '',
       }).catch((e) => console.error('Verification notification error:', e));
     }
 

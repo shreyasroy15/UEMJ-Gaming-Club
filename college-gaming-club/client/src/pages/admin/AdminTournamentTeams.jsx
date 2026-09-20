@@ -82,6 +82,8 @@ const AdminTournamentTeams = () => {
       await API.put(`/registrations/${selectedRegForReject._id}/verify`, {
         isVerified: false,
         status: 'rejected',
+        identityProofStatus: 'rejected',
+        verificationNotes: reason || 'You need to upload all proofs by merging in a single PDF.',
         reason: reason || 'You need to upload all proofs by merging in a single PDF.',
       });
       addToast('Team verification rejected. User notification dispatched with cause.', 'info');
