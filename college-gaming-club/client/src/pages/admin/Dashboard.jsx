@@ -51,11 +51,11 @@ const Dashboard = () => {
     },
     {
       title: 'Active Teams',
-      value: stats?.totalTeams || 0,
+      value: stats?.activeTeams !== undefined ? stats.activeTeams : (stats?.totalTeams || 0),
       icon: Shield,
       color: 'from-indigo-500 to-purple-600',
       textColor: 'text-indigo-400',
-      subtitle: 'Registered squad rosters',
+      subtitle: `${stats?.activeTeams || 0} approved & verified rosters`,
     },
     {
       title: 'Tournaments',
@@ -171,20 +171,20 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Top Ranked Teams */}
+        {/* Active & Approved Teams */}
         <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
             <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
-              <Shield className="w-4 h-4 text-amber-400" /> Leaderboard Top Teams
+              <Shield className="w-4 h-4 text-emerald-400" /> Active & Approved Teams
             </h3>
-            <Link to="/admin/teams?tab=all-teams" className="text-xs text-cyan-400 hover:underline shrink-0">
-              Manage →
+            <Link to="/admin/tournaments" className="text-xs text-cyan-400 hover:underline shrink-0">
+              Verify Teams →
             </Link>
           </div>
 
           <div className="space-y-2.5">
             {teamsLeaderboard.length === 0 ? (
-              <p className="text-xs text-slate-500 py-6 text-center font-mono">No registered teams</p>
+              <p className="text-xs text-slate-500 py-6 text-center font-mono">No verified active teams yet</p>
             ) : (
               teamsLeaderboard.map((team, idx) => (
                 <div
@@ -192,26 +192,27 @@ const Dashboard = () => {
                   className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs"
                 >
                   <div className="flex items-center gap-2.5 truncate pr-2">
-                    <span className="font-mono font-bold text-amber-400 w-5 text-center">
+                    <span className="font-mono font-bold text-emerald-400 w-5 text-center">
                       #{idx + 1}
                     </span>
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
-                      {team.logo ? (
-                        <img src={team.logo} alt={team.name} className="w-full h-full object-cover" />
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
+                      {team.teamLogo || team.logo ? (
+                        <img src={team.teamLogo || team.logo} alt={team.teamName || team.name} className="w-full h-full object-cover" />
                       ) : (
-                        team.name?.charAt(0).toUpperCase()
+                        (team.teamName || team.name || 'T').charAt(0).toUpperCase()
                       )}
                     </div>
                     <div className="truncate">
-                      <span className="font-bold text-white block truncate">{team.name}</span>
-                      <span className="text-[10px] text-slate-400">{team.game}</span>
+                      <span className="font-bold text-white block truncate">{team.teamName || team.name}</span>
+                      <span className="text-[10px] text-slate-400">
+                        {team.tournament?.name || team.game || 'Tournament'} • Capt. @{team.captain?.username || 'user'}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 font-mono shrink-0">
-                    <span className="text-emerald-400">{team.wins || 0}W</span>
-                    <span className="text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-                      {team.points || 0} PTS
+                  <div className="flex items-center gap-2 font-mono shrink-0">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                      ✓ Active Team
                     </span>
                   </div>
                 </div>

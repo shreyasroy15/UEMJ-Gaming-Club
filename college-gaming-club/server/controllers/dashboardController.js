@@ -14,6 +14,7 @@ exports.getDashboardStats = async (req, res, next) => {
     const [
       totalUsers,
       totalTeams,
+      activeTeams,
       totalTournaments,
       liveTournaments,
       liveMatches,
@@ -25,16 +26,18 @@ exports.getDashboardStats = async (req, res, next) => {
     ] = await Promise.all([
       User.countDocuments(),
       TournamentRegistration.countDocuments({ status: { $ne: 'rejected' } }),
+      TournamentRegistration.countDocuments({ status: { $in: ['verified', 'complete'] } }),
       Tournament.countDocuments(),
-      Tournament.countDocuments({ status: 'live' }),
+      Tournament.countDocuments({ status: { $in: ['live', 'ongoing'] } }),
       Match.countDocuments({ status: 'live' }),
       Event.countDocuments({ date: { $gte: new Date() } }),
       User.find().select('-password').sort({ createdAt: -1 }).limit(5),
       Tournament.find().sort({ createdAt: -1 }).limit(5),
-      TournamentRegistration.find({ status: { $ne: 'rejected' } })
+      TournamentRegistration.find({ status: { $in: ['verified', 'complete'] } })
+        .populate('tournament', 'name game')
         .populate('captain', 'name username')
-        .sort({ createdAt: -1 })
-        .limit(5),
+        .sort({ updatedAt: -1 })
+        .limit(6),
       Game.find(),
     ]);
 
@@ -43,6 +46,7 @@ exports.getDashboardStats = async (req, res, next) => {
       stats: {
         totalUsers,
         totalTeams,
+        activeTeams,
         totalTournaments,
         liveTournaments,
         liveMatches,

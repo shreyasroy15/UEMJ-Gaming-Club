@@ -31,6 +31,8 @@ const notificationSchema = new mongoose.Schema(
         'match_results',
         'tournament_announcement',
         'invitation',
+        'verification_rejected',
+        'verification_approved',
         'system',
       ],
       default: 'match_update',

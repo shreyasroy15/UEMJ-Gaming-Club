@@ -21,6 +21,8 @@ import {
   Key,
   CheckCheck,
   Clock,
+  AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 import API from '../../services/api';
 
@@ -398,6 +400,8 @@ const Navbar = () => {
                                     const isMatchCreds = notif.type === 'match_credentials';
                                     const isLive = notif.type === 'match_live';
                                     const isResults = notif.type === 'match_results' || notif.type === 'tournament_results';
+                                    const isRejected = notif.type === 'verification_rejected';
+                                    const isApproved = notif.type === 'verification_approved';
 
                                     return (
                                       <div
@@ -405,14 +409,22 @@ const Navbar = () => {
                                         onClick={() => handleNotificationClick(notif)}
                                         className={`p-2.5 rounded-2xl border transition-all cursor-pointer group select-none ${
                                           !notif.isRead
-                                            ? 'bg-cyan-950/30 hover:bg-cyan-950/50 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]'
+                                            ? isRejected
+                                              ? 'bg-rose-950/30 hover:bg-rose-950/50 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.15)]'
+                                              : isApproved
+                                              ? 'bg-emerald-950/30 hover:bg-emerald-950/50 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                                              : 'bg-cyan-950/30 hover:bg-cyan-950/50 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]'
                                             : 'bg-slate-900/60 hover:bg-slate-900/90 border-slate-800'
                                         }`}
                                       >
                                         <div className="flex items-start gap-2.5">
                                           <div
                                             className={`p-1.5 rounded-xl shrink-0 mt-0.5 ${
-                                              isMatchCreds
+                                              isRejected
+                                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                                                : isApproved
+                                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                                : isMatchCreds
                                                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                                                 : isLive
                                                 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
@@ -421,7 +433,11 @@ const Navbar = () => {
                                                 : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                                             }`}
                                           >
-                                            {isMatchCreds ? (
+                                            {isRejected ? (
+                                              <AlertTriangle className="w-3.5 h-3.5" />
+                                            ) : isApproved ? (
+                                              <ShieldCheck className="w-3.5 h-3.5" />
+                                            ) : isMatchCreds ? (
                                               <Key className="w-3.5 h-3.5" />
                                             ) : isLive ? (
                                               <Flame className="w-3.5 h-3.5 animate-pulse" />
@@ -436,7 +452,13 @@ const Navbar = () => {
                                             <div className="flex items-center justify-between gap-1">
                                               <span
                                                 className={`text-xs font-bold truncate ${
-                                                  !notif.isRead ? 'text-white' : 'text-slate-300'
+                                                  !notif.isRead
+                                                    ? isRejected
+                                                      ? 'text-rose-200'
+                                                      : isApproved
+                                                      ? 'text-emerald-200'
+                                                      : 'text-white'
+                                                    : 'text-slate-300'
                                                 }`}
                                               >
                                                 {notif.title}
@@ -449,12 +471,34 @@ const Navbar = () => {
                                               {notif.message}
                                             </p>
                                             <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
-                                              <span className="text-[9px] font-mono text-cyan-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                                                <span>View match & credentials</span>
+                                              <span
+                                                className={`text-[9px] font-mono flex items-center gap-1 group-hover:translate-x-0.5 transition-transform ${
+                                                  isRejected
+                                                    ? 'text-rose-400'
+                                                    : isApproved
+                                                    ? 'text-emerald-400'
+                                                    : 'text-cyan-400'
+                                                }`}
+                                              >
+                                                <span>
+                                                  {isRejected
+                                                    ? 'Upload single merged PDF'
+                                                    : isApproved
+                                                    ? 'View verified team'
+                                                    : 'View match & credentials'}
+                                                </span>
                                                 <ArrowRight className="w-2.5 h-2.5" />
                                               </span>
                                               {!notif.isRead && (
-                                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                                                <span
+                                                  className={`w-1.5 h-1.5 rounded-full ${
+                                                    isRejected
+                                                      ? 'bg-rose-400'
+                                                      : isApproved
+                                                      ? 'bg-emerald-400'
+                                                      : 'bg-cyan-400'
+                                                  }`}
+                                                ></span>
                                               )}
                                             </div>
                                           </div>

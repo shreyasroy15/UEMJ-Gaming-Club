@@ -31,8 +31,12 @@ exports.getTournamentStructure = async (req, res, next) => {
       ],
     });
 
-    // Get all registered teams in the tournament
-    const allRegistrations = await TournamentRegistration.find({ tournament: tournament._id })
+    // Get all registered teams in the tournament (EXCLUDE REJECTED TEAMS)
+    const allRegistrations = await TournamentRegistration.find({
+      tournament: tournament._id,
+      status: { $ne: 'rejected' },
+      'identityProof.status': { $ne: 'rejected' },
+    })
       .populate('captain', 'name username email avatar college studentId phone')
       .populate('players.user', 'name username email avatar college studentId')
       .sort({ createdAt: 1 });
@@ -60,10 +64,22 @@ exports.getTournamentStructure = async (req, res, next) => {
       await tournament.save();
     }
 
-    // Flatten all lobbies for direct lobby-first navigation
+    // Flatten all lobbies for direct lobby-first navigation (Filter out any rejected teams)
     const allLobbies = [];
     (tournament.stages || []).forEach((stage) => {
+      // Filter out rejected teams from stage qualified/advanced
+      stage.qualifiedTeams = (stage.qualifiedTeams || []).filter(
+        (t) => t && t.status !== 'rejected' && (!t.identityProof || t.identityProof.status !== 'rejected')
+      );
+      stage.advancedTeams = (stage.advancedTeams || []).filter(
+        (t) => t && t.status !== 'rejected' && (!t.identityProof || t.identityProof.status !== 'rejected')
+      );
+
       (stage.lobbies || []).forEach((lobby) => {
+        const activeTeamsInLobby = (lobby.teams || []).filter(
+          (t) => t && t.status !== 'rejected' && (!t.identityProof || t.identityProof.status !== 'rejected')
+        );
+
         allLobbies.push({
           _id: lobby._id,
           stageId: stage._id,
@@ -72,7 +88,7 @@ exports.getTournamentStructure = async (req, res, next) => {
           maxTeams: lobby.maxTeams || 25,
           status: lobby.status || 'upcoming',
           order: lobby.order || 1,
-          teams: lobby.teams || [],
+          teams: activeTeamsInLobby,
         });
       });
     });

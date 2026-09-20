@@ -17,6 +17,7 @@ const AdminTeams = () => {
   // Tournament Teams View
   const [tournaments, setTournaments] = useState([]);
   const [tournLoading, setTournLoading] = useState(true);
+  const [tournSearchQuery, setTournSearchQuery] = useState('');
 
   // All Registered Teams View
   const [allTeams, setAllTeams] = useState([]);
@@ -204,7 +205,49 @@ const AdminTeams = () => {
 
       {/* TAB 1: TOURNAMENT REGISTRATIONS */}
       {activeTab === 'tournaments' && (
-        <>
+        <div className="space-y-4">
+          {/* Tournament Search Bar */}
+          {tournaments.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search tournaments by name or game..."
+                  value={tournSearchQuery}
+                  onChange={(e) => setTournSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono shadow-inner transition"
+                />
+                {tournSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setTournSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 transition cursor-pointer"
+                    title="Clear"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="text-xs font-mono text-slate-400">
+                Showing{' '}
+                <span className="text-cyan-400 font-bold">
+                  {
+                    tournaments.filter((t) => {
+                      if (!tournSearchQuery.trim()) return true;
+                      const q = tournSearchQuery.toLowerCase().trim();
+                      return (
+                        (t.name || '').toLowerCase().includes(q) ||
+                        (t.game || '').toLowerCase().includes(q)
+                      );
+                    }).length
+                  }
+                </span>{' '}
+                of <span className="text-white font-bold">{tournaments.length}</span> tournaments
+              </div>
+            </div>
+          )}
+
           {tournLoading ? (
             <Loading message="Loading tournaments..." />
           ) : tournaments.length === 0 ? (
@@ -214,53 +257,83 @@ const AdminTeams = () => {
               description="There are no tournaments available to manage teams."
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {tournaments.map((tournament) => (
-                <Link
-                  key={tournament._id}
-                  to={`/admin/teams/${tournament._id}`}
-                  className="group block p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition-all shadow-lg hover:shadow-cyan-500/10"
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-cyan-400">
-                      <Trophy className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white group-hover:text-cyan-400 transition-colors">
-                        {tournament.name}
-                      </h3>
-                      <p className="text-xs text-slate-400">{tournament.game}</p>
-                    </div>
-                  </div>
+            (() => {
+              const filteredList = tournaments.filter((t) => {
+                if (!tournSearchQuery.trim()) return true;
+                const q = tournSearchQuery.toLowerCase().trim();
+                return (
+                  (t.name || '').toLowerCase().includes(q) ||
+                  (t.game || '').toLowerCase().includes(q)
+                );
+              });
 
-                  <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800 pt-4">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="w-4 h-4" />
-                      <span>
-                        Teams:{' '}
-                        <strong className="text-white">
-                          {tournament.registeredTeams?.length || 0}
-                        </strong>{' '}
-                        {tournament.maxTeams ? `/ ${tournament.maxTeams}` : ''}
-                      </span>
-                    </div>
-                    <div
-                      className={`px-2 py-0.5 rounded-md font-mono text-[10px] uppercase ${
-                        tournament.status === 'live'
-                          ? 'bg-emerald-950 text-emerald-400'
-                          : tournament.status === 'upcoming'
-                          ? 'bg-amber-950 text-amber-400'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
+              if (filteredList.length === 0) {
+                return (
+                  <div className="p-8 text-center rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                    <p className="text-xs text-slate-400 font-mono">
+                      No tournaments found matching "{tournSearchQuery}".
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setTournSearchQuery('')}
+                      className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono font-bold"
                     >
-                      {tournament.status}
-                    </div>
+                      Clear Search
+                    </button>
                   </div>
-                </Link>
-              ))}
-            </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredList.map((tournament) => (
+                    <Link
+                      key={tournament._id}
+                      to={`/admin/teams/${tournament._id}`}
+                      className="group block p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 transition-all shadow-lg hover:shadow-cyan-500/10"
+                    >
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-cyan-400">
+                          <Trophy className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-white group-hover:text-cyan-400 transition-colors">
+                            {tournament.name}
+                          </h3>
+                          <p className="text-xs text-slate-400">{tournament.game}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800 pt-4">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-4 h-4" />
+                          <span>
+                            Teams:{' '}
+                            <strong className="text-white">
+                              {tournament.registeredTeams?.length || 0}
+                            </strong>{' '}
+                            {tournament.maxTeams ? `/ ${tournament.maxTeams}` : ''}
+                          </span>
+                        </div>
+                        <div
+                          className={`px-2 py-0.5 rounded-md font-mono text-[10px] uppercase ${
+                            tournament.status === 'live'
+                              ? 'bg-emerald-950 text-emerald-400'
+                              : tournament.status === 'upcoming'
+                              ? 'bg-amber-950 text-amber-400'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}
+                        >
+                          {tournament.status}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              );
+            })()
           )}
-        </>
+        </div>
       )}
 
       {/* TAB 2: ALL REGISTERED TEAMS */}

@@ -561,13 +561,19 @@ const TournamentRegister = () => {
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                    isTeamComplete
+                    activeRegistration.status === 'verified'
                       ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
+                      : activeRegistration.status === 'rejected'
+                      ? 'bg-rose-950 text-rose-300 border-rose-500/50'
+                      : isTeamComplete
+                      ? 'bg-cyan-950 text-cyan-300 border-cyan-500/50'
                       : 'bg-amber-950 text-amber-300 border-amber-500/50'
                   }`}
                 >
                   {activeRegistration.status === 'verified'
-                    ? '✓ VERIFIED BY ADMIN'
+                    ? '✓ ACTIVE TEAM (VERIFIED)'
+                    : activeRegistration.status === 'rejected'
+                    ? '✕ VERIFICATION REJECTED'
                     : isTeamComplete
                     ? '✓ REGISTRATION COMPLETE'
                     : '⏳ INCOMPLETE SQUAD'}
@@ -979,6 +985,53 @@ const TournamentRegister = () => {
                     <button type="button" onClick={() => setProofError('')} className="ml-auto p-0.5 hover:bg-rose-900/40 rounded">
                       <X className="w-3 h-3" />
                     </button>
+                  </div>
+                )}
+
+                {/* Verification Rejection Alert Banner with Cause */}
+                {(activeRegistration.status === 'rejected' || activeRegistration.identityProof?.status === 'rejected') && (
+                  <div className="p-4 rounded-xl bg-rose-950/40 border-2 border-rose-500/60 text-rose-200 space-y-2.5 shadow-lg animate-in fade-in">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0 mt-0.5">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-rose-400 font-mono">
+                            ❌ Document Verification Rejected
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            Action Required
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-black/40 border border-rose-900/40 text-xs font-medium text-rose-100">
+                          <span className="text-rose-400 font-bold uppercase tracking-wide text-[10px] block mb-1">
+                            Rejection Cause from Admin:
+                          </span>
+                          "{activeRegistration.verificationNotes || activeRegistration.identityProof?.verificationNotes || 'Proof was rejected. You need to upload all proofs by merging in a single PDF.'}"
+                        </div>
+                        <p className="text-[11px] text-rose-300/90 leading-relaxed">
+                          💡 <strong>How to fix:</strong> Merge the college ID proofs of <strong>all registered squad members</strong> into a <strong>single PDF file</strong> and replace or re-upload your document below. Once re-uploaded, the admin will verify your squad.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Verification Approved Banner */}
+                {(activeRegistration.status === 'verified' || activeRegistration.identityProof?.status === 'verified') && (
+                  <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/40 text-emerald-200 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-emerald-300">
+                        ✅ Identity Verified & Team Approved
+                      </p>
+                      <p className="text-[11px] text-emerald-400/80">
+                        Your squad is an official active team in this tournament. Stay tuned for match lobbies and room credentials!
+                      </p>
+                    </div>
                   </div>
                 )}
 

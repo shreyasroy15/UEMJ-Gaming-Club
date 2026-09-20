@@ -149,7 +149,7 @@ exports.getTournamentById = async (req, res, next) => {
       return matchObj;
     });
 
-    // Extract unified allLobbies
+    // Extract unified allLobbies (Filter out rejected teams)
     const allLobbies = [];
     (tournament.stages || []).forEach((stage) => {
       (stage.lobbies || []).forEach((l) => {
@@ -161,7 +161,9 @@ exports.getTournamentById = async (req, res, next) => {
           maxTeams: l.maxTeams || 25,
           status: l.status || 'upcoming',
           order: l.order || 1,
-          teams: l.teams || [],
+          teams: (l.teams || []).filter(
+            (t) => t && t.status !== 'rejected' && (!t.identityProof || t.identityProof.status !== 'rejected')
+          ),
         });
       });
     });

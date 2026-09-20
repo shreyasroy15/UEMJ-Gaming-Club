@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import API from '../../services/api';
 import Loading from '../../components/Loading/Loading';
 import EmptyState from '../../components/EmptyState/EmptyState';
@@ -23,8 +23,12 @@ import {
   ChevronUp,
   FileText,
   Swords,
+  Search,
+  X,
+  Filter,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import RejectionModal from '../../components/RejectionModal/RejectionModal';
 
 const AdminTournaments = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -41,9 +45,16 @@ const AdminTournaments = () => {
   const [viewingTournament, setViewingTournament] = useState(null);
   const [adminRegistrations, setAdminRegistrations] = useState([]);
   const [viewTeamsLoading, setViewTeamsLoading] = useState(false);
-  const [teamStatusFilter, setTeamStatusFilter] = useState('all');
-  const [expandedTeamId, setExpandedTeamId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
+  const [expandedTeamId, setExpandedTeamId] = useState(null);
+  const [teamStatusFilter, setTeamStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [teamSearchQuery, setTeamSearchQuery] = useState('');
+
+  // Rejection Modal State
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -221,40 +232,97 @@ const AdminTournaments = () => {
     }
   };
 
-  // Verify / Reject Team Registration
-  const handleVerifyRegistration = async (regId, status = null, identityProofStatus = null) => {
-    let note = '';
-    if (status === 'rejected' || identityProofStatus === 'rejected') {
-      note = prompt('Please enter the reason for rejection (e.g. Invalid or unreadable college ID card in PDF):') || '';
-      if (!note) return;
-    }
+  // Open Rejection Modal
+  const handleOpenRejectModal = (reg, isPdfOnly = false) => {
+    setRejectTarget({
+      regId: reg._id,
+      status: isPdfOnly ? null : 'rejected',
+      identityProofStatus: 'rejected',
+      teamName: reg.teamName,
+    });
+    setRejectionModalOpen(true);
+  };
 
+  // Confirm Rejection with Reason
+  const handleConfirmRejection = async (reason) => {
+    if (!rejectTarget) return;
     try {
-      setVerifyingId(regId);
-      const payload = {};
-      if (status) payload.status = status;
-      if (identityProofStatus) payload.identityProofStatus = identityProofStatus;
-      if (note) payload.verificationNotes = note;
+      setVerifyingId(rejectTarget.regId);
+      const payload = {
+        status: rejectTarget.status || 'rejected',
+        identityProofStatus: 'rejected',
+        verificationNotes: reason,
+      };
 
-      const res = await API.put(`/registrations/${regId}/verify`, payload);
-
+      const res = await API.put(`/registrations/${rejectTarget.regId}/verify`, payload);
       if (res.data.success) {
-        addToast('Registration verification updated successfully!', 'success');
-        // Refresh list
-        const refreshed = await API.get(`/tournaments/${viewingTournament._id}/admin-registrations`);
-        setAdminRegistrations(refreshed.data.registrations || []);
+        addToast(`Team "${rejectTarget.teamName}" rejected. Notification sent to squad with cause.`, 'info');
+        setRejectionModalOpen(false);
+        setRejectTarget(null);
+        if (viewingTournament) {
+          const refreshed = await API.get(`/tournaments/${viewingTournament._id}/admin-registrations`);
+          setAdminRegistrations(refreshed.data.registrations || []);
+        }
       }
     } catch (err) {
-      addToast(err.response?.data?.message || 'Verification update failed', 'error');
+      addToast(err.response?.data?.message || 'Rejection failed', 'error');
     } finally {
       setVerifyingId(null);
     }
   };
 
-  const filteredRegistrations = adminRegistrations.filter((r) => {
-    if (teamStatusFilter === 'all') return true;
-    return r.status === teamStatusFilter;
-  });
+  // Approve Team Registration
+  const handleApproveRegistration = async (reg) => {
+    try {
+      setVerifyingId(reg._id);
+      const payload = {
+        status: 'verified',
+        identityProofStatus: 'verified',
+        verificationNotes: 'All squad documents verified and approved.',
+      };
+
+      const res = await API.put(`/registrations/${reg._id}/verify`, payload);
+      if (res.data.success) {
+        addToast(`Team "${reg.teamName}" verified and approved as active! Notification sent to squad.`, 'success');
+        if (viewingTournament) {
+          const refreshed = await API.get(`/tournaments/${viewingTournament._id}/admin-registrations`);
+          setAdminRegistrations(refreshed.data.registrations || []);
+        }
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Approval failed', 'error');
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const filteredRegistrations = useMemo(() => {
+    return adminRegistrations.filter((r) => {
+      if (teamStatusFilter !== 'all' && r.status !== teamStatusFilter) return false;
+      if (teamSearchQuery.trim()) {
+        const q = teamSearchQuery.toLowerCase().trim();
+        const matchesName = (r.teamName || '').toLowerCase().includes(q);
+        const matchesCode = (r.teamCode || '').toLowerCase().includes(q);
+        const matchesLeader = (r.leader?.name || r.captain?.name || '').toLowerCase().includes(q);
+        if (!matchesName && !matchesCode && !matchesLeader) return false;
+      }
+      return true;
+    });
+  }, [adminRegistrations, teamStatusFilter, teamSearchQuery]);
+
+  const filteredTournaments = useMemo(() => {
+    return tournaments.filter((t) => {
+      if (statusFilter !== 'all' && t.status !== statusFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesName = (t.name || '').toLowerCase().includes(q);
+        const matchesGame = (t.game || '').toLowerCase().includes(q);
+        const matchesSlug = (t.slug || '').toLowerCase().includes(q);
+        if (!matchesName && !matchesGame && !matchesSlug) return false;
+      }
+      return true;
+    });
+  }, [tournaments, searchQuery, statusFilter]);
 
   return (
     <div className="space-y-6">
@@ -277,6 +345,53 @@ const AdminTournaments = () => {
         </button>
       </div>
 
+      {/* Search & Filter Bar */}
+      {tournaments.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800 shadow-md">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search tournaments by name or game..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono shadow-inner transition"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 transition cursor-pointer"
+                title="Clear"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-slate-500" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-mono"
+              >
+                <option value="all">All Statuses ({tournaments.length})</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="live">Live / Ongoing</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <div className="text-xs font-mono text-slate-400 hidden sm:block">
+              Showing <span className="text-cyan-400 font-bold">{filteredTournaments.length}</span> of{' '}
+              <span className="text-white font-bold">{tournaments.length}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tournaments Table */}
       {loading ? (
         <Loading message="Loading tournaments..." />
@@ -286,6 +401,22 @@ const AdminTournaments = () => {
           title="No tournaments found"
           description="Create your first collegiate tournament to kick off the season."
         />
+      ) : filteredTournaments.length === 0 ? (
+        <div className="p-10 text-center rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
+          <Search className="w-8 h-8 text-slate-600 mx-auto" />
+          <p className="text-sm text-slate-300 font-mono font-bold">
+            No tournaments found matching "{searchQuery}"
+          </p>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setStatusFilter('all');
+            }}
+            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono font-bold transition cursor-pointer"
+          >
+            Clear Search & Filters
+          </button>
+        </div>
       ) : (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
@@ -302,7 +433,7 @@ const AdminTournaments = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
-                {tournaments.map((t) => (
+                {filteredTournaments.map((t) => (
                   <tr key={t._id} className="hover:bg-slate-800/40 transition-colors">
                     <td className="p-4 font-bold text-white font-mono">
                       <Link
@@ -696,28 +827,63 @@ const AdminTournaments = () => {
             )}
           </div>
 
-          {/* Filter tabs */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono font-bold overflow-x-auto">
-            {['all', 'incomplete', 'complete', 'verified', 'rejected'].map((st) => (
-              <button
-                key={st}
-                onClick={() => setTeamStatusFilter(st)}
-                className={`px-3 py-1 rounded-lg uppercase transition-all ${
-                  teamStatusFilter === st
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {st}
-              </button>
-            ))}
+          {/* Search & Filter bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search team name, code, or leader..."
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
+              />
+              {teamSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setTeamSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter tabs */}
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono font-bold overflow-x-auto">
+              {['all', 'incomplete', 'complete', 'verified', 'rejected'].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setTeamStatusFilter(st)}
+                  className={`px-3 py-1 rounded-lg uppercase transition-all cursor-pointer ${
+                    teamStatusFilter === st
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
           </div>
 
           {viewTeamsLoading ? (
             <Loading message="Loading registered teams and player documents..." />
           ) : filteredRegistrations.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400 space-y-1">
-              <p>No registered teams found matching status filter "{teamStatusFilter}".</p>
+              <p>
+                No registered teams found {teamSearchQuery ? `matching "${teamSearchQuery}"` : ''}{' '}
+                with status filter "{teamStatusFilter}".
+              </p>
+              {teamSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setTeamSearchQuery('')}
+                  className="text-cyan-400 hover:underline text-xs mt-1"
+                >
+                  Clear search
+                </button>
+              )}
             </div>
           ) : (
             <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
@@ -786,9 +952,9 @@ const AdminTournaments = () => {
                           <button
                             type="button"
                             disabled={verifyingId === reg._id}
-                            onClick={() => handleVerifyRegistration(reg._id, 'verified')}
+                            onClick={() => handleApproveRegistration(reg)}
                             className="p-1.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 cursor-pointer"
-                            title="Verify and Approve Team"
+                            title="Verify and Approve Team (Mark Active)"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
                           </button>
@@ -797,9 +963,9 @@ const AdminTournaments = () => {
                           <button
                             type="button"
                             disabled={verifyingId === reg._id}
-                            onClick={() => handleVerifyRegistration(reg._id, 'rejected')}
+                            onClick={() => handleOpenRejectModal(reg, false)}
                             className="p-1.5 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 cursor-pointer"
-                            title="Reject Registration"
+                            title="Reject Registration with Cause"
                           >
                             <XCircle className="w-3.5 h-3.5" />
                           </button>
@@ -881,7 +1047,7 @@ const AdminTournaments = () => {
                                   <button
                                     type="button"
                                     disabled={verifyingId === reg._id}
-                                    onClick={() => handleVerifyRegistration(reg._id, null, 'verified')}
+                                    onClick={() => handleApproveRegistration(reg)}
                                     className="px-2.5 py-1 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 text-[11px] font-bold border border-emerald-800 flex items-center gap-1 cursor-pointer"
                                   >
                                     <CheckCircle2 className="w-3 h-3" /> Approve PDF
@@ -891,7 +1057,7 @@ const AdminTournaments = () => {
                                   <button
                                     type="button"
                                     disabled={verifyingId === reg._id}
-                                    onClick={() => handleVerifyRegistration(reg._id, null, 'rejected')}
+                                    onClick={() => handleOpenRejectModal(reg, true)}
                                     className="px-2.5 py-1 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 text-[11px] font-bold border border-rose-800 flex items-center gap-1 cursor-pointer"
                                   >
                                     <XCircle className="w-3 h-3" /> Reject PDF
@@ -993,6 +1159,18 @@ const AdminTournaments = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Rejection Modal with Presets */}
+      <RejectionModal
+        isOpen={rejectionModalOpen}
+        onClose={() => {
+          setRejectionModalOpen(false);
+          setRejectTarget(null);
+        }}
+        onConfirm={handleConfirmRejection}
+        teamName={rejectTarget?.teamName}
+        submitting={verifyingId !== null}
+      />
     </div>
   );
 };

@@ -42,6 +42,7 @@ import {
   Minus,
   Save,
   Flame,
+  X,
 } from 'lucide-react';
 
 // Official Esports Pointing System Presets
@@ -147,6 +148,9 @@ const AdminMatches = () => {
   const [customKillPoint, setCustomKillPoint] = useState(1);
   const [showCustomConfig, setShowCustomConfig] = useState(false);
   const [roundResultsData, setRoundResultsData] = useState([]);
+  const [pointsSearchQuery, setPointsSearchQuery] = useState('');
+  const [standingsSearchQuery, setStandingsSearchQuery] = useState('');
+  const [qualifySearchQuery, setQualifySearchQuery] = useState('');
 
   // Quick Room Credentials Drawer / Inline editing
   const [quickCredsMatch, setQuickCredsMatch] = useState(null);
@@ -232,27 +236,42 @@ const AdminMatches = () => {
   }, [tournaments, selectedTournamentId, structure.tournament]);
 
   // Unified list of all lobbies in this tournament
+  // Unified list of all lobbies in this tournament (EXCLUDING REJECTED TEAMS)
   const allLobbies = useMemo(() => {
+    let raw = [];
     if (structure.lobbies && structure.lobbies.length > 0) {
-      return structure.lobbies;
-    }
-    const result = [];
-    (structure.stages || []).forEach((stage) => {
-      (stage.lobbies || []).forEach((l) => {
-        result.push({
-          _id: l._id,
-          stageId: stage._id,
-          stageName: stage.name,
-          name: l.name,
-          maxTeams: l.maxTeams || 25,
-          status: l.status || 'upcoming',
-          order: l.order || 1,
-          teams: l.teams || [],
+      raw = structure.lobbies;
+    } else {
+      (structure.stages || []).forEach((stage) => {
+        (stage.lobbies || []).forEach((l) => {
+          raw.push({
+            _id: l._id,
+            stageId: stage._id,
+            stageName: stage.name,
+            name: l.name,
+            maxTeams: l.maxTeams || 25,
+            status: l.status || 'upcoming',
+            order: l.order || 1,
+            teams: l.teams || [],
+          });
         });
       });
-    });
-    return result;
-  }, [structure.lobbies, structure.stages]);
+    }
+
+    // Filter out any rejected teams from lobbies
+    return raw.map((lobby) => ({
+      ...lobby,
+      teams: (lobby.teams || []).filter((t) => {
+        const tid = (t._id || t).toString();
+        const fullReg = (structure.allRegistrations || []).find((r) => r._id.toString() === tid);
+        const isRejected =
+          t.status === 'rejected' ||
+          fullReg?.status === 'rejected' ||
+          fullReg?.identityProof?.status === 'rejected';
+        return !isRejected;
+      }),
+    }));
+  }, [structure.lobbies, structure.stages, structure.allRegistrations]);
 
   // Active Lobby object
   const activeLobby = useMemo(() => {
@@ -271,9 +290,11 @@ const AdminMatches = () => {
     return map;
   }, [allLobbies]);
 
-  // Registered teams enriched with assignment status
+  // Registered teams enriched with assignment status (STRICTLY EXCLUDE REJECTED TEAMS)
   const registeredTeams = useMemo(() => {
-    const list = structure.allRegistrations || [];
+    const list = (structure.allRegistrations || []).filter(
+      (team) => team.status !== 'rejected' && team.identityProof?.status !== 'rejected'
+    );
     return list.map((team) => {
       const id = team._id.toString();
       const assignment = teamLobbyMap[id];
@@ -383,6 +404,17 @@ const AdminMatches = () => {
     if (!activeLobby) return [];
     return computeLobbyStandings(activeLobby._id);
   }, [activeLobby, matchesByLobby, registeredTeams]);
+
+  const filteredActiveLobbyStandings = useMemo(() => {
+    if (!standingsSearchQuery.trim()) return activeLobbyStandings;
+    const q = standingsSearchQuery.toLowerCase().trim();
+    return activeLobbyStandings.filter((st) => {
+      const name = (st.teamName || '').toLowerCase();
+      const tag = (st.teamTag || '').toLowerCase();
+      const cap = (st.captain || '').toLowerCase();
+      return name.includes(q) || tag.includes(q) || cap.includes(q);
+    });
+  }, [activeLobbyStandings, standingsSearchQuery]);
 
   // ==========================================
   // SELECTION HELPERS FOR REGISTERED TEAMS
@@ -867,6 +899,7 @@ const AdminMatches = () => {
     });
 
     setRoundResultsData(initialized);
+    setPointsSearchQuery('');
     setPointsModalOpen(true);
   };
 
@@ -879,6 +912,18 @@ const AdminMatches = () => {
     }
     return next;
   }, [roundResultsData]);
+
+  // Filtered teams list for points entry modal by team name, tag, or captain
+  const filteredResultsData = useMemo(() => {
+    if (!pointsSearchQuery.trim()) return roundResultsData;
+    const q = pointsSearchQuery.toLowerCase().trim();
+    return roundResultsData.filter((item) => {
+      const name = (item.teamName || '').toLowerCase();
+      const tag = (item.teamTag || '').toLowerCase();
+      const cap = (item.captain || '').toLowerCase();
+      return name.includes(q) || tag.includes(q) || cap.includes(q);
+    });
+  }, [roundResultsData, pointsSearchQuery]);
 
   // Sequential Tap-to-Rank on a team card
   const handleTapTeamRank = (teamId) => {
@@ -1440,7 +1485,7 @@ const AdminMatches = () => {
             No registered teams found matching your filter criteria.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2 max-h-[580px] overflow-y-auto pr-1.5 custom-scrollbar">
             {displayedTeams.map((team) => {
               const isSelected = selectedTeamIds.includes(team._id.toString());
               const isAssigned = Boolean(team.assignedLobbyId);
@@ -1919,24 +1964,77 @@ const AdminMatches = () => {
                     No teams assigned to this lobby yet. Select teams from the Registered Teams section above.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-slate-800">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-800/80 text-slate-400 uppercase tracking-wider font-mono text-[11px]">
-                        <tr>
-                          <th className="p-3.5 text-center w-14">Rank</th>
-                          <th className="p-3.5">Team</th>
-                          <th className="p-3.5">Captain</th>
-                          <th className="p-3.5 text-center">Rounds Played</th>
-                          <th className="p-3.5 text-center">Wins (🍗)</th>
-                          <th className="p-3.5 text-center">Total Kills</th>
-                          <th className="p-3.5 text-center">Placement Pts</th>
-                          <th className="p-3.5 text-center">Bonus Pts</th>
-                          <th className="p-3.5 text-center font-bold text-white">Total Points</th>
-                          <th className="p-3.5 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800 bg-slate-900/60 font-medium">
-                        {activeLobbyStandings.map((team, idx) => {
+                  <div className="space-y-3">
+                    {/* Search Bar for Lobby Standings */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                      <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="Search team name, tag, or captain in lobby..."
+                          value={standingsSearchQuery}
+                          onChange={(e) => setStandingsSearchQuery(e.target.value)}
+                          className="w-full bg-slate-800/80 border border-slate-700/80 rounded-xl pl-9 pr-9 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono shadow-inner transition"
+                        />
+                        {standingsSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setStandingsSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 transition"
+                            title="Clear"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="text-xs font-mono text-slate-400 shrink-0">
+                        Showing <span className="text-cyan-400 font-bold">{filteredActiveLobbyStandings.length}</span> of{' '}
+                        <span className="text-white font-bold">{activeLobbyStandings.length}</span> teams
+                        {standingsSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setStandingsSearchQuery('')}
+                            className="ml-2 text-cyan-400 hover:underline text-[11px] cursor-pointer"
+                          >
+                            Reset
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-slate-800">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-800/80 text-slate-400 uppercase tracking-wider font-mono text-[11px]">
+                          <tr>
+                            <th className="p-3.5 text-center w-14">Rank</th>
+                            <th className="p-3.5">Team</th>
+                            <th className="p-3.5">Captain</th>
+                            <th className="p-3.5 text-center">Rounds Played</th>
+                            <th className="p-3.5 text-center">Wins (🍗)</th>
+                            <th className="p-3.5 text-center">Total Kills</th>
+                            <th className="p-3.5 text-center">Placement Pts</th>
+                            <th className="p-3.5 text-center">Bonus Pts</th>
+                            <th className="p-3.5 text-center font-bold text-white">Total Points</th>
+                            <th className="p-3.5 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800 bg-slate-900/60 font-medium">
+                          {filteredActiveLobbyStandings.length === 0 ? (
+                            <tr>
+                              <td colSpan="10" className="p-8 text-center text-slate-400 font-mono">
+                                No teams found matching "{standingsSearchQuery}".
+                                <button
+                                  type="button"
+                                  onClick={() => setStandingsSearchQuery('')}
+                                  className="ml-2 text-cyan-400 hover:underline font-bold"
+                                >
+                                  Clear filter
+                                </button>
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredActiveLobbyStandings.map((team, idx) => {
                           const isTop1 = idx === 0;
 
                           return (
@@ -1999,11 +2097,13 @@ const AdminMatches = () => {
                               </td>
                             </tr>
                           );
-                        })}
+                        })
+                      )}
                       </tbody>
                     </table>
                   </div>
-                )}
+                </div>
+              )}
               </div>
             )}
           </div>
@@ -2131,14 +2231,40 @@ const AdminMatches = () => {
             </div>
           </div>
 
-          <p className="text-xs text-slate-400">
-            Select top qualifying teams from each lobby column below. The selected teams will be merged into your new lobby:
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p className="text-xs text-slate-400">
+              Select top qualifying teams from each lobby column below. The selected teams will be merged into your new lobby:
+            </p>
+            <div className="relative w-full sm:w-64 shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search team in lobbies..."
+                value={qualifySearchQuery}
+                onChange={(e) => setQualifySearchQuery(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-8 pr-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono shadow-inner"
+              />
+              {qualifySearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setQualifySearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
 
           {/* Side-by-side Lobby Columns */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[50vh] overflow-y-auto pr-1">
             {allLobbies.map((lobby) => {
               const standings = computeLobbyStandings(lobby._id);
+              const filteredStandings = qualifySearchQuery.trim()
+                ? standings.filter((st) =>
+                    (st.teamName || '').toLowerCase().includes(qualifySearchQuery.toLowerCase().trim())
+                  )
+                : standings;
 
               return (
                 <div
@@ -2172,11 +2298,13 @@ const AdminMatches = () => {
                       </div>
                     </div>
 
-                    {standings.length === 0 ? (
-                      <p className="text-slate-500 text-xs py-4 text-center">No teams in lobby</p>
+                    {filteredStandings.length === 0 ? (
+                      <p className="text-slate-500 text-xs py-4 text-center">
+                        {standings.length === 0 ? 'No teams in lobby' : 'No teams match search'}
+                      </p>
                     ) : (
                       <div className="space-y-1.5">
-                        {standings.map((st, idx) => {
+                        {filteredStandings.map((st, idx) => {
                           const isChecked = selectedQualifyTeamIds.includes(st.teamId);
 
                           return (
@@ -2376,7 +2504,7 @@ const AdminMatches = () => {
       {/* FULL-SCREEN OVERLAY: INTERACTIVE MATCH RESULTS & POINTS ENTRY */}
       {/* ========================================================================= */}
       {pointsModalOpen && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
+        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col h-screen max-h-screen overflow-hidden">
           {/* STICKY HEADER */}
           <header className="sticky top-0 bg-slate-950 border-b border-slate-800 px-6 py-4 space-y-4 flex-shrink-0">
             <div className="flex items-start justify-between gap-4">
@@ -2535,13 +2663,68 @@ const AdminMatches = () => {
                 Reset Ranks
               </button>
             </div>
+
+            {/* Search Team for Points / Rank Update */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="relative flex-1 max-w-lg">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search team name or tag to update position & kills..."
+                  value={pointsSearchQuery}
+                  onChange={(e) => setPointsSearchQuery(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-10 pr-10 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono shadow-inner transition"
+                />
+                {pointsSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setPointsSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 transition cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs font-mono text-slate-400 shrink-0">
+                <span>
+                  Showing <strong className="text-cyan-400">{filteredResultsData.length}</strong> of{' '}
+                  <strong className="text-white">{roundResultsData.length}</strong> teams
+                </span>
+                {pointsSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setPointsSearchQuery('')}
+                    className="text-cyan-400 hover:underline text-[11px] ml-1 cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
           </header>
 
           {/* SCROLLABLE MAIN AREA */}
-          <main className="flex-1 overflow-y-auto px-6 py-6">
-            {/* Teams Card Grid: Responsive columns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-max">
-              {roundResultsData.map((item) => {
+          <main className="flex-1 overflow-y-auto px-6 py-6 min-h-0 custom-scrollbar overscroll-contain">
+            {filteredResultsData.length === 0 ? (
+              <div className="py-16 text-center space-y-3">
+                <Search className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="text-sm font-mono text-slate-300">
+                  No team found matching "{pointsSearchQuery}" in this match round.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPointsSearchQuery('')}
+                  className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono font-bold transition cursor-pointer"
+                >
+                  Show All Teams ({roundResultsData.length})
+                </button>
+              </div>
+            ) : (
+              /* Teams Card Grid: Responsive columns */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-max">
+                {filteredResultsData.map((item) => {
                 const isRanked = item.position > 0;
                 const isWinner = item.position === 1;
 
@@ -2687,6 +2870,7 @@ const AdminMatches = () => {
                 );
               })}
             </div>
+          )}
           </main>
 
           {/* STICKY FOOTER */}

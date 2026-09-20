@@ -4,6 +4,7 @@ const TournamentRegistration = require('../models/TournamentRegistration');
 const TournamentInvitation = require('../models/TournamentInvitation');
 const User = require('../models/User');
 const { cloudinary, isConfigured: cloudinaryConfigured } = require('../config/cloudinary');
+const { sendRegistrationVerificationNotification } = require('../utils/notificationHelper');
 
 // Helper to generate unique team code
 const generateUniqueCode = async (game) => {
@@ -1226,7 +1227,10 @@ exports.verifyRegistration = async (req, res, next) => {
   try {
     const { status, identityProofStatus, verificationNotes } = req.body;
 
-    const registration = await TournamentRegistration.findById(req.params.id);
+    const registration = await TournamentRegistration.findById(req.params.id)
+      .populate('tournament', 'name slug game')
+      .populate('captain', 'name username')
+      .populate('leader', 'name username');
 
     if (!registration) {
       return res.status(404).json({
@@ -1243,6 +1247,12 @@ exports.verifyRegistration = async (req, res, next) => {
         });
       }
       registration.status = status;
+      if (status === 'verified') {
+        registration.isVerified = true;
+        registration.verifiedAt = new Date();
+      } else if (status === 'rejected') {
+        registration.isVerified = false;
+      }
     }
 
     if (identityProofStatus) {
@@ -1256,6 +1266,14 @@ exports.verifyRegistration = async (req, res, next) => {
         registration.identityProof = {};
       }
       registration.identityProof.status = identityProofStatus;
+      if (identityProofStatus === 'verified') {
+        registration.status = 'verified';
+        registration.isVerified = true;
+        registration.verifiedAt = new Date();
+      } else if (identityProofStatus === 'rejected') {
+        registration.status = 'rejected';
+        registration.isVerified = false;
+      }
     }
 
     if (verificationNotes !== undefined) {
@@ -1267,9 +1285,48 @@ exports.verifyRegistration = async (req, res, next) => {
 
     await registration.save();
 
+    // Determine notification trigger
+    const effectiveStatus =
+      status === 'rejected' || identityProofStatus === 'rejected'
+        ? 'rejected'
+        : status === 'verified' || identityProofStatus === 'verified'
+        ? 'verified'
+        : null;
+
+    if (effectiveStatus) {
+      if (effectiveStatus === 'rejected') {
+        const tourneyId = registration.tournament?._id || registration.tournament;
+        if (tourneyId) {
+          await Tournament.updateOne(
+            { _id: tourneyId },
+            {
+              $pull: {
+                'stages.$[].lobbies.$[].teams': registration._id,
+                'stages.$[].qualifiedTeams': registration._id,
+                'stages.$[].advancedTeams': registration._id,
+              },
+            }
+          ).catch((err) => console.error('Error removing rejected team from tournament lobbies:', err));
+
+          const Match = require('../models/Match');
+          await Match.updateMany(
+            { tournament: tourneyId, status: 'scheduled' },
+            { $pull: { teams: registration._id } }
+          ).catch((err) => console.error('Error removing rejected team from scheduled matches:', err));
+        }
+      }
+
+      sendRegistrationVerificationNotification({
+        registration,
+        tournament: registration.tournament,
+        status: effectiveStatus,
+        reason: verificationNotes || registration.verificationNotes || '',
+      }).catch((e) => console.error('Verification notification error:', e));
+    }
+
     res.status(200).json({
       success: true,
-      message: 'Registration verification updated successfully',
+      message: `Registration ${effectiveStatus === 'rejected' ? 'rejected' : 'verified'} successfully`,
       registration,
     });
   } catch (error) {

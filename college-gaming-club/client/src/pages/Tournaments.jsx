@@ -253,9 +253,19 @@ const Tournaments = () => {
                             ⏸️ On Hold
                           </span>
                         ) : null}
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-800 shrink-0">
-                          ✓ Registered
-                        </span>
+                        {reg.isVerified || reg.status === 'verified' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/40 shrink-0">
+                            ✓ Active Team
+                          </span>
+                        ) : reg.status === 'rejected' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-950 text-rose-300 border border-rose-500/40 shrink-0">
+                            ✕ Rejected
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-800 shrink-0">
+                            ✓ Registered
+                          </span>
+                        )}
                       </div>
                     </div>
 
