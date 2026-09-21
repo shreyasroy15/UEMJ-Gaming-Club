@@ -24,7 +24,6 @@ import {
   CheckCircle2,
   Sparkles,
   Activity,
-  Plus,
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -197,14 +196,7 @@ const AdminLayout = () => {
         {/* Right Controls */}
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
 
-          {/* New Room / Launch Match Quick Action */}
-          <Link
-            to="/admin/matches"
-            className="hidden sm:flex admin-gradient-accent hover:opacity-95 text-white font-bold rounded-xl px-4 py-2 admin-shadow-glow-accent transition-all hover:scale-105 items-center gap-2 border border-sky-300/30 text-xs shadow-sm cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span className="tracking-wide">New Room</span>
-          </Link>
+
 
           {/* Admin Avatar & Profile Dropdown */}
           <div className="relative" ref={profileRef}>
