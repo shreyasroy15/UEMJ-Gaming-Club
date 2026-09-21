@@ -44,7 +44,12 @@ router.get('/:id/activity', protect, staffOnly, getUserActivity);
 router
   .route('/:id')
   .get(protect, staffOnly, getUserById)
-  .put(protect, adminOnly, updateUser)
+  .put(protect, (req, res, next) => {
+    if (req.user && (req.user._id.toString() === req.params.id || ['admin', 'super_admin'].includes(req.user.role))) {
+      return next();
+    }
+    return res.status(403).json({ success: false, message: 'Not authorized to update this profile' });
+  }, updateUser)
   .patch(protect, adminOnly, updateUser)
   .delete(protect, adminOnly, deleteUser);
 

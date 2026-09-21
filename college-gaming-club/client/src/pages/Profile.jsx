@@ -4,6 +4,7 @@ import { useToast } from '../context/ToastContext';
 import API from '../services/api';
 import Modal from '../components/Modal/Modal';
 import Avatar from '../components/Avatar/Avatar';
+import AvatarSelectorModal from '../components/Avatar/AvatarSelectorModal';
 import {
   User,
   Shield,
@@ -15,6 +16,8 @@ import {
   Gamepad2,
   CheckCircle2,
   Flame,
+  Sparkles,
+  Camera,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -23,6 +26,7 @@ const Profile = () => {
   const { addToast } = useToast();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     bio: user?.bio || '',
@@ -35,14 +39,24 @@ const Profile = () => {
     e.preventDefault();
     try {
       setSaving(true);
-      const res = await API.put(`/users/${user._id}`, formData);
+      const res = await API.put('/auth/profile', formData);
       if (res.data.success) {
         updateUser(res.data.user);
         addToast('Profile updated successfully!', 'success');
         setEditModalOpen(false);
       }
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to update profile', 'error');
+      try {
+        const fallback = await API.put(`/users/${user._id}`, formData);
+        if (fallback.data.success) {
+          updateUser(fallback.data.user || { ...user, ...formData });
+          addToast('Profile updated successfully!', 'success');
+          setEditModalOpen(false);
+          return;
+        }
+      } catch (fallbackErr) {
+        addToast(err.response?.data?.message || 'Failed to update profile', 'error');
+      }
     } finally {
       setSaving(false);
     }
@@ -57,14 +71,22 @@ const Profile = () => {
       <div className="p-4 sm:p-8 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
           <div className="flex flex-col min-[480px]:flex-row items-center min-[480px]:items-start gap-4 sm:gap-5 text-center min-[480px]:text-left w-full md:w-auto">
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 group">
               <Avatar
                 user={user}
                 size="2xl"
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 group-hover:border-cyan-300 transition-all"
                 imgClassName="rounded-2xl"
                 textSize="text-3xl sm:text-4xl"
               />
+              <button
+                onClick={() => setAvatarModalOpen(true)}
+                title="Change Character Avatar"
+                className="absolute inset-0 bg-black/60 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-bold font-mono cursor-pointer"
+              >
+                <Camera className="w-5 h-5 text-cyan-400 mb-0.5" />
+                <span>Change</span>
+              </button>
               <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500 font-mono">
                 {user?.role}
               </span>
@@ -88,12 +110,29 @@ const Profile = () => {
             </div>
           </div>
 
-          <button
-            onClick={() => setEditModalOpen(true)}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-1.5 transition-all self-stretch md:self-auto"
-          >
-            <Edit className="w-3.5 h-3.5" /> Edit Profile
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={() => setAvatarModalOpen(true)}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Choose Avatar
+            </button>
+
+            <button
+              onClick={() => {
+                setFormData({
+                  name: user?.name || '',
+                  bio: user?.bio || '',
+                  avatar: user?.avatar || '',
+                  college: user?.college || '',
+                });
+                setEditModalOpen(true);
+              }}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Edit className="w-3.5 h-3.5" /> Edit Profile
+            </button>
+          </div>
         </div>
 
         {/* Bio */}
@@ -221,16 +260,42 @@ const Profile = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Avatar URL
-            </label>
-            <input
-              type="url"
-              value={formData.avatar}
-              onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-              placeholder="https://..."
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
-            />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-300 uppercase">
+                Avatar Image
+              </label>
+              <button
+                type="button"
+                onClick={() => setAvatarModalOpen(true)}
+                className="text-xs text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" /> Choose from Game Characters
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl overflow-hidden bg-slate-950 border border-slate-700 shrink-0 flex items-center justify-center">
+                {formData.avatar ? (
+                  <img
+                    src={formData.avatar}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/assets/free-fire-logo.jpg';
+                    }}
+                  />
+                ) : (
+                  <span className="text-[10px] font-bold text-slate-500 font-mono">None</span>
+                )}
+              </div>
+              <input
+                type="url"
+                value={formData.avatar}
+                onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                placeholder="https://... or select character"
+                className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+              />
+            </div>
           </div>
 
           <div>
@@ -275,6 +340,15 @@ const Profile = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Interactive Avatar Selector Modal with BGMI, Free Fire, Valorant Suggestions */}
+      <AvatarSelectorModal
+        isOpen={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+        onAvatarSaved={(savedUser) => {
+          setFormData((prev) => ({ ...prev, avatar: savedUser.avatar }));
+        }}
+      />
     </div>
   );
 };

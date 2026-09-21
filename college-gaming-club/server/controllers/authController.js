@@ -289,3 +289,47 @@ exports.resetPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Update current logged-in user profile & avatar
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const { name, bio, college, phone, game, gameId, avatar } = req.body;
+
+    if (name) user.name = name.trim();
+    if (bio !== undefined) user.bio = bio;
+    if (college !== undefined) user.college = college.trim();
+    if (phone !== undefined) user.phone = phone.trim();
+    if (game) {
+      user.game = game;
+      if (!user.games) user.games = [];
+      if (!user.games.includes(game)) user.games.push(game);
+    }
+    if (gameId !== undefined) user.gameId = gameId.trim();
+    if (avatar !== undefined) {
+      user.avatar = avatar ? avatar.trim() : '';
+    }
+
+    await user.save();
+
+    const result = user.toObject();
+    delete result.password;
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile and avatar updated successfully',
+      user: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

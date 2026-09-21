@@ -18,11 +18,15 @@ import {
   Megaphone,
   Pin,
   Calendar,
+  Camera,
+  Sparkles,
 } from 'lucide-react';
+import AvatarSelectorModal from '../components/Avatar/AvatarSelectorModal';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [tournaments, setTournaments] = useState([]);
   const [myTournaments, setMyTournaments] = useState([]);
   const [upcomingMatches, setUpcomingMatches] = useState([]);
@@ -121,18 +125,27 @@ const Dashboard = () => {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-6">
-            <div className="relative">
+            <button
+              type="button"
+              onClick={() => setAvatarModalOpen(true)}
+              className="relative group rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-400 text-left cursor-pointer"
+              title="Click to choose Valorant, Free Fire, or BGMI avatar"
+            >
               <Avatar
                 user={user}
                 size="xl"
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 group-hover:opacity-85 transition-all"
                 imgClassName="rounded-2xl"
                 textSize="text-2xl sm:text-3xl"
               />
-              <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-[10px] font-black tracking-wider text-slate-950 uppercase shadow-md">
+              <div className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity backdrop-blur-[2px]">
+                <Camera className="w-5 h-5 text-cyan-300 drop-shadow" />
+                <span className="text-[9px] font-bold mt-0.5 text-cyan-200">Change</span>
+              </div>
+              <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-[10px] font-black tracking-wider text-slate-950 uppercase shadow-md pointer-events-none">
                 LVL {level}
               </div>
-            </div>
+            </button>
 
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -166,6 +179,14 @@ const Dashboard = () => {
 
           {/* Quick Hub Navigation */}
           <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setAvatarModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 hover:border-cyan-500/50 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-black/30"
+            >
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <span>Select Avatar</span>
+            </button>
             <Link
               to="/tournaments"
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-1.5"
@@ -483,6 +504,12 @@ const Dashboard = () => {
           )}
         </section>
       </div>
+
+      {/* Character Avatar Suggestion & Selection Modal */}
+      <AvatarSelectorModal
+        isOpen={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+      />
     </div>
   );
 };
