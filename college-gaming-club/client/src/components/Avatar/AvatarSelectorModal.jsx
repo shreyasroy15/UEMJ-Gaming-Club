@@ -18,7 +18,7 @@ const AvatarSelectorModal = ({ isOpen, onClose, onAvatarSaved }) => {
   const { user, updateUser } = useAuth();
   const { addToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'bgmi' | 'freefire' | 'valorant' | 'custom'
+  const [activeTab, setActiveTab] = useState('bgmi'); // 'bgmi' | 'freefire' | 'valorant' | 'custom'
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || '');
   const [customUrl, setCustomUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -26,8 +26,19 @@ const AvatarSelectorModal = ({ isOpen, onClose, onAvatarSaved }) => {
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedAvatar(user?.avatar || '');
+      const currentAvatar = user?.avatar || '';
+      setSelectedAvatar(currentAvatar);
       setCustomUrl('');
+
+      const all = [
+        ...AVATAR_PRESETS.valorant,
+        ...AVATAR_PRESETS.freefire,
+        ...AVATAR_PRESETS.bgmi,
+      ];
+      const matchedPreset = all.find((a) => a.src === currentAvatar);
+      if (matchedPreset?.gameCategory) {
+        setActiveTab(matchedPreset.gameCategory);
+      }
     }
   }, [isOpen, user?.avatar]);
 
@@ -37,11 +48,7 @@ const AvatarSelectorModal = ({ isOpen, onClose, onAvatarSaved }) => {
     if (activeTab === 'freefire') return AVATAR_PRESETS.freefire;
     if (activeTab === 'valorant') return AVATAR_PRESETS.valorant;
     if (activeTab === 'custom') return [];
-    return [
-      ...AVATAR_PRESETS.valorant,
-      ...AVATAR_PRESETS.freefire,
-      ...AVATAR_PRESETS.bgmi,
-    ];
+    return AVATAR_PRESETS.bgmi;
   }, [activeTab]);
 
   // Find info of currently selected preset (if any)
@@ -213,18 +220,6 @@ const AvatarSelectorModal = ({ isOpen, onClose, onAvatarSaved }) => {
 
         {/* Tab Filters */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto select-none">
-          <button
-            type="button"
-            onClick={() => setActiveTab('all')}
-            className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'all'
-                ? 'bg-white text-slate-900 shadow-xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            All Characters
-          </button>
-
           <button
             type="button"
             onClick={() => setActiveTab('bgmi')}
