@@ -154,29 +154,29 @@ const AdminTournamentTeams = () => {
   if (!tournament) return <div className="text-white p-6">Error: Tournament data missing.</div>;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full px-2 sm:px-4">
+    <div className="space-y-6 max-w-7xl mx-auto w-full px-2 sm:px-4 pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/admin/teams')}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors shrink-0"
+            className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors shrink-0 shadow-sm"
             title="Back to tournaments"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-black text-white font-mono uppercase truncate">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 font-mono uppercase truncate">
               {tournament.name}
             </h1>
-            <p className="text-xs text-slate-400 font-mono">
+            <p className="text-xs text-slate-500 font-mono">
               {tournament.game} • {registrations.length} Teams Registered
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
             {verifiedCount} Active / Verified
           </span>
         </div>
@@ -184,24 +184,24 @@ const AdminTournamentTeams = () => {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <p className="text-[10px] uppercase font-bold text-slate-500 font-mono">Registered Teams</p>
-          <p className="text-xl sm:text-2xl font-black text-white font-mono">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+          <p className="text-[10px] uppercase font-bold text-slate-400 font-mono">Registered Teams</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
             {registrations.length}{' '}
-            <span className="text-xs sm:text-sm font-normal text-slate-500">
+            <span className="text-xs sm:text-sm font-normal text-slate-400">
               / {tournament.maxTeams}
             </span>
           </p>
         </div>
-        <div className="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-slate-800">
-          <p className="text-[10px] uppercase font-bold text-slate-500 font-mono">Active Verified Teams</p>
-          <p className="text-xl sm:text-2xl font-black text-emerald-400 font-mono">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+          <p className="text-[10px] uppercase font-bold text-slate-400 font-mono">Active Verified Teams</p>
+          <p className="text-xl sm:text-2xl font-black text-emerald-600 font-mono">
             {verifiedCount}
           </p>
         </div>
-        <div className="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-slate-800 col-span-2 sm:col-span-1">
-          <p className="text-[10px] uppercase font-bold text-slate-500 font-mono">Total Players</p>
-          <p className="text-xl sm:text-2xl font-black text-cyan-400 font-mono">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm col-span-2 sm:col-span-1">
+          <p className="text-[10px] uppercase font-bold text-slate-400 font-mono">Total Players</p>
+          <p className="text-xl sm:text-2xl font-black text-cyan-600 font-mono">
             {registrations.reduce((acc, reg) => acc + (reg.players?.length || 0), 0)}
           </p>
         </div>
@@ -209,7 +209,7 @@ const AdminTournamentTeams = () => {
 
       {/* Search & Filter Toolbar */}
       {registrations.length > 0 && (
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 shadow-lg">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {/* Search Input */}
             <div className="relative flex-1">
@@ -219,13 +219,13 @@ const AdminTournamentTeams = () => {
                 placeholder="Search team name, team code, captain, or player..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-950 border border-slate-700/80 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono transition shadow-inner"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white font-mono transition"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 rounded-full transition"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-full transition"
                   title="Clear search"
                 >
                   <X className="w-4 h-4" />
@@ -234,15 +234,15 @@ const AdminTournamentTeams = () => {
             </div>
 
             {/* Results count badge */}
-            <div className="text-xs font-mono text-slate-400 shrink-0 self-end sm:self-center">
-              Showing <span className="text-cyan-400 font-bold">{filteredRegistrations.length}</span> of{' '}
-              <span className="text-white font-bold">{registrations.length}</span> teams
+            <div className="text-xs font-mono text-slate-500 shrink-0 self-end sm:self-center">
+              Showing <span className="text-cyan-600 font-bold">{filteredRegistrations.length}</span> of{' '}
+              <span className="text-slate-900 font-bold">{registrations.length}</span> teams
             </div>
           </div>
 
           {/* Status Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80">
-            <span className="text-[11px] font-mono text-slate-500 uppercase font-bold flex items-center gap-1 mr-1">
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+            <span className="text-[11px] font-mono text-slate-400 uppercase font-bold flex items-center gap-1 mr-1">
               <Filter className="w-3 h-3" /> Status:
             </span>
 
@@ -251,8 +251,8 @@ const AdminTournamentTeams = () => {
               onClick={() => setStatusFilter('all')}
               className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                 statusFilter === 'all'
-                  ? 'bg-slate-700 text-white shadow-sm'
-                  : 'bg-slate-950 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                  ? 'bg-slate-800 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
               }`}
             >
               All ({registrations.length})
@@ -264,7 +264,7 @@ const AdminTournamentTeams = () => {
               className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                 statusFilter === 'verified'
                   ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 border border-emerald-800/50'
+                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
               }`}
             >
               Active / Verified ({verifiedCount})
@@ -276,7 +276,7 @@ const AdminTournamentTeams = () => {
               className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                 statusFilter === 'pending'
                   ? 'bg-cyan-600 text-white shadow-sm'
-                  : 'bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 border border-cyan-800/50'
+                  : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 border border-cyan-200'
               }`}
             >
               Pending ({pendingCount})
@@ -288,7 +288,7 @@ const AdminTournamentTeams = () => {
               className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                 statusFilter === 'rejected'
                   ? 'bg-rose-600 text-white shadow-sm'
-                  : 'bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 border border-rose-800/50'
+                  : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
               }`}
             >
               Rejected ({rejectedCount})
@@ -301,7 +301,7 @@ const AdminTournamentTeams = () => {
                   setSearchQuery('');
                   setStatusFilter('all');
                 }}
-                className="ml-auto text-[11px] font-mono text-slate-400 hover:text-cyan-400 underline underline-offset-2 transition cursor-pointer"
+                className="ml-auto text-[11px] font-mono text-slate-400 hover:text-cyan-600 underline underline-offset-2 transition cursor-pointer"
               >
                 Reset Filters
               </button>
@@ -318,9 +318,9 @@ const AdminTournamentTeams = () => {
           description="Wait for teams to register for this tournament."
         />
       ) : filteredRegistrations.length === 0 ? (
-        <div className="p-10 text-center rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
-          <Search className="w-8 h-8 text-slate-600 mx-auto" />
-          <p className="text-sm text-slate-300 font-mono font-bold">
+        <div className="p-10 text-center rounded-2xl bg-white border border-slate-200 space-y-3 shadow-sm">
+          <Search className="w-8 h-8 text-slate-400 mx-auto" />
+          <p className="text-sm text-slate-800 font-mono font-bold">
             No teams found matching "{searchQuery}"
           </p>
           <p className="text-xs text-slate-500 font-mono">
@@ -331,7 +331,7 @@ const AdminTournamentTeams = () => {
               setSearchQuery('');
               setStatusFilter('all');
             }}
-            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono font-bold transition cursor-pointer"
+            className="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-cyan-700 text-xs font-mono font-bold transition cursor-pointer"
           >
             Clear Search & Filters
           </button>
@@ -348,58 +348,58 @@ const AdminTournamentTeams = () => {
               return (
                 <div
                   key={reg._id}
-                  className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                  className={`p-4 rounded-2xl border space-y-3 transition-all shadow-sm ${
                     isVerified
-                      ? 'bg-slate-900/80 border-emerald-500/30'
+                      ? 'bg-white border-emerald-300'
                       : isRejected
-                      ? 'bg-rose-950/20 border-rose-500/40'
-                      : 'bg-slate-900/70 border-slate-800'
+                      ? 'bg-white border-rose-300'
+                      : 'bg-white border-slate-200'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-bold text-white font-mono truncate">
+                      <h3 className="text-sm font-bold text-slate-900 font-mono truncate">
                         {reg.teamName}
                       </h3>
-                      <p className="text-xs text-slate-400 font-mono truncate mt-0.5">
+                      <p className="text-xs text-slate-500 font-mono truncate mt-0.5">
                         Captain: {reg.captain?.name || reg.captain?.username || 'N/A'}
                       </p>
                     </div>
                     {isVerified ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/40 shrink-0">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                         ✓ Active Team
                       </span>
                     ) : isRejected ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-rose-950 text-rose-300 border border-rose-500/40 shrink-0">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
                         ✕ Rejected
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-cyan-950 text-cyan-300 border border-cyan-500/40 shrink-0">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-cyan-50 text-cyan-700 border border-cyan-200 shrink-0">
                         {reg.status}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-mono">
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-mono">
+                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
                       👥 {reg.players?.length || 0} Players
                     </span>
                     {hasProof ? (
-                      <span className="px-2 py-0.5 rounded bg-purple-950/70 text-purple-300 border border-purple-800/50 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
                         <FileText className="w-3 h-3" /> Proof Uploaded
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded bg-amber-950/50 text-amber-400 border border-amber-800/40">
+                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
                         ⏳ No Proof
                       </span>
                     )}
                   </div>
 
                   {/* Verification & Action Buttons */}
-                  <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+                  <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
                     <Link
                       to={`/admin/teams/${tournamentId}/${reg._id}`}
-                      className="flex-1 min-w-[90px] py-1.5 px-3 rounded-xl bg-cyan-600/20 text-cyan-300 hover:bg-cyan-600/30 border border-cyan-500/30 text-center text-xs font-bold font-mono transition"
+                      className="flex-1 min-w-[90px] py-1.5 px-3 rounded-xl bg-cyan-50 text-cyan-700 hover:bg-cyan-100 border border-cyan-200 text-center text-xs font-bold font-mono transition"
                     >
                       View Details
                     </Link>
@@ -409,7 +409,7 @@ const AdminTournamentTeams = () => {
                       <button
                         disabled={submitting}
                         onClick={() => handleApproveRegistration(reg._id)}
-                        className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                        className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-1 shadow-sm transition cursor-pointer"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Approve
@@ -421,7 +421,7 @@ const AdminTournamentTeams = () => {
                       <button
                         disabled={submitting}
                         onClick={() => handleOpenRejectModal(reg)}
-                        className="py-1.5 px-3 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-1 transition cursor-pointer"
+                        className="py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-1 transition cursor-pointer"
                       >
                         <XCircle className="w-3.5 h-3.5" />
                         Reject
@@ -434,12 +434,12 @@ const AdminTournamentTeams = () => {
           </div>
 
           {/* DESKTOP TABLE VIEW (>= sm breakpoint) */}
-          <div className="hidden sm:block rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-lg">
+          <div className="hidden sm:block rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300 min-w-[700px]">
-                <thead className="bg-slate-950/80 uppercase font-mono text-slate-400 border-b border-slate-800">
+              <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
+                <thead className="bg-slate-50 uppercase font-mono text-slate-500 border-b border-slate-200">
                   <tr>
-                    <th className="p-4 text-white">Team Name</th>
+                    <th className="p-4 text-slate-800">Team Name</th>
                     <th className="p-4 text-center">Players</th>
                     <th className="p-4">Captain</th>
                     <th className="p-4">Proof</th>
@@ -447,7 +447,7 @@ const AdminTournamentTeams = () => {
                     <th className="p-4 text-right">Verification & Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/80 font-mono">
+                <tbody className="divide-y divide-slate-100 font-mono">
                   {filteredRegistrations.map((reg) => {
                     const isVerified = reg.status === 'verified' || reg.isVerified;
                     const isRejected = reg.status === 'rejected';
@@ -456,40 +456,40 @@ const AdminTournamentTeams = () => {
                     return (
                       <tr
                         key={reg._id}
-                        className={`hover:bg-slate-800/40 transition-colors ${
-                          isVerified ? 'bg-emerald-950/10' : isRejected ? 'bg-rose-950/10' : ''
+                        className={`hover:bg-slate-50 transition-colors ${
+                          isVerified ? 'bg-emerald-50/40' : isRejected ? 'bg-rose-50/40' : ''
                         }`}
                       >
                         <td className="p-4">
-                          <div className="font-bold text-slate-100 text-sm">{reg.teamName}</div>
-                          <div className="text-[10px] text-slate-500">Code: {reg.teamCode}</div>
+                          <div className="font-bold text-slate-900 text-sm">{reg.teamName}</div>
+                          <div className="text-[10px] text-slate-400">Code: {reg.teamCode}</div>
                         </td>
-                        <td className="p-4 text-center font-mono text-slate-200">
+                        <td className="p-4 text-center font-mono text-slate-800">
                           {reg.players?.length || 0}
                         </td>
-                        <td className="p-4 text-slate-300">
+                        <td className="p-4 text-slate-600">
                           {reg.captain?.name || reg.captain?.username || 'N/A'}
                         </td>
                         <td className="p-4">
                           {hasProof ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950/60 text-purple-300 border border-purple-800/40 flex items-center gap-1 w-fit">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1 w-fit">
                               <FileText className="w-3 h-3" /> PDF Uploaded
                             </span>
                           ) : (
-                            <span className="text-[10px] text-slate-500">None</span>
+                            <span className="text-[10px] text-slate-400">None</span>
                           )}
                         </td>
                         <td className="p-4">
                           {isVerified ? (
-                            <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase bg-emerald-950 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 w-fit">
+                            <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 w-fit">
                               <CheckCircle2 className="w-3 h-3" /> Active Team
                             </span>
                           ) : isRejected ? (
-                            <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase bg-rose-950 text-rose-300 border border-rose-500/40 flex items-center gap-1 w-fit">
+                            <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 w-fit">
                               <XCircle className="w-3 h-3" /> Rejected
                             </span>
                           ) : (
-                            <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500/40 w-fit block">
+                            <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold uppercase bg-cyan-50 text-cyan-700 border border-cyan-200 w-fit block">
                               {reg.status}
                             </span>
                           )}
@@ -501,7 +501,7 @@ const AdminTournamentTeams = () => {
                               <button
                                 disabled={submitting}
                                 onClick={() => handleApproveRegistration(reg._id)}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold uppercase flex items-center gap-1 shadow transition cursor-pointer"
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold uppercase flex items-center gap-1 shadow-sm transition cursor-pointer"
                                 title="Approve Team (Mark Active)"
                               >
                                 <CheckCircle2 className="w-3 h-3" />
@@ -514,7 +514,7 @@ const AdminTournamentTeams = () => {
                               <button
                                 disabled={submitting}
                                 onClick={() => handleOpenRejectModal(reg)}
-                                className="px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-[11px] font-bold uppercase flex items-center gap-1 transition cursor-pointer"
+                                className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold uppercase flex items-center gap-1 transition cursor-pointer"
                                 title="Reject with Reason"
                               >
                                 <XCircle className="w-3 h-3" />
@@ -524,7 +524,7 @@ const AdminTournamentTeams = () => {
 
                             <Link
                               to={`/admin/teams/${tournamentId}/${reg._id}`}
-                              className="px-3 py-1 rounded-lg bg-cyan-600/20 text-cyan-300 hover:bg-cyan-600/30 border border-cyan-500/30 transition-colors text-[11px] font-bold"
+                              className="px-3 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors text-[11px] font-bold"
                             >
                               View Details
                             </Link>
