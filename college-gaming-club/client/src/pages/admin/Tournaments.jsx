@@ -358,10 +358,10 @@ const AdminTournaments = () => {
       {/* Top bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 font-mono">
+          <h1 className="text-2xl font-black text-black font-mono">
             TOURNAMENT MANAGEMENT
           </h1>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-black font-medium">
             Create tournaments, configure squad sizes, customize registration forms, and verify player rosters.
           </p>
         </div>
