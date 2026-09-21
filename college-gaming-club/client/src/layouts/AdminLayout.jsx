@@ -134,25 +134,29 @@ const AdminLayout = () => {
       {/* ========================================================================= */}
       {/* TOP HEADER COMMAND BAR */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-40 h-20 admin-glass-panel border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-3 sm:gap-6 shadow-sm">
+      <header className="sticky top-0 z-40 h-16 sm:h-20 admin-glass-panel border-b border-slate-200/80 px-3.5 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-6 shadow-sm">
         {/* Left: Logo, Branding & Mobile Toggle */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           {/* Mobile drawer toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="md:hidden p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm transition-colors"
+            className="md:hidden p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm transition-colors cursor-pointer"
             aria-label="Toggle admin sidebar"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          <Link to="/admin" className="flex items-center gap-3.5 group">
-            <div className="w-11 h-11 admin-gradient-primary rounded-xl border border-slate-700 flex items-center justify-center admin-shadow-inner-glow shadow-sm group-hover:scale-105 transition-transform shrink-0">
-              <span className="font-extrabold text-white text-base tracking-wider font-mono">UEMJ</span>
+          <Link to="/admin" className="flex items-center gap-2.5 sm:gap-3.5 group">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-950 border border-lime-400/40 p-1 flex items-center justify-center shadow-[0_0_12px_rgba(163,230,53,0.25)] group-hover:scale-105 transition-transform shrink-0 overflow-hidden">
+              <img
+                src="/assets/gaming-geeks-logo.png"
+                alt="Gaming Geeks Club"
+                className="w-full h-full object-contain drop-shadow-[0_0_6px_rgba(163,230,53,0.6)]"
+              />
             </div>
-            <div className="hidden min-[420px]:block text-left">
+            <div className="hidden min-[480px]:block text-left">
               <div className="flex items-center gap-2">
-                <h1 className="font-black text-sm sm:text-base tracking-tight text-slate-800 group-hover:text-sky-600 transition-colors">
+                <h1 className="font-black text-xs sm:text-base tracking-tight text-slate-800 group-hover:text-sky-600 transition-colors">
                   GAMING GEEKS CLUB
                 </h1>
                 <div className="w-1.5 h-1.5 rounded-full bg-slate-300 hidden sm:block"></div>
@@ -160,8 +164,8 @@ const AdminLayout = () => {
                   Admin Core
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 font-mono tracking-wider mt-0.5">
-                University of Engineering & Management, Jaipur
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-mono tracking-wider mt-0.5 truncate max-w-[200px] sm:max-w-none">
+                UEM Jaipur Esports Console
               </p>
             </div>
           </Link>
@@ -172,11 +176,12 @@ const AdminLayout = () => {
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
-            className="w-full px-3 sm:px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-sky-300 text-slate-500 hover:text-slate-800 transition-all flex items-center justify-between text-xs group cursor-pointer shadow-sm"
+            className="w-full px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-sky-300 text-slate-500 hover:text-slate-800 transition-all flex items-center justify-between text-xs group cursor-pointer shadow-sm"
           >
-            <div className="flex items-center gap-2.5 truncate">
+            <div className="flex items-center gap-2 truncate">
               <Search className="w-4 h-4 text-slate-400 group-hover:text-sky-500 transition-colors shrink-0" />
-              <span className="truncate text-xs font-medium">Search commands, tournaments, rosters...</span>
+              <span className="truncate text-xs font-medium hidden sm:inline">Search commands, tournaments, rosters...</span>
+              <span className="truncate text-xs font-medium sm:hidden">Quick Search...</span>
             </div>
             <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono text-slate-500 shadow-xs shrink-0">
               <Command className="w-3 h-3" /> K
@@ -185,18 +190,7 @@ const AdminLayout = () => {
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          {/* Server Node Status */}
-          <div className="hidden lg:flex bg-emerald-50/90 border border-emerald-100 rounded-xl px-3.5 py-1.5 items-center gap-2.5 shadow-sm">
-            <div className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-            </div>
-            <div className="text-left leading-tight">
-              <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Server Node</span>
-              <span className="block text-xs font-bold text-emerald-600 font-mono">PORT :5000</span>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
 
           {/* New Room / Launch Match Quick Action */}
           <Link
@@ -211,7 +205,7 @@ const AdminLayout = () => {
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-sm border border-indigo-400/50 cursor-pointer hover:ring-2 ring-indigo-200 transition-all"
+              className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-sm border border-indigo-400/50 cursor-pointer hover:ring-2 ring-indigo-200 transition-all"
               aria-label="User Profile"
             >
               {user?.name?.charAt(0)?.toUpperCase() || 'S'}
@@ -219,13 +213,10 @@ const AdminLayout = () => {
 
             {/* Profile Dropdown */}
             {profileMenuOpen && (
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 animate-in fade-in duration-150 space-y-3 font-sans">
+              <div className="absolute right-0 mt-2 w-60 sm:w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 animate-in fade-in duration-150 space-y-3 font-sans">
                 <div className="pb-2.5 border-b border-slate-100">
                   <p className="text-xs font-bold text-slate-800 truncate">{user?.name || 'Super Admin'}</p>
                   <p className="text-[11px] text-slate-500 truncate mt-0.5">@{user?.username || 'admin'}</p>
-                  <span className="inline-block mt-1.5 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-sky-50 text-sky-600 border border-sky-100">
-                    Super Admin • Level 1
-                  </span>
                 </div>
 
                 <div className="pt-1">
@@ -251,15 +242,15 @@ const AdminLayout = () => {
         {sidebarOpen && (
           <div
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-150"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-150"
           />
         )}
 
         {/* Sidebar */}
         <aside
           className={`
-            fixed md:sticky top-20 inset-y-0 left-0 z-50 md:z-30 h-[calc(100vh-5rem)]
-            w-64 admin-glass-panel border-r border-slate-200/80 p-4 flex flex-col justify-between shrink-0 shadow-sm
+            fixed md:sticky top-16 sm:top-20 inset-y-0 left-0 z-50 md:z-30 h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)]
+            w-72 max-w-[85vw] md:w-64 admin-glass-panel border-r border-slate-200/80 p-4 flex flex-col justify-between shrink-0 shadow-sm
             transition-transform duration-300 ease-in-out select-none admin-scrollbar
             ${sidebarOpen ? 'translate-x-0 shadow-2xl bg-white' : '-translate-x-full md:translate-x-0'}
           `}
@@ -269,8 +260,12 @@ const AdminLayout = () => {
             {/* Mobile Drawer Header with Close */}
             <div className="md:hidden flex items-center justify-between pb-3 mb-1 border-b border-slate-200 px-1">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg admin-gradient-primary flex items-center justify-center text-white text-xs font-bold font-mono">
-                  UEMJ
+                <div className="w-7 h-7 rounded-lg bg-slate-950 border border-lime-400/40 p-0.5 flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+                  <img
+                    src="/assets/gaming-geeks-logo.png"
+                    alt="Gaming Geeks"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <span className="font-bold text-xs text-slate-800">ADMIN CORE</span>
               </div>
@@ -350,7 +345,7 @@ const AdminLayout = () => {
                     {user?.name || 'Super Admin'}
                   </p>
                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                    Admin Level 1
+                    Admin
                   </p>
                 </div>
               </div>
@@ -369,14 +364,89 @@ const AdminLayout = () => {
         {/* ========================================================================= */}
         {/* MAIN ADMIN CONTENT AREA */}
         {/* ========================================================================= */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-y-auto admin-scrollbar">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="flex-1 flex flex-col min-w-0 overflow-y-auto admin-scrollbar pb-20 md:pb-8">
+          <div className="p-3.5 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6">
             <ErrorBoundary>
               <Outlet />
             </ErrorBoundary>
           </div>
         </main>
       </div>
+
+      {/* ========================================================================= */}
+      {/* MOBILE BOTTOM NAVIGATION DOCK (Native App Feel on Mobile) */}
+      {/* ========================================================================= */}
+      <nav aria-label="Mobile Navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200 py-1 px-2 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.06)] select-none">
+        <NavLink
+          to="/admin"
+          end
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+              isActive ? 'text-sky-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+            }`
+          }
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          <span className="text-[9px] tracking-tight">Overview</span>
+        </NavLink>
+
+        <NavLink
+          to="/admin/tournaments"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+              isActive ? 'text-sky-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+            }`
+          }
+        >
+          <Trophy className="w-4 h-4" />
+          <span className="text-[9px] tracking-tight">Tourneys</span>
+        </NavLink>
+
+        <NavLink
+          to="/admin/matches"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+              isActive ? 'text-sky-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+            }`
+          }
+        >
+          <Swords className="w-4 h-4" />
+          <span className="text-[9px] tracking-tight">Matches</span>
+        </NavLink>
+
+        <NavLink
+          to="/admin/teams"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+              isActive ? 'text-sky-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+            }`
+          }
+        >
+          <Shield className="w-4 h-4" />
+          <span className="text-[9px] tracking-tight">Teams</span>
+        </NavLink>
+
+        <NavLink
+          to="/admin/users"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+              isActive ? 'text-sky-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+            }`
+          }
+        >
+          <Users className="w-4 h-4" />
+          <span className="text-[9px] tracking-tight">Users</span>
+        </NavLink>
+
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
+        >
+          <Menu className="w-4 h-4" />
+          <span className="text-[9px] tracking-tight">More</span>
+        </button>
+      </nav>
+
 
       {/* Global Command Palette Modal */}
       <AdminCommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
