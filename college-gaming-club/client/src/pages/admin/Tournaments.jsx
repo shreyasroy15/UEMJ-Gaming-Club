@@ -26,6 +26,7 @@ import {
   Search,
   X,
   Filter,
+  RefreshCw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import RejectionModal from '../../components/RejectionModal/RejectionModal';
@@ -34,6 +35,7 @@ const AdminTournaments = () => {
   const [tournaments, setTournaments] = useState([]);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { addToast } = useToast();
 
   // Create / Edit modal state
@@ -100,6 +102,18 @@ const AdminTournaments = () => {
       addToast('Failed to load tournament records', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await fetchData();
+      addToast('Tournament data refreshed', 'success');
+    } catch (err) {
+      addToast('Failed to refresh tournament data', 'error');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -232,6 +246,21 @@ const AdminTournaments = () => {
     }
   };
 
+  const handleRefreshTeams = async () => {
+    if (!viewingTournament) return;
+    try {
+      setViewTeamsLoading(true);
+      const res = await API.get(`/tournaments/${viewingTournament._id}/admin-registrations`);
+      setAdminRegistrations(res.data.registrations || []);
+      addToast('Registered teams refreshed', 'success');
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to refresh teams', 'error');
+    } finally {
+      setViewTeamsLoading(false);
+    }
+  };
+
   // Open Rejection Modal
   const handleOpenRejectModal = (reg, isPdfOnly = false) => {
     setRejectTarget({
@@ -327,22 +356,33 @@ const AdminTournaments = () => {
   return (
     <div className="space-y-6">
       {/* Top bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-black text-white font-mono">
+          <h1 className="text-2xl font-black text-slate-900 font-mono">
             TOURNAMENT MANAGEMENT
           </h1>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Create tournaments, configure squad sizes, customize registration forms, and verify player rosters.
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-fuchsia-600/20 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Create Tournament
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 sm:p-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center"
+            title="Refresh Tournaments"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-sky-500' : ''}`} />
+          </button>
+
+          <button
+            onClick={handleOpenCreate}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-xs font-bold text-white shadow-sm hover:scale-105 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Create Tournament
+          </button>
+        </div>
       </div>
 
       {/* Search & Filter Bar */}
@@ -369,7 +409,16 @@ const AdminTournaments = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 shadow-2xs transition-all hover:scale-105 cursor-pointer disabled:opacity-50"
+              title="Refresh Records"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-sky-500' : ''}`} />
+            </button>
+
             <div className="flex items-center gap-1.5">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <select
@@ -933,11 +982,21 @@ const AdminTournaments = () => {
         title={`Registered Teams & Roster Verification: ${viewingTournament?.name || ''}`}
       >
         <div className="space-y-4 max-w-3xl">
-          {/* Top Info Bar with Quick Link to Form Builder */}
+          {/* Top Info Bar with Quick Link to Form Builder & Refresh */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono">
-            <div>
-              <span className="text-slate-500">Total Teams:</span>{' '}
-              <span className="font-bold text-cyan-600">{adminRegistrations.length}</span> / {viewingTournament?.maxTeams || 16}
+            <div className="flex items-center gap-2.5">
+              <div>
+                <span className="text-slate-500">Total Teams:</span>{' '}
+                <span className="font-bold text-cyan-600">{adminRegistrations.length}</span> / {viewingTournament?.maxTeams || 16}
+              </div>
+              <button
+                onClick={handleRefreshTeams}
+                disabled={viewTeamsLoading}
+                className="p-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+                title="Refresh Registered Teams"
+              >
+                <RefreshCw className={`w-3 h-3 ${viewTeamsLoading ? 'animate-spin text-cyan-600' : ''}`} />
+              </button>
             </div>
             {viewingTournament && (
               <Link
