@@ -180,7 +180,7 @@ const Dashboard = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
             </span>
-            Gaming Geeks Club • Official Esports HQ
+            Gaming Geeks Club
           </div>
 
           <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-800 mb-3 sm:mb-6 flex flex-wrap items-center gap-2 sm:gap-4 tracking-tight">
