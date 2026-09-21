@@ -587,31 +587,31 @@ const AdminUsers = () => {
     const g = (gameName || 'BGMI').toUpperCase();
     if (g.includes('BGMI')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-amber-950/50 text-amber-300 border border-amber-500/30">
-          <Gamepad2 className="w-3 h-3 text-amber-400 shrink-0" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-amber-50 text-amber-800 border border-amber-200 shadow-sm">
+          <Gamepad2 className="w-3 h-3 text-amber-600 shrink-0" />
           <span>BGMI</span>
         </span>
       );
     }
     if (g.includes('FREE FIRE') || g.includes('FIRE')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-orange-950/50 text-orange-300 border border-orange-500/30">
-          <Flame className="w-3 h-3 text-orange-400 shrink-0" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-orange-50 text-orange-800 border border-orange-200 shadow-sm">
+          <Flame className="w-3 h-3 text-orange-600 shrink-0" />
           <span>Free Fire</span>
         </span>
       );
     }
     if (g.includes('VALORANT')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-rose-950/50 text-rose-300 border border-rose-500/30">
-          <Crosshair className="w-3 h-3 text-rose-400 shrink-0" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-rose-50 text-rose-800 border border-rose-200 shadow-sm">
+          <Crosshair className="w-3 h-3 text-rose-600 shrink-0" />
           <span>Valorant</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-cyan-950/50 text-cyan-300 border border-cyan-500/30">
-        <Gamepad2 className="w-3 h-3 text-cyan-400 shrink-0" />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-cyan-50 text-cyan-800 border border-cyan-200 shadow-sm">
+        <Gamepad2 className="w-3 h-3 text-cyan-600 shrink-0" />
         <span>{gameName}</span>
       </span>
     );
@@ -622,31 +622,31 @@ const AdminUsers = () => {
     const r = (role || 'player').toLowerCase();
     if (r === 'super_admin' || r === 'admin') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-pink-950/60 text-pink-300 border border-pink-500/40 shadow-sm shadow-pink-500/10">
-          <Shield className="w-3 h-3 text-pink-400" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-pink-50 text-pink-700 border border-pink-200 shadow-sm">
+          <Shield className="w-3 h-3 text-pink-600" />
           <span>Admin</span>
         </span>
       );
     }
     if (r === 'captain') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-purple-950/60 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-500/10">
-          <Crown className="w-3 h-3 text-purple-400" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 shadow-sm">
+          <Crown className="w-3 h-3 text-purple-600" />
           <span>Captain</span>
         </span>
       );
     }
     if (r === 'moderator') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-950/60 text-indigo-300 border border-indigo-500/40">
-          <Shield className="w-3 h-3 text-indigo-400" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm">
+          <Shield className="w-3 h-3 text-indigo-600" />
           <span>Moderator</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wider bg-cyan-950/50 text-cyan-400 border border-cyan-500/30">
-        <Users className="w-3 h-3 text-cyan-400" />
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wider bg-cyan-50 text-cyan-700 border border-cyan-200 shadow-sm">
+        <Users className="w-3 h-3 text-cyan-600" />
         <span>Player</span>
       </span>
     );
@@ -657,31 +657,31 @@ const AdminUsers = () => {
     const s = (status || 'active').toLowerCase();
     if (s === 'active') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/60 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/15">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>Active</span>
         </span>
       );
     }
     if (s === 'pending') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-950/60 text-amber-400 border border-amber-500/40">
-          <Clock className="w-3 h-3 text-amber-400" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
+          <Clock className="w-3 h-3 text-amber-600" />
           <span>Pending</span>
         </span>
       );
     }
     if (s === 'suspended') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-950/60 text-rose-400 border border-rose-500/40">
-          <XCircle className="w-3 h-3 text-rose-400" />
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
+          <XCircle className="w-3 h-3 text-rose-600" />
           <span>Suspended</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-950/60 text-red-400 border border-red-500/40">
-        <AlertTriangle className="w-3 h-3 text-red-400" />
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-700 border border-red-200 shadow-sm">
+        <AlertTriangle className="w-3 h-3 text-red-600" />
         <span>Rejected</span>
       </span>
     );
@@ -703,27 +703,27 @@ const AdminUsers = () => {
       {/* ==================================================
           2. USERS PAGE HEADER WITH ESPORTS BANNER
           ================================================== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-[#0E1322] to-purple-950/40 border border-slate-800 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/80 p-6 sm:p-8 shadow-sm">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-100/40 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-cyan-100/40 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/80 border border-purple-500/30 text-purple-300 text-xs font-mono font-bold tracking-wider uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-mono font-bold tracking-wider uppercase">
+              <Sparkles className="w-3.5 h-3.5 text-purple-600" />
               <span>Esports SaaS Directory</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 font-mono tracking-tight">
               USER MANAGEMENT
             </h1>
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <p className="text-sm text-slate-600 leading-relaxed font-medium">
               Manage players, captains and administrators. Control account access and manage the UEM Gaming Club community.
             </p>
           </div>
 
           {/* Right-side esports badge/visual */}
-          <div className="flex items-center gap-4 shrink-0 bg-slate-900/80 border border-slate-800/80 p-4 rounded-2xl shadow-xl backdrop-blur-md">
-            <div className="w-12 h-12 rounded-xl bg-black/90 border border-lime-400/50 p-1 flex items-center justify-center shadow-[0_0_15px_rgba(163,230,53,0.35)] shrink-0">
+          <div className="flex items-center gap-4 shrink-0 bg-slate-50 border border-slate-200 p-4 rounded-2xl shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-slate-900 border border-lime-400/50 p-1 flex items-center justify-center shadow-sm shrink-0">
               <img
                 src="/assets/gaming-geeks-logo.png"
                 alt="Gaming Geeks"
@@ -731,13 +731,13 @@ const AdminUsers = () => {
               />
             </div>
             <div>
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-lime-400 block">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-600 block">
                 GAMING GEEKS
               </span>
-              <span className="text-base font-bold text-white font-mono leading-tight block">
+              <span className="text-base font-bold text-slate-900 font-mono leading-tight block">
                 Verified Collegiate League
               </span>
-              <span className="text-[11px] text-slate-400 block">
+              <span className="text-[11px] text-slate-500 block font-medium">
                 UEM Jaipur • Official Circuit
               </span>
             </div>
@@ -750,91 +750,90 @@ const AdminUsers = () => {
           ================================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* TOTAL USERS (Purple) */}
-        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-purple-500/30 hover:border-purple-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-purple-950/20 flex flex-col justify-between">
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-purple-300 transition-all duration-200 hover:-translate-y-1 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider font-mono">
               Total Users
             </span>
-            <div className="w-8 h-8 rounded-xl bg-purple-950/80 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-200/80 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
               {statsLoading ? <span className="animate-pulse">--</span> : stats.totalUsers}
             </p>
-            <span className="text-[10px] font-semibold text-purple-400 mt-1 block">
+            <span className="text-[10px] font-semibold text-purple-600 mt-1 block">
               {trends.totalUsers || '+12% this month'}
             </span>
           </div>
         </div>
 
         {/* PLAYERS (Cyan) */}
-        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-cyan-500/30 hover:border-cyan-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-cyan-950/20 flex flex-col justify-between">
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-cyan-300 transition-all duration-200 hover:-translate-y-1 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider font-mono">
               Players
             </span>
-            <div className="w-8 h-8 rounded-xl bg-cyan-950/80 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 rounded-xl bg-cyan-50 border border-cyan-200/80 flex items-center justify-center text-cyan-600 group-hover:scale-110 transition-transform">
               <Swords className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
               {statsLoading ? <span className="animate-pulse">--</span> : stats.players}
             </p>
-            <span className="text-[10px] font-semibold text-cyan-400 mt-1 block">
+            <span className="text-[10px] font-semibold text-cyan-600 mt-1 block">
               {trends.players || '+8% this week'}
             </span>
           </div>
         </div>
 
         {/* PENDING VERIFICATION (Orange) */}
-        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-amber-500/30 hover:border-amber-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-amber-950/20 flex flex-col justify-between">
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-amber-300 transition-all duration-200 hover:-translate-y-1 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider font-mono">
               Pending
             </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-950/80 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
               {statsLoading ? <span className="animate-pulse">--</span> : stats.pending}
             </p>
-            <span className="text-[10px] font-semibold text-amber-400 mt-1 block">
+            <span className="text-[10px] font-semibold text-amber-600 mt-1 block">
               {trends.pending || 'Requires verification'}
             </span>
           </div>
         </div>
 
         {/* SUSPENDED (Red) */}
-        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-rose-500/30 hover:border-rose-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-rose-950/20 flex flex-col justify-between">
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-rose-300 transition-all duration-200 hover:-translate-y-1 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider font-mono">
               Suspended
             </span>
-            <div className="w-8 h-8 rounded-xl bg-rose-950/80 border border-rose-500/30 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
               <UserX className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
               {statsLoading ? <span className="animate-pulse">--</span> : stats.suspended}
             </p>
-            <span className="text-[10px] font-semibold text-rose-400 mt-1 block">
+            <span className="text-[10px] font-semibold text-rose-600 mt-1 block">
               {trends.suspended || 'Restricted access'}
             </span>
           </div>
         </div>
       </div>
 
-
       {/* ==================================================
           5. SEARCH AND FILTER TOOLBAR
           ================================================== */}
-      <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-4">
+      <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search Input (Debounced) */}
           <div className="relative flex-1 min-w-[260px]">
@@ -844,12 +843,12 @@ const AdminUsers = () => {
               placeholder="Search by name, username or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all font-mono"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:bg-white transition-all font-mono"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -865,7 +864,7 @@ const AdminUsers = () => {
                 setSelectedGame(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono min-w-[130px]"
+              className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-purple-500 font-mono min-w-[130px]"
             >
               <option value="all">All Games</option>
               <option value="BGMI">BGMI</option>
@@ -879,16 +878,16 @@ const AdminUsers = () => {
             <button
               onClick={handleExport}
               title="Export filtered dataset to CSV"
-              className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 border border-slate-200 shadow-sm flex items-center gap-1.5 transition-all"
             >
-              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <Download className="w-3.5 h-3.5 text-cyan-600" />
               <span>Export</span>
             </button>
 
             <button
               onClick={handleRefreshAll}
               title="Refresh users roster and reset filters"
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs font-bold text-white shadow-lg shadow-cyan-600/20 border border-cyan-400/30 flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs font-bold text-white shadow-md shadow-cyan-600/20 flex items-center gap-1.5 transition-all"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>REFRESH</span>
@@ -923,39 +922,39 @@ const AdminUsers = () => {
           ================================================== */}
       {loading ? (
         /* Skeleton Table Loader */
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl p-4 space-y-4">
-          <div className="h-6 bg-slate-800/60 rounded-md animate-pulse w-48" />
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm p-4 space-y-4">
+          <div className="h-6 bg-slate-100 rounded-md animate-pulse w-48" />
           <div className="space-y-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-14 bg-slate-800/40 rounded-xl animate-pulse flex items-center px-4 justify-between">
+              <div key={i} className="h-14 bg-slate-50 rounded-xl animate-pulse flex items-center px-4 justify-between border border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-700/60" />
+                  <div className="w-8 h-8 rounded-full bg-slate-200" />
                   <div className="space-y-1.5">
-                    <div className="w-28 h-3 bg-slate-700/60 rounded" />
-                    <div className="w-16 h-2.5 bg-slate-800 rounded" />
+                    <div className="w-28 h-3 bg-slate-200 rounded" />
+                    <div className="w-16 h-2.5 bg-slate-100 rounded" />
                   </div>
                 </div>
-                <div className="w-24 h-3 bg-slate-700/40 rounded hidden md:block" />
-                <div className="w-20 h-5 bg-slate-700/40 rounded-full" />
-                <div className="w-16 h-5 bg-slate-700/40 rounded-full" />
+                <div className="w-24 h-3 bg-slate-100 rounded hidden md:block" />
+                <div className="w-20 h-5 bg-slate-100 rounded-full" />
+                <div className="w-16 h-5 bg-slate-100 rounded-full" />
               </div>
             ))}
           </div>
         </div>
       ) : users.length === 0 ? (
         /* Empty State */
-        <div className="p-12 text-center rounded-3xl border border-slate-800/80 bg-slate-900/40 space-y-4 max-w-lg mx-auto">
-          <div className="w-16 h-16 rounded-2xl bg-purple-950/50 border border-purple-500/30 flex items-center justify-center mx-auto text-purple-400">
+        <div className="p-12 text-center rounded-3xl border border-slate-200 bg-white space-y-4 max-w-lg mx-auto shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-center mx-auto text-purple-600">
             <Users className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-white font-mono">NO USERS FOUND</h3>
-          <p className="text-xs text-slate-400">
+          <h3 className="text-xl font-bold text-slate-900 font-mono">NO USERS FOUND</h3>
+          <p className="text-xs text-slate-500">
             No accounts match your current filters. Clear the search parameters to view the active roster.
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
               onClick={handleResetFilters}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
             >
               Clear Filters
             </button>
@@ -964,17 +963,17 @@ const AdminUsers = () => {
       ) : (
         <>
           {/* DESKTOP / TABLET TABLE VIEW (Hidden on Mobile) */}
-          <div className="hidden md:block rounded-2xl border border-slate-800/90 bg-slate-900/60 overflow-hidden shadow-2xl backdrop-blur-md">
+          <div className="hidden md:block rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950/90 uppercase font-mono text-slate-400 border-b border-slate-800 tracking-wider">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 uppercase font-mono text-slate-500 border-b border-slate-200 tracking-wider">
                   <tr>
                     <th className="p-4 w-10">
                       <input
                         type="checkbox"
                         checked={selectedUserIds.length === users.length && users.length > 0}
                         onChange={handleSelectAll}
-                        className="rounded border-slate-700 bg-slate-900 text-purple-600 focus:ring-purple-500"
+                        className="rounded border-slate-300 bg-white text-purple-600 focus:ring-purple-500"
                       />
                     </th>
                     <th className="p-4 w-10">#</th>
@@ -988,7 +987,7 @@ const AdminUsers = () => {
                     <th className="p-4 text-right">ACTIONS</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/70">
+                <tbody className="divide-y divide-slate-100">
                   {users.map((u, idx) => {
                     const rowNumber = (currentPage - 1) * limit + idx + 1;
                     const isSelected = selectedUserIds.includes(u._id);
@@ -996,8 +995,8 @@ const AdminUsers = () => {
                     return (
                       <tr
                         key={u._id}
-                        className={`transition-colors duration-150 hover:bg-slate-800/40 ${
-                          isSelected ? 'bg-purple-950/20' : ''
+                        className={`transition-colors duration-150 hover:bg-slate-50/80 ${
+                          isSelected ? 'bg-purple-50/50' : ''
                         }`}
                       >
                         {/* Checkbox */}
@@ -1006,12 +1005,12 @@ const AdminUsers = () => {
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggleSelectUser(u._id)}
-                            className="rounded border-slate-700 bg-slate-900 text-purple-600 focus:ring-purple-500"
+                            className="rounded border-slate-300 bg-white text-purple-600 focus:ring-purple-500"
                           />
                         </td>
 
                         {/* # Index */}
-                        <td className="p-4 font-mono text-slate-500 text-[11px]">
+                        <td className="p-4 font-mono text-slate-400 text-[11px]">
                           {rowNumber}
                         </td>
 
@@ -1024,10 +1023,10 @@ const AdminUsers = () => {
                           >
                             {renderAvatar(u, 'w-9 h-9')}
                             <div className="min-w-0">
-                              <span className="font-bold text-white block truncate group-hover/user:text-purple-300 transition-colors">
+                              <span className="font-bold text-slate-900 block truncate group-hover/user:text-purple-600 transition-colors">
                                 {u.name}
                               </span>
-                              <span className="text-[11px] text-slate-500 font-mono block">
+                              <span className="text-[11px] text-slate-400 font-mono block">
                                 @{u.username}
                               </span>
                             </div>
@@ -1035,26 +1034,26 @@ const AdminUsers = () => {
                         </td>
 
                         {/* College */}
-                        <td className="p-4 text-slate-300 max-w-[180px] truncate" title={u.college}>
+                        <td className="p-4 text-slate-600 max-w-[180px] truncate" title={u.college}>
                           {u.college || 'UEM Jaipur'}
                         </td>
 
                         {/* Team with Verified Badge */}
                         <td className="p-4">
                           <div className="space-y-0.5 max-w-[170px]">
-                            <span className="font-semibold text-slate-200 block truncate">
+                            <span className="font-semibold text-slate-800 block truncate">
                               {u.teamInfo?.name || u.teamName || 'Free Agent'}
                             </span>
                             {u.teamInfo?.isFreeAgent || (!u.teamName || u.teamName.toLowerCase() === 'free agent') ? (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-cyan-400/90 font-semibold">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-cyan-700 font-semibold">
                                 ⚡ FREE AGENT
                               </span>
                             ) : u.teamInfo?.isVerified ? (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 font-bold">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-700 font-bold">
                                 <Check className="w-2.5 h-2.5" /> VERIFIED
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-amber-400/90 font-medium">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-amber-700 font-medium">
                                 ⚠ UNVERIFIED
                               </span>
                             )}
@@ -1077,7 +1076,7 @@ const AdminUsers = () => {
                         </td>
 
                         {/* Joined Date */}
-                        <td className="p-4 font-mono text-slate-400 text-[11px] whitespace-nowrap">
+                        <td className="p-4 font-mono text-slate-500 text-[11px] whitespace-nowrap">
                           {formatDate(u.createdAt)}
                         </td>
 
@@ -1087,7 +1086,7 @@ const AdminUsers = () => {
                             <button
                               onClick={() => handleOpenEdit(u)}
                               title="Edit User"
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
@@ -1098,58 +1097,58 @@ const AdminUsers = () => {
                                 setActiveMenuId(activeMenuId === u._id ? null : u._id);
                               }}
                               title="More Actions"
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors"
                             >
                               <MoreVertical className="w-3.5 h-3.5" />
                             </button>
 
                             {/* Dropdown Menu */}
                             {activeMenuId === u._id && (
-                              <div className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-slate-950 border border-slate-800 shadow-2xl p-1.5 z-30 text-left space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                              <div className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-white border border-slate-200 shadow-xl p-1.5 z-30 text-left space-y-1 animate-in fade-in zoom-in-95 duration-100">
                                 <button
                                   onClick={() => {
                                     setActiveMenuId(null);
                                     handleOpenProfileDrawer(u);
                                   }}
-                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-purple-300 hover:bg-slate-900 transition-colors"
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-purple-700 hover:bg-purple-50 transition-colors"
                                 >
-                                  <Users className="w-3.5 h-3.5 text-purple-400" />
+                                  <Users className="w-3.5 h-3.5 text-purple-600" />
                                   <span>View Profile</span>
                                 </button>
 
                                 <button
                                   onClick={() => promptResetAccess(u)}
-                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-900 hover:text-white transition-colors"
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
                                 >
-                                  <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                                  <KeyRound className="w-3.5 h-3.5 text-cyan-600" />
                                   <span>Reset Access</span>
                                 </button>
 
                                 {u.status === 'suspended' ? (
                                   <button
                                     onClick={() => promptActivate(u)}
-                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-400 hover:bg-emerald-950/40 transition-colors"
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
                                   >
-                                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
                                     <span>Activate User</span>
                                   </button>
                                 ) : (
                                   <button
                                     onClick={() => promptSuspend(u)}
-                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-400 hover:bg-amber-950/40 transition-colors"
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors"
                                   >
-                                    <UserX className="w-3.5 h-3.5 text-amber-400" />
+                                    <UserX className="w-3.5 h-3.5 text-amber-600" />
                                     <span>Suspend User</span>
                                   </button>
                                 )}
 
-                                <div className="border-t border-slate-800 my-1" />
+                                <div className="border-t border-slate-100 my-1" />
 
                                 <button
                                   onClick={() => promptDelete(u)}
-                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-950/40 transition-colors"
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                                   <span>Delete User</span>
                                 </button>
                               </div>
@@ -1171,51 +1170,51 @@ const AdminUsers = () => {
             {users.map((u) => (
               <div
                 key={u._id}
-                className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3 shadow-lg"
+                className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     {renderAvatar(u, 'w-10 h-10')}
                     <div>
-                      <h4 className="font-bold text-white text-sm leading-tight">{u.name}</h4>
+                      <h4 className="font-bold text-slate-900 text-sm leading-tight">{u.name}</h4>
                       <p className="text-xs text-slate-400 font-mono">@{u.username}</p>
                     </div>
                   </div>
                   {renderStatusBadge(u.status)}
                 </div>
 
-                <div className="text-xs text-slate-300 font-medium">
+                <div className="text-xs text-slate-600 font-medium">
                   {u.college || 'UEM Jaipur'}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-xs text-slate-300 font-semibold bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 flex items-center gap-1">
+                  <span className="text-xs text-slate-700 font-semibold bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 flex items-center gap-1">
                     🛡 {u.teamInfo?.name || u.teamName || 'Free Agent'}
                   </span>
                   {renderGameBadge(u.game)}
                   {renderRoleBadge(u.role)}
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
-                  <span className="text-[11px] text-slate-500 font-mono">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <span className="text-[11px] text-slate-400 font-mono">
                     Joined: {formatDate(u.createdAt)}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleOpenProfileDrawer(u)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-purple-300 hover:bg-slate-700"
+                      className="px-3 py-1.5 rounded-lg bg-purple-50 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-colors"
                     >
                       View
                     </button>
                     <button
                       onClick={() => handleOpenEdit(u)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => promptSuspend(u)}
-                      className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+                      className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors"
                       title="More"
                     >
                       <MoreVertical className="w-3.5 h-3.5" />
@@ -1229,12 +1228,12 @@ const AdminUsers = () => {
           {/* ==================================================
               19. SERVER-SIDE PAGINATION
               ================================================== */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 text-xs text-slate-500 shadow-sm">
             {/* Range display */}
             <div className="font-mono">
-              Showing <span className="text-white font-bold">{Math.min((currentPage - 1) * limit + 1, totalCount)}</span>–
-              <span className="text-white font-bold">{Math.min(currentPage * limit, totalCount)}</span> of{' '}
-              <span className="text-purple-400 font-bold">{totalCount}</span> users
+              Showing <span className="text-slate-900 font-bold">{Math.min((currentPage - 1) * limit + 1, totalCount)}</span>–
+              <span className="text-slate-900 font-bold">{Math.min(currentPage * limit, totalCount)}</span> of{' '}
+              <span className="text-purple-600 font-bold">{totalCount}</span> users
             </div>
 
             {/* Page buttons */}
@@ -1242,7 +1241,7 @@ const AdminUsers = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-colors"
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 transition-colors"
                 aria-label="Previous Page"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -1261,8 +1260,8 @@ const AdminUsers = () => {
                     onClick={() => setCurrentPage(pNum)}
                     className={`w-8 h-8 rounded-xl font-mono text-xs font-bold transition-all ${
                       currentPage === pNum
-                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
-                        : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                        ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {pNum}
@@ -1272,10 +1271,10 @@ const AdminUsers = () => {
 
               {totalPages > 5 && currentPage < totalPages - 2 && (
                 <>
-                  <span className="px-1 text-slate-600 font-mono">...</span>
+                  <span className="px-1 text-slate-400 font-mono">...</span>
                   <button
                     onClick={() => setCurrentPage(totalPages)}
-                    className="w-8 h-8 rounded-xl bg-slate-800/80 font-mono text-xs font-bold text-slate-300 hover:bg-slate-700"
+                    className="w-8 h-8 rounded-xl bg-slate-100 font-mono text-xs font-bold text-slate-700 hover:bg-slate-200"
                   >
                     {totalPages}
                   </button>
@@ -1285,7 +1284,7 @@ const AdminUsers = () => {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-colors"
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 transition-colors"
                 aria-label="Next Page"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1301,7 +1300,7 @@ const AdminUsers = () => {
                   setLimit(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-purple-500"
+                className="px-2 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 focus:outline-none focus:border-purple-500"
               >
                 <option value={10}>10 / page</option>
                 <option value={25}>25 / page</option>
