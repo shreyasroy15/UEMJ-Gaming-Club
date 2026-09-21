@@ -130,7 +130,7 @@ const AdminCommandPalette = ({ isOpen, onClose }) => {
     { name: 'Announcements Broadcast', path: '/admin/announcements', icon: Megaphone, category: 'Navigation' },
     { name: 'Media Gallery', path: '/admin/gallery', icon: Image, category: 'Navigation' },
     { name: 'BGMI Command Hub', path: '/admin/games/bgmi', icon: Gamepad2, category: 'Games' },
-    { name: 'Free Fire Command Hub', path: '/admin/games/free-fire', icon: Gamepad2, category: 'Games' },
+    { name: 'Free Fire Command Hub', path: '/admin/games/free-fire', icon: Gamepad2, image: 'https://wallpapers.com/images/hd/free-fire-logo-in-black-neggg4nr4exfv0yh.jpg', category: 'Games' },
     { name: 'Valorant Command Hub', path: '/admin/games/valorant', icon: Gamepad2, category: 'Games' },
   ];
 
@@ -293,7 +293,21 @@ const AdminCommandPalette = ({ isOpen, onClose }) => {
                   className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-100/80 border border-transparent hover:border-slate-200 flex items-center justify-between group transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
-                    <act.icon className="w-4 h-4 text-slate-400 group-hover:text-sky-600 transition-colors" />
+                    {act.image ? (
+                      <div className="w-4 h-4 rounded overflow-hidden shrink-0 bg-black border border-slate-200 flex items-center justify-center">
+                        <img
+                          src={act.image}
+                          alt={act.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/assets/free-fire-logo.jpg';
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <act.icon className="w-4 h-4 text-slate-400 group-hover:text-sky-600 transition-colors shrink-0" />
+                    )}
                     <span className="text-slate-700 group-hover:text-slate-900 font-medium">
                       {act.name}
                     </span>

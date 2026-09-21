@@ -113,6 +113,7 @@ const AdminLayout = () => {
           name: 'Free Fire',
           path: '/admin/games/free-fire',
           icon: Gamepad2,
+          image: 'https://wallpapers.com/images/hd/free-fire-logo-in-black-neggg4nr4exfv0yh.jpg',
           tag: 'SURV',
           color: 'text-orange-400',
           indicatorColor: 'bg-orange-400',
@@ -302,12 +303,26 @@ const AdminLayout = () => {
                     >
                       {({ isActive }) => (
                         <>
-                          <div className="flex items-center gap-3 truncate">
-                            <item.icon
-                              className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
-                                isActive ? 'text-sky-500' : item.color || 'text-slate-400'
-                              }`}
-                            />
+                          <div className="flex items-center gap-2.5 truncate">
+                            {item.image ? (
+                              <div className="w-5 h-5 rounded-md overflow-hidden shrink-0 border border-orange-400/40 bg-black flex items-center justify-center shadow-xs">
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = '/assets/free-fire-logo.jpg';
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <item.icon
+                                className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
+                                  isActive ? 'text-sky-500' : item.color || 'text-slate-400'
+                                }`}
+                              />
+                            )}
                             <span className="truncate">{item.name}</span>
                           </div>
 

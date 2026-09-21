@@ -54,7 +54,8 @@ const GAME_CONFIG = {
       badge: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
       glow: 'shadow-[0_0_20px_rgba(249,115,22,0.15)]',
     },
-    defaultLogo: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80',
+    defaultLogo: 'https://wallpapers.com/images/hd/free-fire-logo-in-black-neggg4nr4exfv0yh.jpg',
+    logo: 'https://wallpapers.com/images/hd/free-fire-logo-in-black-neggg4nr4exfv0yh.jpg',
     description: 'Fast-paced survival esports bracket management and points accumulation.',
   },
   valorant: {
@@ -165,9 +166,21 @@ const AdminGameView = () => {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start sm:items-center gap-4 sm:gap-6">
             <div
-              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-1 bg-white border border-slate-200 shadow-sm flex items-center justify-center shrink-0`}
+              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-1 bg-black border border-slate-200 shadow-sm flex items-center justify-center shrink-0 overflow-hidden`}
             >
-              <Gamepad2 className={`w-9 h-9 sm:w-11 sm:h-11 ${game.themeClass.text}`} />
+              {game.logo ? (
+                <img
+                  src={game.logo}
+                  alt={game.fullName}
+                  className="w-full h-full object-cover rounded-xl"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/assets/free-fire-logo.jpg';
+                  }}
+                />
+              ) : (
+                <Gamepad2 className={`w-9 h-9 sm:w-11 sm:h-11 ${game.themeClass.text}`} />
+              )}
             </div>
 
             <div className="space-y-1">
