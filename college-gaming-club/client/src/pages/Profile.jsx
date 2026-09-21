@@ -112,13 +112,6 @@ const Profile = () => {
 
           <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
             <button
-              onClick={() => setAvatarModalOpen(true)}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> Choose Avatar
-            </button>
-
-            <button
               onClick={() => {
                 setFormData({
                   name: user?.name || '',
