@@ -130,11 +130,11 @@ const AdminLayout = () => {
   ];
 
   return (
-    <div className="min-h-screen admin-grid-bg text-slate-800 flex flex-col font-sans selection:bg-sky-500/20 selection:text-sky-900">
+    <div className="h-screen max-h-screen overflow-hidden admin-grid-bg text-slate-800 flex flex-col font-sans selection:bg-sky-500/20 selection:text-sky-900">
       {/* ========================================================================= */}
       {/* TOP HEADER COMMAND BAR */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-40 h-16 sm:h-20 admin-glass-panel border-b border-slate-200/80 px-3.5 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-6 shadow-sm">
+      <header className="shrink-0 z-40 h-16 sm:h-20 admin-glass-panel border-b border-slate-200/80 px-3.5 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-6 shadow-sm">
         {/* Left: Logo, Branding & Mobile Toggle */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           {/* Mobile drawer toggle */}
@@ -237,7 +237,7 @@ const AdminLayout = () => {
       {/* ========================================================================= */}
       {/* BODY WITH FULL RESPONSIVE SIDEBAR & CONTENT */}
       {/* ========================================================================= */}
-      <div className="flex-1 flex min-w-0 overflow-hidden">
+      <div className="flex-1 flex min-w-0 overflow-hidden relative">
         {/* Mobile Backdrop overlay */}
         {sidebarOpen && (
           <div
@@ -246,19 +246,19 @@ const AdminLayout = () => {
           />
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar: Constant, Static, and Pinned on Desktop; Smooth Drawer on Mobile */}
         <aside
           className={`
-            fixed md:sticky top-16 sm:top-20 inset-y-0 left-0 z-50 md:z-30 h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)]
-            w-72 max-w-[85vw] md:w-64 admin-glass-panel border-r border-slate-200/80 p-4 flex flex-col justify-between shrink-0 shadow-sm
-            transition-transform duration-300 ease-in-out select-none admin-scrollbar
-            ${sidebarOpen ? 'translate-x-0 shadow-2xl bg-white' : '-translate-x-full md:translate-x-0'}
+            fixed md:relative inset-y-0 left-0 z-50 md:z-30 h-full
+            w-72 max-w-[85vw] md:w-64 bg-white/95 md:bg-white/80 backdrop-blur-md border-r border-slate-200/80 p-4 flex flex-col justify-between shrink-0 shadow-sm
+            transition-transform duration-300 ease-in-out select-none
+            ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}
           `}
         >
-          {/* Top Section: Nav Groups */}
-          <div className="space-y-6 overflow-y-auto pr-1 admin-scrollbar">
+          {/* Top Section: Nav Groups (Internally scrollable for responsiveness on short screens) */}
+          <div className="flex-1 overflow-y-auto space-y-6 pr-1.5 overscroll-contain admin-scrollbar">
             {/* Mobile Drawer Header with Close */}
-            <div className="md:hidden flex items-center justify-between pb-3 mb-1 border-b border-slate-200 px-1">
+            <div className="md:hidden flex items-center justify-between pb-3 mb-1 border-b border-slate-200 px-1 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-slate-950 border border-lime-400/40 p-0.5 flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
                   <img
@@ -271,7 +271,7 @@ const AdminLayout = () => {
               </div>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 transition-colors"
+                className="p-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -333,8 +333,8 @@ const AdminLayout = () => {
             ))}
           </div>
 
-          {/* Bottom Sidebar: Admin Profile */}
-          <div className="pt-3 border-t border-slate-200/80 mt-2">
+          {/* Bottom Sidebar: Admin Profile (Pinned constant at the bottom) */}
+          <div className="shrink-0 pt-3 border-t border-slate-200/80 mt-2">
             <div className="flex items-center justify-between bg-white rounded-xl p-2.5 shadow-sm border border-slate-100">
               <div className="flex items-center gap-2.5 truncate">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
@@ -362,9 +362,9 @@ const AdminLayout = () => {
         </aside>
 
         {/* ========================================================================= */}
-        {/* MAIN ADMIN CONTENT AREA */}
+        {/* MAIN ADMIN CONTENT AREA: Smooth independent vertical scroll */}
         {/* ========================================================================= */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-y-auto admin-scrollbar pb-20 md:pb-8">
+        <main className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto admin-scrollbar overscroll-contain pb-20 md:pb-8">
           <div className="p-3.5 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-6">
             <ErrorBoundary>
               <Outlet />
