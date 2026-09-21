@@ -5,11 +5,130 @@ const Match = require('../models/Match');
 const Team = require('../models/Team');
 const Tournament = require('../models/Tournament');
 const { isSuperAdmin } = require('../middleware/adminMiddleware');
+const { getCapitalLetterAvatarUrl } = require('../utils/avatar');
 
 // Helper to normalize roles for display/queries
 const normalizeRole = (role) => {
   if (role === 'student') return 'player';
   return role || 'player';
+};
+
+// Helper to resolve detailed team info and verification status
+const resolveTeamInfo = async (u, captainIds = []) => {
+  const rawTeam = (u.teamName || '').trim();
+  const isFreeAgent =
+    !rawTeam ||
+    rawTeam.toLowerCase() === 'free agent' ||
+    rawTeam.toLowerCase() === 'none' ||
+    rawTeam.toLowerCase() === 'solo';
+
+  if (isFreeAgent) {
+    return {
+      name: 'Free Agent',
+      isFreeAgent: true,
+      isVerified: null,
+      teamId: null,
+      teamType: null,
+      roleInTeam: 'Solo Player',
+      game: u.game || (u.games && u.games[0]) || 'BGMI',
+      memberCount: 0,
+      tag: '',
+    };
+  }
+
+  const teamRegex = new RegExp(`^${rawTeam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+
+  // 1. Check TournamentRegistration matching the user's specific team name
+  let reg = await TournamentRegistration.findOne({ teamName: teamRegex })
+    .sort({ createdAt: -1 })
+    .select('teamName isVerified status players game teamTag captain leader')
+    .lean();
+
+  if (!reg) {
+    reg = await TournamentRegistration.findOne({
+      $or: [
+        { captain: u._id },
+        { leader: u._id },
+        { 'players.user': u._id },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .select('teamName isVerified status players game teamTag captain leader')
+      .lean();
+  }
+
+  if (reg) {
+    const isCaptain = Boolean(
+      (reg.captain && reg.captain.toString() === u._id.toString()) ||
+      (reg.leader && reg.leader.toString() === u._id.toString()) ||
+      u.role === 'captain' ||
+      captainIds.includes(u._id.toString())
+    );
+    return {
+      name: reg.teamName,
+      tag: reg.teamTag || '',
+      isFreeAgent: false,
+      isVerified: Boolean(reg.isVerified || reg.status === 'verified'),
+      teamId: reg._id,
+      teamType: 'registration',
+      roleInTeam: isCaptain ? 'Captain' : 'Player',
+      game: reg.game || u.game || (u.games && u.games[0]) || 'BGMI',
+      memberCount: Array.isArray(reg.players) ? reg.players.length : 4,
+    };
+  }
+
+  // 2. Check Team model matching the user's specific team name
+  let teamDoc = await Team.findOne({ name: teamRegex })
+    .select('name isVerified game members tag captain')
+    .lean();
+
+  if (!teamDoc) {
+    teamDoc = await Team.findOne({
+      $or: [
+        { captain: u._id },
+        { 'members.user': u._id },
+      ],
+    })
+      .select('name isVerified game members tag captain')
+      .lean();
+  }
+
+  if (teamDoc) {
+    const isCaptain = Boolean(
+      (teamDoc.captain && teamDoc.captain.toString() === u._id.toString()) ||
+      u.role === 'captain' ||
+      captainIds.includes(u._id.toString())
+    );
+    return {
+      name: teamDoc.name,
+      tag: teamDoc.tag || '',
+      isFreeAgent: false,
+      isVerified: Boolean(teamDoc.isVerified),
+      teamId: teamDoc._id,
+      teamType: 'team',
+      roleInTeam: isCaptain ? 'Captain' : 'Player',
+      game: teamDoc.game || u.game || (u.games && u.games[0]) || 'BGMI',
+      memberCount: Array.isArray(teamDoc.members) ? teamDoc.members.length : 4,
+    };
+  }
+
+  // 3. Fallback: custom team name assigned in User collection
+  const sameTeamUsers = await User.countDocuments({
+    teamName: teamRegex,
+    isDeleted: false,
+  });
+
+  return {
+    name: rawTeam,
+    tag: '',
+    isFreeAgent: false,
+    isVerified: false,
+    teamId: null,
+    teamType: 'custom',
+    roleInTeam: u.role === 'captain' ? 'Captain' : 'Player',
+    game: u.game || (u.games && u.games[0]) || 'BGMI',
+    memberCount: sameTeamUsers || 1,
+  };
 };
 
 // @desc    Get all users with server-side pagination & filtering
@@ -118,50 +237,13 @@ exports.getUsers = async (req, res, next) => {
     // Enrich users with live team verification status if available
     const enrichedUsers = await Promise.all(
       users.map(async (u) => {
-        let teamInfo = {
-          name: u.teamName || 'Free Agent',
-          isVerified: false,
-          teamId: null,
-          roleInTeam: u.role === 'captain' ? 'Captain' : 'Member',
-          game: u.game || (u.games && u.games[0]) || 'BGMI',
-          memberCount: 4,
-        };
+        const teamInfo = await resolveTeamInfo(u, captainIds);
 
-        // Check if user is captain or player in a TournamentRegistration
-        const reg = await TournamentRegistration.findOne({
-          $or: [
-            { captain: u._id },
-            { leader: u._id },
-            { 'players.user': u._id },
-          ],
-        })
-          .sort({ createdAt: -1 })
-          .select('teamName isVerified status players game')
-          .lean();
-
-        if (reg) {
-          teamInfo.name = reg.teamName;
-          teamInfo.isVerified = Boolean(reg.isVerified || reg.status === 'verified');
-          teamInfo.teamId = reg._id;
-          teamInfo.memberCount = Array.isArray(reg.players) ? reg.players.length : 4;
-        } else {
-          // Check standard Team model
-          const teamDoc = await Team.findOne({
-            $or: [{ captain: u._id }, { 'members.user': u._id }],
-          })
-            .select('name isVerified game members')
-            .lean();
-
-          if (teamDoc) {
-            teamInfo.name = teamDoc.name;
-            teamInfo.isVerified = Boolean(teamDoc.isVerified);
-            teamInfo.teamId = teamDoc._id;
-            teamInfo.game = teamDoc.game;
-            teamInfo.memberCount = Array.isArray(teamDoc.members) ? teamDoc.members.length : 4;
-          }
-        }
-
-        const isCaptain = Boolean(u.role === 'captain' || captainIds.includes(u._id.toString()));
+        const isCaptain = Boolean(
+          u.role === 'captain' ||
+          teamInfo.roleInTeam === 'Captain' ||
+          captainIds.includes(u._id.toString())
+        );
         const displayRole = ['admin', 'super_admin'].includes(u.role)
           ? 'admin'
           : isCaptain
@@ -180,11 +262,13 @@ exports.getUsers = async (req, res, next) => {
       })
     );
 
-    // Get list of distinct team names for filter dropdown
-    const distinctTeams = await User.distinct('teamName', {
-      teamName: { $nin: ['', null] },
-      isDeleted: false,
-    });
+    // Get list of distinct team names for filter dropdown and team assignment
+    const [userTeams, clubTeams, regTeams] = await Promise.all([
+      User.distinct('teamName', { teamName: { $nin: ['', null, 'Free Agent', 'free agent', 'Solo'] }, isDeleted: false }),
+      Team.distinct('name'),
+      TournamentRegistration.distinct('teamName'),
+    ]);
+    const distinctTeams = [...new Set([...userTeams, ...clubTeams, ...regTeams].filter(Boolean))].sort();
 
     res.status(200).json({
       success: true,
@@ -278,33 +362,7 @@ exports.getUserById = async (req, res, next) => {
     }
 
     // Resolve team info with verification
-    let teamInfo = {
-      name: user.teamName || 'Free Agent',
-      isVerified: false,
-      teamId: null,
-      roleInTeam: user.role === 'captain' ? 'Captain' : 'Player',
-      game: user.game || (user.games && user.games[0]) || 'BGMI',
-      memberCount: 4,
-      tag: '',
-    };
-
-    const reg = await TournamentRegistration.findOne({
-      $or: [
-        { captain: user._id },
-        { leader: user._id },
-        { 'players.user': user._id },
-      ],
-    })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    if (reg) {
-      teamInfo.name = reg.teamName;
-      teamInfo.tag = reg.teamTag || '';
-      teamInfo.isVerified = Boolean(reg.isVerified || reg.status === 'verified');
-      teamInfo.teamId = reg._id;
-      teamInfo.memberCount = Array.isArray(reg.players) ? reg.players.length : 4;
-    }
+    const teamInfo = await resolveTeamInfo(user);
 
     // Calculate actual player stats from matches & user stats
     const matchesCount = user.stats?.matchesPlayed || 0;
@@ -409,7 +467,7 @@ exports.createUser = async (req, res, next) => {
       role: userRole,
       teamName: team || teamName || '',
       status: status.toLowerCase() || 'active',
-      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanUsername}`,
+      avatar: getCapitalLetterAvatarUrl(name, cleanUsername),
     });
 
     const userObj = newUser.toObject();
@@ -489,7 +547,15 @@ exports.updateUser = async (req, res, next) => {
     if (name) userToEdit.name = name.trim();
     if (college) userToEdit.college = college.trim();
     if (bio !== undefined) userToEdit.bio = bio;
-    if (avatar) userToEdit.avatar = avatar;
+    if (avatar !== undefined) {
+      if (!avatar || avatar.includes('photo-1566492031773-4f4e44671857')) {
+        userToEdit.avatar = getCapitalLetterAvatarUrl(userToEdit.name, userToEdit.username);
+      } else {
+        userToEdit.avatar = avatar.trim();
+      }
+    } else if (name && (!userToEdit.avatar || userToEdit.avatar.includes('ui-avatars.com') || userToEdit.avatar.includes('photo-1566492031773-4f4e44671857'))) {
+      userToEdit.avatar = getCapitalLetterAvatarUrl(userToEdit.name, userToEdit.username);
+    }
     if (game) {
       userToEdit.game = game;
       if (!userToEdit.games.includes(game)) userToEdit.games.push(game);

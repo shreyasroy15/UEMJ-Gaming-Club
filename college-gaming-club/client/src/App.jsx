@@ -46,6 +46,7 @@ import AdminEvents from './pages/admin/Events';
 import AdminAnnouncements from './pages/admin/Announcements';
 import AdminGallery from './pages/admin/Gallery';
 import AdminUsers from './pages/admin/Users';
+import AdminGameView from './pages/admin/AdminGameView';
 
 // Route Guards
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute/ProtectedRoute';
@@ -135,6 +136,7 @@ function App() {
                 <Route path=":tournamentId/:registrationId" element={<AdminTeamDetails />} />
               </Route>
               <Route path="games" element={<AdminGames />} />
+              <Route path="games/:gameKey" element={<AdminGameView />} />
               <Route path="events" element={<AdminEvents />} />
               <Route path="announcements" element={<AdminAnnouncements />} />
               <Route path="gallery" element={<AdminGallery />} />

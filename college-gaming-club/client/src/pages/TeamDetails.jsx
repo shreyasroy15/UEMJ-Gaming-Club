@@ -4,6 +4,7 @@ import API from '../services/api';
 import Loading from '../components/Loading/Loading';
 import EmptyState from '../components/EmptyState/EmptyState';
 import Modal from '../components/Modal/Modal';
+import Avatar from '../components/Avatar/Avatar';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import {
@@ -277,10 +278,11 @@ const TeamDetails = () => {
                   className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={u.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'}
-                      alt={u.name}
-                      className="w-11 h-11 rounded-xl object-cover border border-slate-700 shrink-0"
+                    <Avatar
+                      user={u}
+                      size="md"
+                      className="w-11 h-11 rounded-xl border border-slate-700 shrink-0"
+                      imgClassName="rounded-xl"
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">

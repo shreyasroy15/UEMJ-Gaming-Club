@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import API from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
@@ -15,15 +15,15 @@ import {
   XCircle,
   Clock,
   Search,
-  RotateCcw,
   Download,
+  RefreshCw,
   Plus,
+  UserPlus,
   Edit3,
   Trash2,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
-  Eye,
   KeyRound,
   UserX,
   UserCheck,
@@ -41,6 +41,7 @@ import {
 
 const AdminUsers = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { addToast } = useToast();
   const { user: currentUser } = useAuth();
 
@@ -86,22 +87,6 @@ const AdminUsers = () => {
   const [userStats, setUserStats] = useState(null);
   const [userActivity, setUserActivity] = useState([]);
 
-  // Add User Modal State
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addFormData, setAddFormData] = useState({
-    name: '',
-    username: '',
-    email: '',
-    password: '',
-    college: 'University of Engineering & Management (UEM Jaipur)',
-    game: 'BGMI',
-    gameId: '',
-    role: 'player',
-    teamName: '',
-    status: 'active',
-  });
-  const [submittingAdd, setSubmittingAdd] = useState(false);
-
   // Edit User Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -118,6 +103,13 @@ const AdminUsers = () => {
     bio: '',
   });
   const [submittingEdit, setSubmittingEdit] = useState(false);
+
+  // Assign Team Modal State
+  const [assignTeamModalOpen, setAssignTeamModalOpen] = useState(false);
+  const [assigningUser, setAssigningUser] = useState(null);
+  const [assignTeamName, setAssignTeamName] = useState('');
+  const [assignRole, setAssignRole] = useState('player');
+  const [submittingAssign, setSubmittingAssign] = useState(false);
 
   // Confirmation Action Dialog Modal
   const [confirmModal, setConfirmModal] = useState({
@@ -166,21 +158,21 @@ const AdminUsers = () => {
     }
   };
 
-  // Fetch paginated & filtered users
-  const fetchUsers = async () => {
+  // Fetch paginated & filtered users (supports parameter overrides for instant reset/refresh)
+  const fetchUsers = async (overrides = {}) => {
     try {
       setLoading(true);
       setError(null);
 
       const params = {
-        page: currentPage,
+        page: overrides.page !== undefined ? overrides.page : currentPage,
         limit,
-        tab: activeTab,
-        search: debouncedSearch,
-        game: selectedGame,
-        role: selectedRole,
-        status: selectedStatus,
-        team: selectedTeam,
+        tab: overrides.tab !== undefined ? overrides.tab : activeTab,
+        search: overrides.search !== undefined ? overrides.search : debouncedSearch,
+        game: overrides.game !== undefined ? overrides.game : selectedGame,
+        role: overrides.role !== undefined ? overrides.role : selectedRole,
+        status: overrides.status !== undefined ? overrides.status : selectedStatus,
+        team: overrides.team !== undefined ? overrides.team : selectedTeam,
       };
 
       const res = await API.get('/users', { params });
@@ -209,6 +201,24 @@ const AdminUsers = () => {
     fetchUsers();
   }, [currentPage, limit, activeTab, debouncedSearch, selectedGame, selectedRole, selectedStatus, selectedTeam]);
 
+  // Automatically refresh users and stats when window gains focus or every 15 seconds
+  // so that any newly logged-in or registered user is immediately visible in the admin panel
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchUsers();
+      fetchStatsOverview();
+    };
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(() => {
+      fetchUsers();
+      fetchStatsOverview();
+    }, 15000);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [currentPage, limit, activeTab, debouncedSearch, selectedGame, selectedRole, selectedStatus, selectedTeam]);
+
   // Close row action dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -227,8 +237,8 @@ const AdminUsers = () => {
     setSelectedUserIds([]);
   };
 
-  // Reset Filters
-  const handleResetFilters = () => {
+  // Unified Refresh & Reset: Resets all filters/search and fetches latest data
+  const handleRefreshAll = async () => {
     setSearchTerm('');
     setDebouncedSearch('');
     setSelectedGame('all');
@@ -239,7 +249,24 @@ const AdminUsers = () => {
     setCurrentPage(1);
     setSelectedUserIds([]);
     setSearchParams({});
-    addToast('Filters reset to default', 'info');
+
+    try {
+      await Promise.all([
+        fetchUsers({
+          page: 1,
+          tab: 'all',
+          search: '',
+          game: 'all',
+          role: 'all',
+          status: 'all',
+          team: 'all',
+        }),
+        fetchStatsOverview(),
+      ]);
+      addToast('✓ Users roster refreshed and filters reset', 'success');
+    } catch {
+      addToast('Failed to refresh roster', 'error');
+    }
   };
 
   // Export to CSV
@@ -284,11 +311,15 @@ const AdminUsers = () => {
     setDrawerLoading(true);
 
     try {
-      // Fetch stats and activity in parallel
-      const [statsRes, actRes] = await Promise.all([
+      // Fetch fresh user profile details (including live teamInfo), stats, and activity
+      const [userRes, statsRes, actRes] = await Promise.all([
+        API.get(`/users/${userObj._id}`),
         API.get(`/users/${userObj._id}/stats`),
         API.get(`/users/${userObj._id}/activity`),
       ]);
+      if (userRes.data.success && userRes.data.user) {
+        setSelectedUser(userRes.data.user);
+      }
       if (statsRes.data.success) {
         setUserStats(statsRes.data.stats);
       }
@@ -299,6 +330,52 @@ const AdminUsers = () => {
       console.error('Error fetching user profile details:', err);
     } finally {
       setDrawerLoading(false);
+    }
+  };
+
+  // View Team in Admin Teams page
+  const handleViewTeam = (teamName) => {
+    if (!teamName || teamName.toLowerCase() === 'free agent') return;
+    navigate(`/admin/teams?tab=all-teams&search=${encodeURIComponent(teamName)}`);
+  };
+
+  // Open Assign Team Modal
+  const handleOpenAssignTeam = (userObj) => {
+    setAssigningUser(userObj);
+    const existingTeam = userObj.teamInfo?.name && !userObj.teamInfo?.isFreeAgent ? userObj.teamInfo.name : '';
+    setAssignTeamName(existingTeam);
+    setAssignRole(userObj.role === 'captain' ? 'captain' : 'player');
+    setAssignTeamModalOpen(true);
+  };
+
+  // Submit Team Assignment
+  const handleAssignTeamSubmit = async (e) => {
+    e.preventDefault();
+    if (!assigningUser) return;
+    const targetTeam = assignTeamName.trim();
+    try {
+      setSubmittingAssign(true);
+      const res = await API.put(`/users/${assigningUser._id}`, {
+        teamName: targetTeam || 'Free Agent',
+        role: assignRole === 'captain' ? 'captain' : 'student',
+      });
+      if (res.data.success) {
+        addToast(`✓ Team updated: ${targetTeam || 'Free Agent'}`, 'success');
+        setAssignTeamModalOpen(false);
+        fetchUsers();
+        fetchStatsOverview();
+        // Also update selectedUser if open in drawer
+        if (selectedUser && selectedUser._id === assigningUser._id) {
+          const updated = await API.get(`/users/${assigningUser._id}`);
+          if (updated.data.success) {
+            setSelectedUser(updated.data.user);
+          }
+        }
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to update team', 'error');
+    } finally {
+      setSubmittingAssign(false);
     }
   };
 
@@ -319,42 +396,6 @@ const AdminUsers = () => {
     });
     setEditModalOpen(true);
     setActiveMenuId(null);
-  };
-
-  // Submit Add User
-  const handleAddUserSubmit = async (e) => {
-    e.preventDefault();
-    if (!addFormData.name.trim() || !addFormData.username.trim() || !addFormData.email.trim()) {
-      addToast('Name, username and email are required', 'error');
-      return;
-    }
-
-    try {
-      setSubmittingAdd(true);
-      const res = await API.post('/users', addFormData);
-      if (res.data.success) {
-        addToast('✓ User created successfully', 'success');
-        setAddModalOpen(false);
-        setAddFormData({
-          name: '',
-          username: '',
-          email: '',
-          password: '',
-          college: 'University of Engineering & Management (UEM Jaipur)',
-          game: 'BGMI',
-          gameId: '',
-          role: 'player',
-          teamName: '',
-          status: 'active',
-        });
-        fetchStatsOverview();
-        fetchUsers();
-      }
-    } catch (err) {
-      addToast(err.response?.data?.message || '❌ Failed to create user', 'error');
-    } finally {
-      setSubmittingAdd(false);
-    }
   };
 
   // Submit Edit User
@@ -490,31 +531,52 @@ const AdminUsers = () => {
     );
   };
 
-  // Helper: Get Initials Avatar
-  const renderAvatar = (u, size = 'w-9 h-9') => {
-    const initials = (u.name || u.username || 'U')
-      .split(' ')
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
+  // Helper: Get Responsive Capital Letter Avatar
+  const renderAvatar = (u, size = 'w-9 h-9', textSize = 'text-xs') => {
+    if (!u) return null;
+    const firstLetter = (u.name || u.username || 'P').trim().charAt(0).toUpperCase();
+    const hasCustomImage = Boolean(u.avatar && !u.avatar.includes('photo-1566492031773-4f4e44671857'));
+
+    // Deterministic gradient colors based on username
+    const gradients = [
+      'from-purple-600 via-indigo-600 to-cyan-500',
+      'from-cyan-500 via-blue-600 to-indigo-700',
+      'from-emerald-500 via-teal-600 to-cyan-600',
+      'from-rose-500 via-pink-600 to-purple-600',
+      'from-amber-500 via-orange-600 to-rose-600',
+    ];
+    let hash = 0;
+    const str = (u.username || u.name || 'P').toLowerCase();
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const bgGradient = gradients[Math.abs(hash) % gradients.length];
 
     return (
-      <div className={`relative ${size} rounded-full shrink-0 overflow-hidden bg-gradient-to-tr from-purple-700 via-indigo-700 to-cyan-600 p-[1.5px]`}>
-        <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center">
-          {u.avatar ? (
+      <div className={`relative ${size} rounded-full shrink-0 overflow-hidden bg-gradient-to-tr ${bgGradient} p-[1.5px] shadow-sm`}>
+        <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center overflow-hidden">
+          {hasCustomImage ? (
             <img
               src={u.avatar}
-              alt={u.name}
+              alt={u.name || u.username || 'Avatar'}
               className="w-full h-full object-cover rounded-full"
               onError={(e) => {
                 e.target.style.display = 'none';
+                if (e.target.nextSibling) {
+                  e.target.nextSibling.style.display = 'flex';
+                }
               }}
             />
           ) : null}
-          <span className="text-[11px] font-bold text-slate-200 font-mono select-none">
-            {initials}
-          </span>
+          <div
+            className={`w-full h-full rounded-full bg-gradient-to-tr ${bgGradient} flex items-center justify-center select-none ${
+              hasCustomImage ? 'hidden' : 'flex'
+            }`}
+          >
+            <span className={`${textSize} font-black text-white font-mono tracking-tighter`}>
+              {firstLetter}
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -661,12 +723,16 @@ const AdminUsers = () => {
 
           {/* Right-side esports badge/visual */}
           <div className="flex items-center gap-4 shrink-0 bg-slate-900/80 border border-slate-800/80 p-4 rounded-2xl shadow-xl backdrop-blur-md">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-purple-500/30 border border-purple-400/40">
-              <Shield className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-xl bg-black/90 border border-lime-400/50 p-1 flex items-center justify-center shadow-[0_0_15px_rgba(163,230,53,0.35)] shrink-0">
+              <img
+                src="/assets/gaming-geeks-logo.png"
+                alt="Gaming Geeks"
+                className="h-full w-auto object-contain drop-shadow-[0_0_6px_rgba(163,230,53,0.7)]"
+              />
             </div>
             <div>
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-400 block">
-                ROSTER SECURITY
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-lime-400 block">
+                GAMING GEEKS
               </span>
               <span className="text-base font-bold text-white font-mono leading-tight block">
                 Verified Collegiate League
@@ -680,9 +746,9 @@ const AdminUsers = () => {
       </div>
 
       {/* ==================================================
-          3. STATISTICS CARDS (6 RESPONSIVE CARDS)
+          3. STATISTICS CARDS (4 RESPONSIVE CARDS)
           ================================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* TOTAL USERS (Purple) */}
         <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-purple-500/30 hover:border-purple-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-purple-950/20 flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -719,46 +785,6 @@ const AdminUsers = () => {
             </p>
             <span className="text-[10px] font-semibold text-cyan-400 mt-1 block">
               {trends.players || '+8% this week'}
-            </span>
-          </div>
-        </div>
-
-        {/* TEAM CAPTAINS (Green) */}
-        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-emerald-500/30 hover:border-emerald-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-emerald-950/20 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
-              Captains
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-              <Crown className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {statsLoading ? <span className="animate-pulse">--</span> : stats.captains}
-            </p>
-            <span className="text-[10px] font-semibold text-emerald-400 mt-1 block">
-              {trends.captains || '38 active rosters'}
-            </span>
-          </div>
-        </div>
-
-        {/* ADMINS (Pink/Purple) */}
-        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-pink-500/30 hover:border-pink-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-pink-950/20 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
-              Admins
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-pink-950/80 border border-pink-500/30 flex items-center justify-center text-pink-400 group-hover:scale-110 transition-transform">
-              <Shield className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
-              {statsLoading ? <span className="animate-pulse">--</span> : stats.admins}
-            </p>
-            <span className="text-[10px] font-semibold text-pink-400 mt-1 block">
-              {trends.admins || 'Super & Sub-admins'}
             </span>
           </div>
         </div>
@@ -804,43 +830,6 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {/* ==================================================
-          4. USER FILTER TABS WITH COUNTS
-          ================================================== */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {[
-          { key: 'all', label: 'All Users', count: stats.totalUsers },
-          { key: 'players', label: 'Players', count: stats.players },
-          { key: 'captains', label: 'Captains', count: stats.captains },
-          { key: 'admins', label: 'Admins', count: stats.admins },
-          { key: 'pending', label: 'Pending', count: stats.pending },
-          { key: 'suspended', label: 'Suspended', count: stats.suspended },
-        ].map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => handleTabChange(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
-                isActive
-                  ? 'bg-purple-950/60 text-purple-200 border-purple-500/80 shadow-lg shadow-purple-500/20'
-                  : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/80'
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                  isActive
-                    ? 'bg-purple-500/30 text-purple-200 border border-purple-400/40'
-                    : 'bg-slate-800 text-slate-400'
-                }`}
-              >
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* ==================================================
           5. SEARCH AND FILTER TOOLBAR
@@ -868,7 +857,7 @@ const AdminUsers = () => {
           </div>
 
           {/* Filter Dropdowns */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-wrap items-center">
+          <div className="flex items-center">
             {/* Game Filter */}
             <select
               value={selectedGame}
@@ -876,73 +865,17 @@ const AdminUsers = () => {
                 setSelectedGame(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
+              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono min-w-[130px]"
             >
               <option value="all">All Games</option>
               <option value="BGMI">BGMI</option>
               <option value="Free Fire">Free Fire</option>
               <option value="Valorant">Valorant</option>
             </select>
-
-            {/* Role Filter */}
-            <select
-              value={selectedRole}
-              onChange={(e) => {
-                setSelectedRole(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
-            >
-              <option value="all">All Roles</option>
-              <option value="player">Player</option>
-              <option value="captain">Captain</option>
-              <option value="admin">Admin</option>
-            </select>
-
-            {/* Status Filter */}
-            <select
-              value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>
-            </select>
-
-            {/* Team Filter */}
-            <select
-              value={selectedTeam}
-              onChange={(e) => {
-                setSelectedTeam(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
-            >
-              <option value="all">All Teams</option>
-              {teamsList.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
           </div>
 
-          {/* Action Buttons: Reset, Export, Add User */}
+          {/* Action Buttons: Export, Refresh */}
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleResetFilters}
-              title="Reset search & filters"
-              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-all"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-              <span>Reset</span>
-            </button>
-
             <button
               onClick={handleExport}
               title="Export filtered dataset to CSV"
@@ -953,11 +886,12 @@ const AdminUsers = () => {
             </button>
 
             <button
-              onClick={() => setAddModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-purple-600/25 border border-purple-400/30 flex items-center gap-1.5 transition-all"
+              onClick={handleRefreshAll}
+              title="Refresh users roster and reset filters"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs font-bold text-white shadow-lg shadow-cyan-600/20 border border-cyan-400/30 flex items-center gap-1.5 transition-all"
             >
-              <Plus className="w-4 h-4" />
-              <span>ADD USER</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>REFRESH</span>
             </button>
           </div>
         </div>
@@ -1016,20 +950,14 @@ const AdminUsers = () => {
           </div>
           <h3 className="text-xl font-bold text-white font-mono">NO USERS FOUND</h3>
           <p className="text-xs text-slate-400">
-            No accounts match your current filters. Clear the search parameters or add a new user to the club.
+            No accounts match your current filters. Clear the search parameters to view the active roster.
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
               onClick={handleResetFilters}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
             >
               Clear Filters
-            </button>
-            <button
-              onClick={() => setAddModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/20"
-            >
-              + Add User
             </button>
           </div>
         </div>
@@ -1089,10 +1017,14 @@ const AdminUsers = () => {
 
                         {/* User Avatar + Name + @Username */}
                         <td className="p-4">
-                          <div className="flex items-center gap-3">
+                          <div
+                            className="flex items-center gap-3 cursor-pointer group/user"
+                            onClick={() => handleOpenProfileDrawer(u)}
+                            title="Click to view full user profile"
+                          >
                             {renderAvatar(u, 'w-9 h-9')}
                             <div className="min-w-0">
-                              <span className="font-bold text-white block truncate hover:text-purple-300 transition-colors">
+                              <span className="font-bold text-white block truncate group-hover/user:text-purple-300 transition-colors">
                                 {u.name}
                               </span>
                               <span className="text-[11px] text-slate-500 font-mono block">
@@ -1113,7 +1045,11 @@ const AdminUsers = () => {
                             <span className="font-semibold text-slate-200 block truncate">
                               {u.teamInfo?.name || u.teamName || 'Free Agent'}
                             </span>
-                            {u.teamInfo?.isVerified ? (
+                            {u.teamInfo?.isFreeAgent || (!u.teamName || u.teamName.toLowerCase() === 'free agent') ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-cyan-400/90 font-semibold">
+                                ⚡ FREE AGENT
+                              </span>
+                            ) : u.teamInfo?.isVerified ? (
                               <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 font-bold">
                                 <Check className="w-2.5 h-2.5" /> VERIFIED
                               </span>
@@ -1149,14 +1085,6 @@ const AdminUsers = () => {
                         <td className="p-4 text-right">
                           <div className="inline-flex items-center gap-1.5 action-menu-container relative">
                             <button
-                              onClick={() => handleOpenProfileDrawer(u)}
-                              title="View Full Profile Drawer"
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
                               onClick={() => handleOpenEdit(u)}
                               title="Edit User"
                               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
@@ -1178,6 +1106,17 @@ const AdminUsers = () => {
                             {/* Dropdown Menu */}
                             {activeMenuId === u._id && (
                               <div className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-slate-950 border border-slate-800 shadow-2xl p-1.5 z-30 text-left space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                                <button
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleOpenProfileDrawer(u);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-purple-300 hover:bg-slate-900 transition-colors"
+                                >
+                                  <Users className="w-3.5 h-3.5 text-purple-400" />
+                                  <span>View Profile</span>
+                                </button>
+
                                 <button
                                   onClick={() => promptResetAccess(u)}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-900 hover:text-white transition-colors"
@@ -1390,7 +1329,7 @@ const AdminUsers = () => {
             {/* Drawer Header */}
             <div className="p-6 border-b border-slate-800/80 sticky top-0 bg-[#0B0E18]/95 backdrop-blur-md z-20 flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                {renderAvatar(selectedUser, 'w-14 h-14')}
+                {renderAvatar(selectedUser, 'w-14 h-14', 'text-xl')}
                 <div>
                   <h3 className="text-lg font-black text-white font-mono leading-tight">
                     {selectedUser.name}
@@ -1482,35 +1421,116 @@ const AdminUsers = () => {
 
                   {/* TEAM INFORMATION */}
                   <div className="space-y-3">
-                    <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500">
-                      TEAM INFORMATION
-                    </h4>
-                    <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-bold text-white font-mono">
-                            {selectedUser.teamInfo?.name || selectedUser.teamName || 'Free Agent'}
-                          </p>
-                          <span className="text-xs text-slate-400">{selectedUser.game || 'BGMI'}</span>
-                        </div>
-                        {selectedUser.teamInfo?.isVerified ? (
-                          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
-                            ✓ VERIFIED
-                          </span>
-                        ) : (
-                          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-950 text-amber-400 border border-amber-500/40">
-                            ⚠ TEAM NOT VERIFIED
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
-                        <span className="text-slate-400 font-mono">4/4 Members</span>
-                        <span className="text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 cursor-pointer">
-                          View Team <ArrowUpRight className="w-3 h-3" />
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500">
+                        TEAM INFORMATION
+                      </h4>
+                      {selectedUser.teamInfo?.isFreeAgent || (!selectedUser.teamName || selectedUser.teamName.toLowerCase() === 'free agent') ? (
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-cyan-950/60 text-cyan-400 border border-cyan-500/30">
+                          SOLO PLAYER
                         </span>
-                      </div>
+                      ) : (
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-purple-950/60 text-purple-300 border border-purple-500/30">
+                          {selectedUser.teamInfo?.roleInTeam || (selectedUser.role === 'captain' ? 'CAPTAIN' : 'ROSTER PLAYER')}
+                        </span>
+                      )}
                     </div>
+
+                    {selectedUser.teamInfo?.isFreeAgent || (!selectedUser.teamName || selectedUser.teamName.toLowerCase() === 'free agent') ? (
+                      /* FREE AGENT CARD */
+                      <div className="rounded-2xl bg-slate-900/60 border border-cyan-500/30 p-4 space-y-3 shadow-lg shadow-cyan-950/20">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-cyan-950/50 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+                              <Shield className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                                Free Agent
+                                <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                                  Unassigned
+                                </span>
+                              </p>
+                              <span className="text-xs text-slate-400">
+                                {selectedUser.game || 'BGMI'} • Individual Competitor
+                              </span>
+                            </div>
+                          </div>
+                          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/40">
+                            ⚡ FREE AGENT
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                          This player is currently not assigned to any collegiate esports squad and is available for team recruitment.
+                        </p>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-800/60 text-xs">
+                          <span className="text-slate-400 font-mono">0 Squad Members (Solo)</span>
+                          <button
+                            onClick={() => handleOpenAssignTeam(selectedUser)}
+                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold flex items-center gap-1.5 transition-all text-xs shadow-md shadow-purple-600/20"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>Assign to Team</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ACTIVE TEAM SQUAD CARD */
+                      <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-purple-950/50 border border-purple-500/30 flex items-center justify-center text-purple-300 shrink-0">
+                              <Shield className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                                {selectedUser.teamInfo?.name || selectedUser.teamName}
+                                {selectedUser.teamInfo?.tag && (
+                                  <span className="text-[10px] font-mono text-purple-300 bg-purple-950 px-1.5 py-0.5 rounded border border-purple-800">
+                                    [{selectedUser.teamInfo.tag}]
+                                  </span>
+                                )}
+                              </p>
+                              <span className="text-xs text-slate-400">
+                                {selectedUser.teamInfo?.game || selectedUser.game || 'BGMI'}
+                              </span>
+                            </div>
+                          </div>
+                          {selectedUser.teamInfo?.isVerified ? (
+                            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                              <Check className="w-3 h-3" /> VERIFIED
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-950 text-amber-400 border border-amber-500/40 flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" /> UNVERIFIED SQUAD
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-800/60 text-xs">
+                          <span className="text-slate-400 font-mono">
+                            {selectedUser.teamInfo?.memberCount || 1} {selectedUser.teamInfo?.memberCount === 1 ? 'Member' : 'Members'}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleOpenAssignTeam(selectedUser)}
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
+                            >
+                              Change Team
+                            </button>
+                            <button
+                              onClick={() => handleViewTeam(selectedUser.teamInfo?.name || selectedUser.teamName)}
+                              className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg hover:bg-cyan-950/40 border border-cyan-500/20"
+                            >
+                              <span>View Team</span>
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* QUICK PLAYER STATS SNAPSHOT */}
@@ -1642,191 +1662,6 @@ const AdminUsers = () => {
               </div>
             </div>
           </aside>
-        </div>
-      )}
-
-      {/* ==================================================
-          6. ADD USER MODAL
-          ================================================== */}
-      {addModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            onClick={() => setAddModalOpen(false)}
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
-          />
-          <div className="relative z-10 w-full max-w-xl bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-950 border border-purple-500/40 flex items-center justify-center text-purple-400">
-                  <Plus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white font-mono">ADD NEW USER</h3>
-                  <p className="text-xs text-slate-400">Enroll player or captain into the gaming club</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setAddModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddUserSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Shreyas Roy"
-                    value={addFormData.name}
-                    onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    Username *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. shreyas"
-                    value={addFormData.username}
-                    onChange={(e) => setAddFormData({ ...addFormData, username: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="e.g. shreyas@gmail.com"
-                    value={addFormData.email}
-                    onChange={(e) => setAddFormData({ ...addFormData, email: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    College Affiliation
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. UEM Jaipur"
-                    value={addFormData.college}
-                    onChange={(e) => setAddFormData({ ...addFormData, college: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    Primary Game
-                  </label>
-                  <select
-                    value={addFormData.game}
-                    onChange={(e) => setAddFormData({ ...addFormData, game: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="BGMI">BGMI</option>
-                    <option value="Free Fire">Free Fire</option>
-                    <option value="Valorant">Valorant</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    Game ID / Tag
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Shreyas#1234"
-                    value={addFormData.gameId}
-                    onChange={(e) => setAddFormData({ ...addFormData, gameId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    Assigned Role
-                  </label>
-                  <select
-                    value={addFormData.role}
-                    onChange={(e) => setAddFormData({ ...addFormData, role: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="player">PLAYER</option>
-                    <option value="captain">CAPTAIN</option>
-                    <option value="admin">ADMIN</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    Team Name (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Phoenix Esports"
-                    value={addFormData.teamName}
-                    onChange={(e) => setAddFormData({ ...addFormData, teamName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
-                    Initial Status
-                  </label>
-                  <select
-                    value={addFormData.status}
-                    onChange={(e) => setAddFormData({ ...addFormData, status: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="active">ACTIVE</option>
-                    <option value="pending">PENDING</option>
-                    <option value="suspended">SUSPENDED</option>
-                    <option value="rejected">REJECTED</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setAddModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingAdd}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 disabled:opacity-50"
-                >
-                  {submittingAdd ? 'Creating Account...' : 'Create Account'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
 
@@ -2002,6 +1837,130 @@ const AdminUsers = () => {
                   className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 disabled:opacity-50"
                 >
                   {submittingEdit ? 'Saving Changes...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================
+          ASSIGN / CHANGE TEAM MODAL
+          ================================================== */}
+      {assignTeamModalOpen && assigningUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setAssignTeamModalOpen(false)}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+          />
+          <div className="relative z-10 w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white font-mono">ASSIGN TEAM ROSTER</h3>
+                  <p className="text-xs text-slate-400">Assign player to a competitive team squad</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAssignTeamModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignTeamSubmit} className="space-y-4">
+              {/* Selected User Info */}
+              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center gap-3">
+                {renderAvatar(assigningUser, 'w-10 h-10')}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-white truncate">{assigningUser.name}</p>
+                  <p className="text-[11px] text-slate-400 font-mono">@{assigningUser.username}</p>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+                  {assigningUser.game || 'BGMI'}
+                </span>
+              </div>
+
+              {/* Team Selection or Entry */}
+              <div>
+                <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  Target Team Name
+                </label>
+                <div className="space-y-2">
+                  <select
+                    value={teamsList.includes(assignTeamName) ? assignTeamName : (assignTeamName ? 'custom' : '')}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setAssignTeamName('');
+                      } else {
+                        setAssignTeamName(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="">-- Choose Existing Team or Custom --</option>
+                    <option value="Free Agent">⚡ Free Agent (Unassigned / Solo)</option>
+                    {teamsList.map((team) => (
+                      <option key={team} value={team}>
+                        🛡 {team}
+                      </option>
+                    ))}
+                    <option value="custom">✏️ Enter Custom Team Name...</option>
+                  </select>
+
+                  <input
+                    type="text"
+                    placeholder="Enter or customize team name (e.g. Sentinel Esports)"
+                    value={assignTeamName}
+                    onChange={(e) => setAssignTeamName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono mt-1 block">
+                  Tip: Setting team name to "Free Agent" returns the player to solo status.
+                </span>
+              </div>
+
+              {/* Role in Team */}
+              <div>
+                <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  Roster Role
+                </label>
+                <select
+                  value={assignRole}
+                  onChange={(e) => setAssignRole(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                >
+                  <option value="player">ROSTER PLAYER</option>
+                  <option value="captain">TEAM CAPTAIN 👑</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setAssignTeamModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingAssign}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 disabled:opacity-50 transition-all flex items-center gap-1.5"
+                >
+                  {submittingAssign ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Team Assignment</span>
+                  )}
                 </button>
               </div>
             </form>

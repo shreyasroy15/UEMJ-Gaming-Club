@@ -4,6 +4,7 @@ import API from '../services/api';
 import Loading from '../components/Loading/Loading';
 import EmptyState from '../components/EmptyState/EmptyState';
 import Modal from '../components/Modal/Modal';
+import Avatar from '../components/Avatar/Avatar';
 import CloudinaryUpload from '../components/Upload/CloudinaryUpload';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -738,13 +739,11 @@ const TournamentRegister = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <img
-                      src={
-                        slot.user?.avatar ||
-                        'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'
-                      }
-                      alt={slot.user?.name}
-                      className="w-11 h-11 rounded-xl object-cover border border-slate-700 shrink-0"
+                    <Avatar
+                      user={slot.user}
+                      size="md"
+                      className="w-11 h-11 rounded-xl border border-slate-700 shrink-0"
+                      imgClassName="rounded-xl"
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -1427,10 +1426,11 @@ const TournamentRegister = () => {
             {searchedUser && (
               <div className="p-4 rounded-2xl bg-slate-950 border border-cyan-800/40 space-y-3">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={searchedUser.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'}
-                    alt={searchedUser.name}
-                    className="w-12 h-12 rounded-xl object-cover border border-slate-700 shrink-0"
+                  <Avatar
+                    user={searchedUser}
+                    size="lg"
+                    className="w-12 h-12 rounded-xl border border-slate-700 shrink-0"
+                    imgClassName="rounded-xl"
                   />
                   <div className="min-w-0">
                     <h4 className="text-sm font-bold text-white font-mono truncate">

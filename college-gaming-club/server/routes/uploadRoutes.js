@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { protect } = require('../middleware/authMiddleware');
-const { getUploadSignature, uploadFile } = require('../controllers/uploadController');
+const { getUploadSignature, uploadFile, uploadUrl } = require('../controllers/uploadController');
 
 // Multer memory storage configuration (max 10MB)
 const storage = multer.memoryStorage();
@@ -24,5 +24,6 @@ const upload = multer({
 
 router.post('/signature', protect, getUploadSignature);
 router.post('/', protect, upload.single('file'), uploadFile);
+router.post('/url', protect, uploadUrl);
 
 module.exports = router;

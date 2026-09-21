@@ -1,67 +1,71 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 /**
  * Avatar Component
- * Displays user avatar with fallback to initials-based avatar with deterministic gradient colors
- * 
+ * Displays user avatar with fallback to capitalized first-letter avatar with esports gradient colors.
+ * Automatically filters out legacy placeholder images and handles loading errors gracefully.
+ *
  * Props:
  * - user: User object with username, name, avatar properties
  * - src: Direct image URL (takes precedence over user.avatar)
- * - size: 'xs' | 'sm' | 'md' | 'lg' (default: 'md')
- * - className: Additional CSS classes
+ * - size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' (default: 'md')
+ * - className: Additional CSS classes for the container
+ * - imgClassName: Additional CSS classes for the image
+ * - textSize: Optional explicit text size override
  */
 
-// Generate deterministic color gradient based on username hash
+// Generate deterministic color gradient based on string hash
 const generateGradientColor = (text) => {
-  if (!text) return 'from-blue-400 to-blue-600';
+  if (!text) return 'from-purple-600 via-indigo-600 to-cyan-500';
 
-  // Simple hash function for string
   let hash = 0;
   for (let i = 0; i < text.length; i++) {
-    const char = text.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  const colorPairs = [
-    'from-cyan-400 to-blue-600',       // Cyan to Blue
-    'from-blue-400 to-indigo-600',     // Blue to Indigo
-    'from-indigo-400 to-purple-600',   // Indigo to Purple
-    'from-purple-400 to-pink-600',     // Purple to Pink
-    'from-pink-400 to-red-600',        // Pink to Red
-    'from-red-400 to-orange-600',      // Red to Orange
-    'from-orange-400 to-amber-600',    // Orange to Amber
-    'from-amber-400 to-yellow-600',    // Amber to Yellow
-    'from-yellow-400 to-lime-600',     // Yellow to Lime
-    'from-lime-400 to-green-600',      // Lime to Green
-    'from-green-400 to-emerald-600',   // Green to Emerald
-    'from-emerald-400 to-teal-600',    // Emerald to Teal
+  const gradients = [
+    'from-purple-600 via-indigo-600 to-cyan-500',
+    'from-cyan-500 via-blue-600 to-indigo-700',
+    'from-emerald-500 via-teal-600 to-cyan-600',
+    'from-rose-500 via-pink-600 to-purple-600',
+    'from-amber-500 via-orange-600 to-rose-600',
+    'from-blue-600 via-indigo-600 to-violet-700',
   ];
 
-  const index = Math.abs(hash) % colorPairs.length;
-  return colorPairs[index];
+  const index = Math.abs(hash) % gradients.length;
+  return gradients[index];
 };
 
-// Size mapping for Tailwind classes
 const sizeClasses = {
-  xs: { container: 'w-6 h-6', text: 'text-xs' },
-  sm: { container: 'w-8 h-8', text: 'text-sm' },
-  md: { container: 'w-10 h-10', text: 'text-base' },
-  lg: { container: 'w-12 h-12', text: 'text-lg' },
+  xs: { container: 'w-6 h-6', text: 'text-[10px]' },
+  sm: { container: 'w-8 h-8', text: 'text-xs' },
+  md: { container: 'w-10 h-10', text: 'text-sm' },
+  lg: { container: 'w-12 h-12', text: 'text-base' },
+  xl: { container: 'w-16 h-16 sm:w-20 sm:h-20', text: 'text-xl sm:text-2xl' },
+  '2xl': { container: 'w-20 h-20 sm:w-24 sm:h-24', text: 'text-2xl sm:text-3xl' },
 };
 
-export default function Avatar({ user, src, size = 'md', className = '' }) {
-  // Get initial letter from username or name
-  const getInitial = () => {
-    const name = user?.username || user?.name || 'P';
-    return name.charAt(0).toUpperCase();
-  };
+export default function Avatar({
+  user,
+  src,
+  size = 'md',
+  className = '',
+  imgClassName = '',
+  textSize,
+}) {
+  const [imgError, setImgError] = useState(false);
 
-  // Check if image URL is valid
-  const hasValidImage = src || user?.avatar;
+  // Capitalized first letter of Name or Username
+  const rawName = (user?.name || user?.username || 'Player').trim();
+  const firstLetter = rawName.charAt(0).toUpperCase() || 'P';
+
+  const rawSrc = src || user?.avatar;
+  const isOldPlaceholder = Boolean(rawSrc && rawSrc.includes('photo-1566492031773-4f4e44671857'));
+  const hasValidImage = Boolean(rawSrc && !isOldPlaceholder && !imgError);
 
   const sizeConfig = sizeClasses[size] || sizeClasses.md;
   const gradientColor = generateGradientColor(user?.username || user?.name || '');
+  const resolvedTextSize = textSize || sizeConfig.text;
 
   return (
     <div
@@ -72,26 +76,25 @@ export default function Avatar({ user, src, size = 'md', className = '' }) {
         items-center
         justify-center
         rounded-full
-        font-bold
+        font-mono
+        font-black
         overflow-hidden
+        shrink-0
+        select-none
         ${className}
-        ${!hasValidImage ? `bg-gradient-to-br ${gradientColor}` : 'bg-gray-200'}
+        ${!hasValidImage ? `bg-gradient-to-tr ${gradientColor} shadow-md` : 'bg-slate-900'}
       `}
     >
       {hasValidImage ? (
         <img
-          src={src || user?.avatar}
-          alt={user?.username || user?.name || 'Avatar'}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            // Fallback to initials if image fails to load
-            e.target.style.display = 'none';
-            e.target.parentElement.textContent = getInitial();
-          }}
+          src={rawSrc}
+          alt={rawName}
+          className={`w-full h-full object-cover rounded-full ${imgClassName}`}
+          onError={() => setImgError(true)}
         />
       ) : (
-        <span className={`${sizeConfig.text} text-white select-none`}>
-          {getInitial()}
+        <span className={`${resolvedTextSize} font-black text-white tracking-tighter drop-shadow-sm`}>
+          {firstLetter}
         </span>
       )}
     </div>

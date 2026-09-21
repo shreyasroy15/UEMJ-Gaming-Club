@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import GooeyNav from '../GooeyNav/GooeyNav';
+import Avatar from '../Avatar/Avatar';
 import {
   Menu,
   X,
@@ -526,10 +527,10 @@ const Navbar = () => {
                                       className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2"
                                     >
                                       <div className="flex items-center gap-2">
-                                        <img
-                                          src={inv.sender?.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'}
-                                          alt={inv.sender?.name}
-                                          className="w-8 h-8 rounded-lg object-cover border border-slate-700"
+                                        <Avatar
+                                          user={inv.sender}
+                                          size="sm"
+                                          className="rounded-lg border border-slate-700"
                                         />
                                         <div className="min-w-0">
                                           <p className="text-xs font-bold text-white truncate">
@@ -575,13 +576,10 @@ const Navbar = () => {
                         className="flex items-center gap-2 p-1 pr-2.5 sm:pr-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 backdrop-blur-md transition-all cursor-pointer select-none group"
                         aria-expanded={profileDropdownOpen}
                       >
-                        <img
-                          src={
-                            user.avatar ||
-                            'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'
-                          }
-                          alt={user.name || 'User avatar'}
-                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-cyan-400/60 group-hover:border-cyan-300"
+                        <Avatar
+                          user={user}
+                          size="sm"
+                          className="border border-cyan-400/60 group-hover:border-cyan-300"
                         />
                         <span className="hidden sm:inline-block text-xs font-bold text-slate-200 max-w-[90px] truncate">
                           {user.username || user.name}
@@ -690,13 +688,10 @@ const Navbar = () => {
                   <>
                     <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <img
-                          src={
-                            user.avatar ||
-                            'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=150&q=80'
-                          }
-                          alt={user.name}
-                          className="w-9 h-9 rounded-full object-cover border border-cyan-400/70 shrink-0"
+                        <Avatar
+                          user={user}
+                          size="md"
+                          className="border border-cyan-400/70 shrink-0"
                         />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white truncate">{user.name}</p>

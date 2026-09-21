@@ -15,28 +15,48 @@ exports.getDashboardStats = async (req, res, next) => {
       totalUsers,
       totalTeams,
       activeTeams,
+      pendingTeams,
       totalTournaments,
       liveTournaments,
       liveMatches,
+      totalMatches,
+      upcomingMatches,
       upcomingEvents,
       recentUsers,
       recentTournaments,
       teamsLeaderboard,
+      liveMatchesList,
+      recentMatchesList,
       games,
     ] = await Promise.all([
       User.countDocuments(),
       TournamentRegistration.countDocuments({ status: { $ne: 'rejected' } }),
       TournamentRegistration.countDocuments({ status: { $in: ['verified', 'complete'] } }),
+      TournamentRegistration.countDocuments({ status: 'pending' }),
       Tournament.countDocuments(),
       Tournament.countDocuments({ status: { $in: ['live', 'ongoing'] } }),
       Match.countDocuments({ status: 'live' }),
+      Match.countDocuments(),
+      Match.countDocuments({ status: { $in: ['upcoming', 'scheduled'] } }),
       Event.countDocuments({ date: { $gte: new Date() } }),
-      User.find().select('-password').sort({ createdAt: -1 }).limit(5),
-      Tournament.find().sort({ createdAt: -1 }).limit(5),
+      User.find().select('-password').sort({ createdAt: -1 }).limit(6),
+      Tournament.find().sort({ createdAt: -1 }).limit(6),
       TournamentRegistration.find({ status: { $in: ['verified', 'complete'] } })
-        .populate('tournament', 'name game')
+        .populate('tournament', 'name game banner')
         .populate('captain', 'name username')
         .sort({ updatedAt: -1 })
+        .limit(8),
+      Match.find({ status: 'live' })
+        .populate('tournament', 'name game banner')
+        .populate('teams', 'teamName teamTag')
+        .populate('teamA teamB winner')
+        .sort({ updatedAt: -1 })
+        .limit(6),
+      Match.find()
+        .populate('tournament', 'name game banner')
+        .populate('teams', 'teamName teamTag')
+        .populate('teamA teamB winner')
+        .sort({ scheduledAt: -1, createdAt: -1 })
         .limit(6),
       Game.find(),
     ]);
@@ -47,14 +67,19 @@ exports.getDashboardStats = async (req, res, next) => {
         totalUsers,
         totalTeams,
         activeTeams,
+        pendingTeams,
         totalTournaments,
         liveTournaments,
         liveMatches,
+        totalMatches,
+        upcomingMatches,
         upcomingEvents,
       },
       recentUsers,
       recentTournaments,
       teamsLeaderboard,
+      liveMatchesList,
+      recentMatchesList,
       games,
     });
   } catch (error) {

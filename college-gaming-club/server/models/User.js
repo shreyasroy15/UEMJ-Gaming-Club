@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80',
+      default: '',
     },
     role: {
       type: String,
@@ -118,6 +118,9 @@ const userSchema = new mongoose.Schema(
     ],
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    lastLogin: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

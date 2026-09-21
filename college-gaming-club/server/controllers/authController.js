@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
+const { getCapitalLetterAvatarUrl } = require('../utils/avatar');
 
 // Helper to generate JWT token
 const generateToken = (id) => {
@@ -72,12 +73,20 @@ exports.register = async (req, res, next) => {
     }
 
     const user = await User.create({
-      name,
-      username,
-      email,
+      name: name.trim(),
+      username: username.toLowerCase().trim(),
+      email: email.toLowerCase().trim(),
       password,
-      college: college || 'University of Engineering & Management (UEM)',
-      games: games || [],
+      college: college || 'University of Engineering & Management (UEM Jaipur)',
+      games: games && games.length > 0 ? games : ['BGMI'],
+      game: games && games.length > 0 ? games[0] : 'BGMI',
+      gameId: `@${username.toLowerCase().trim()}`,
+      teamName: 'Free Agent',
+      role: 'student',
+      status: 'active',
+      isDeleted: false,
+      lastLogin: new Date(),
+      avatar: getCapitalLetterAvatarUrl(name, username),
     });
 
     sendTokenResponse(user, 201, res);
@@ -147,6 +156,20 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    // Automatically update to capitalized first-letter avatar if user has old placeholder or missing avatar
+    const isOldPlaceholder = !user.avatar || user.avatar.includes('photo-1566492031773-4f4e44671857');
+    if (isOldPlaceholder) {
+      user.avatar = getCapitalLetterAvatarUrl(user.name, user.username);
+    }
+
+    // Automatically ensure active status, record last login, and persist updated avatar
+    await User.findByIdAndUpdate(user._id, {
+      lastLogin: new Date(),
+      status: user.status === 'suspended' ? 'suspended' : 'active',
+      isDeleted: false,
+      avatar: user.avatar,
+    });
+
     sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);
@@ -159,6 +182,10 @@ exports.login = async (req, res, next) => {
 exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).populate('teams');
+    if (user && (!user.avatar || user.avatar.includes('photo-1566492031773-4f4e44671857'))) {
+      user.avatar = getCapitalLetterAvatarUrl(user.name, user.username);
+      await User.findByIdAndUpdate(user._id, { avatar: user.avatar });
+    }
     res.status(200).json({
       success: true,
       user,

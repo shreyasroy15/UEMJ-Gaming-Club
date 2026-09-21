@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Loading from '../components/Loading/Loading';
+import Avatar from '../components/Avatar/Avatar';
 import {
   Trophy,
   Gamepad2,
@@ -231,10 +232,11 @@ const Home = () => {
               {isAuthenticated && user && (
                 <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-left bg-slate-950/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-800/60 shadow-xl max-w-xl mx-auto">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={user?.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80'}
-                      alt={user?.name}
-                      className="w-10 h-10 rounded-xl object-cover border border-cyan-400/60"
+                    <Avatar
+                      user={user}
+                      size="md"
+                      className="w-10 h-10 rounded-xl border border-cyan-400/60"
+                      imgClassName="rounded-xl"
                     />
                     <div>
                       <div className="flex items-center gap-2">

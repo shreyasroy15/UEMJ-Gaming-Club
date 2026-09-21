@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../services/api';
 import Modal from '../components/Modal/Modal';
+import Avatar from '../components/Avatar/Avatar';
 import {
   User,
   Shield,
@@ -57,10 +58,12 @@ const Profile = () => {
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
           <div className="flex flex-col min-[480px]:flex-row items-center min-[480px]:items-start gap-4 sm:gap-5 text-center min-[480px]:text-left w-full md:w-auto">
             <div className="relative shrink-0">
-              <img
-                src={user?.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=300&q=80'}
-                alt={user?.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
+              <Avatar
+                user={user}
+                size="2xl"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
+                imgClassName="rounded-2xl"
+                textSize="text-3xl sm:text-4xl"
               />
               <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500 font-mono">
                 {user?.role}

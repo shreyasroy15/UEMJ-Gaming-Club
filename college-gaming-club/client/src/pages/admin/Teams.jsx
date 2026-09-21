@@ -22,7 +22,7 @@ const AdminTeams = () => {
   // All Registered Teams View
   const [allTeams, setAllTeams] = useState([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [gameFilter, setGameFilter] = useState('all');
   const [verificationFilter, setVerificationFilter] = useState('all');
   const [games, setGames] = useState([]);
@@ -30,6 +30,14 @@ const AdminTeams = () => {
   const [deletingTeamId, setDeletingTeamId] = useState(null);
 
   const { addToast } = useToast();
+
+  // Sync tab and search query from URL parameters
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) setActiveTab(tabParam);
+    const searchParam = searchParams.get('search');
+    if (searchParam !== null) setSearchQuery(searchParam);
+  }, [searchParams]);
 
   // Fetch tournaments for tournament view
   useEffect(() => {

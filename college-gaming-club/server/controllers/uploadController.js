@@ -100,3 +100,47 @@ exports.uploadFile = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Upload image from URL to Cloudinary
+// @route   POST /api/upload/url
+// @access  Private
+exports.uploadUrl = async (req, res, next) => {
+  try {
+    const { url, folder = 'uemj/announcements' } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an image URL to upload',
+      });
+    }
+
+    if (isConfigured) {
+      const result = await cloudinary.uploader.upload(url, {
+        folder,
+        resource_type: 'image',
+      });
+
+      res.status(200).json({
+        success: true,
+        url: result.secure_url,
+        publicId: result.public_id,
+        format: result.format,
+        bytes: result.bytes,
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        url,
+        publicId: `dev-url-${Date.now()}`,
+        warning: 'Cloudinary not configured in .env, using direct URL',
+      });
+    }
+  } catch (error) {
+    console.error('Cloudinary upload URL error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to upload image URL to Cloudinary',
+    });
+  }
+};
