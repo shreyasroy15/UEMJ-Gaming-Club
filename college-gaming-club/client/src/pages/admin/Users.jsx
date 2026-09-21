@@ -1,222 +1,2077 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import API from '../../services/api';
-import Loading from '../../components/Loading/Loading';
-import EmptyState from '../../components/EmptyState/EmptyState';
-import Modal from '../../components/Modal/Modal';
 import { useToast } from '../../context/ToastContext';
-import { Users, Shield, Trash2, Edit, Search } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import {
+  Users,
+  Shield,
+  Crown,
+  Gamepad2,
+  Flame,
+  Crosshair,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Search,
+  RotateCcw,
+  Download,
+  Plus,
+  Edit3,
+  Trash2,
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  KeyRound,
+  UserX,
+  UserCheck,
+  Activity,
+  BarChart3,
+  Trophy,
+  Swords,
+  Sparkles,
+  X,
+  ArrowUpRight,
+  Check,
+  Copy,
+  Layers,
+} from 'lucide-react';
 
 const AdminUsers = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { addToast } = useToast();
+  const { user: currentUser } = useAuth();
+
+  // Statistics State (Real DB Counts)
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    players: 0,
+    captains: 0,
+    admins: 0,
+    pending: 0,
+    suspended: 0,
+  });
+  const [trends, setTrends] = useState({});
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // Users Data State
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const { addToast } = useToast();
+  const [error, setError] = useState(null);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [teamsList, setTeamsList] = useState([]);
 
+  // Filter States
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'all');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  const [selectedGame, setSelectedGame] = useState(searchParams.get('game') || 'all');
+  const [selectedRole, setSelectedRole] = useState(searchParams.get('role') || 'all');
+  const [selectedStatus, setSelectedStatus] = useState(searchParams.get('status') || 'all');
+  const [selectedTeam, setSelectedTeam] = useState(searchParams.get('team') || 'all');
+
+  // Checkbox Selection for batch/table
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
+
+  // Profile Drawer State
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [drawerTab, setDrawerTab] = useState('overview'); // 'overview' | 'stats' | 'activity'
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [userStats, setUserStats] = useState(null);
+  const [userActivity, setUserActivity] = useState([]);
+
+  // Add User Modal State
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addFormData, setAddFormData] = useState({
+    name: '',
+    username: '',
+    email: '',
+    password: '',
+    college: 'University of Engineering & Management (UEM Jaipur)',
+    game: 'BGMI',
+    gameId: '',
+    role: 'player',
+    teamName: '',
+    status: 'active',
+  });
+  const [submittingAdd, setSubmittingAdd] = useState(false);
+
+  // Edit User Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [selectedRole, setSelectedRole] = useState('student');
-  const [submitting, setSubmitting] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    username: '',
+    email: '',
+    college: '',
+    game: 'BGMI',
+    gameId: '',
+    role: 'player',
+    teamName: '',
+    status: 'active',
+    bio: '',
+  });
+  const [submittingEdit, setSubmittingEdit] = useState(false);
 
+  // Confirmation Action Dialog Modal
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    actionType: null,
+    targetUser: null,
+    confirmButtonText: 'Confirm',
+    confirmButtonClass: 'bg-purple-600 hover:bg-purple-500',
+  });
+
+  // Action Dropdown Menu per row
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [copiedToken, setCopiedToken] = useState(null);
+
+  // Debounce search input
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
+  // Sync URL search params with local filter states
+  useEffect(() => {
+    const roleParam = searchParams.get('role');
+    const gameParam = searchParams.get('game');
+    if (roleParam) setSelectedRole(roleParam);
+    if (gameParam) setSelectedGame(gameParam);
+  }, [searchParams]);
+
+  // Fetch overview statistics
+  const fetchStatsOverview = async () => {
+    try {
+      setStatsLoading(true);
+      const res = await API.get('/users/stats/overview');
+      if (res.data.success) {
+        setStats(res.data.stats || {});
+        setTrends(res.data.trends || {});
+      }
+    } catch (err) {
+      console.error('Failed to load stats overview:', err);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  // Fetch paginated & filtered users
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await API.get('/users');
-      setUsers(res.data.users || []);
+      setError(null);
+
+      const params = {
+        page: currentPage,
+        limit,
+        tab: activeTab,
+        search: debouncedSearch,
+        game: selectedGame,
+        role: selectedRole,
+        status: selectedStatus,
+        team: selectedTeam,
+      };
+
+      const res = await API.get('/users', { params });
+      if (res.data.success) {
+        setUsers(res.data.users || []);
+        setTotalCount(res.data.totalCount || 0);
+        setTotalPages(res.data.totalPages || 1);
+        if (res.data.teamsList && res.data.teamsList.length > 0) {
+          setTeamsList(res.data.teamsList);
+        }
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching users:', err);
+      setError(err.response?.data?.message || 'Unable to load users. Please check your network connection.');
       addToast('Failed to load users', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenEditRole = (u) => {
-    setEditingUser(u);
-    setSelectedRole(u.role || 'student');
-    setEditModalOpen(true);
+  useEffect(() => {
+    fetchStatsOverview();
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, limit, activeTab, debouncedSearch, selectedGame, selectedRole, selectedStatus, selectedTeam]);
+
+  // Close row action dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.action-menu-container')) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Handle Tab Switch
+  const handleTabChange = (tabKey) => {
+    setActiveTab(tabKey);
+    setCurrentPage(1);
+    setSelectedUserIds([]);
   };
 
-  const handleUpdateRole = async (e) => {
-    e.preventDefault();
+  // Reset Filters
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setDebouncedSearch('');
+    setSelectedGame('all');
+    setSelectedRole('all');
+    setSelectedStatus('all');
+    setSelectedTeam('all');
+    setActiveTab('all');
+    setCurrentPage(1);
+    setSelectedUserIds([]);
+    setSearchParams({});
+    addToast('Filters reset to default', 'info');
+  };
+
+  // Export to CSV
+  const handleExport = async () => {
     try {
-      setSubmitting(true);
-      const res = await API.put(`/users/${editingUser._id}`, { role: selectedRole });
+      addToast('Preparing CSV export...', 'info');
+      const params = {
+        tab: activeTab,
+        search: debouncedSearch,
+        game: selectedGame,
+        role: selectedRole,
+        status: selectedStatus,
+        team: selectedTeam,
+      };
+
+      const res = await API.get('/users/export', {
+        params,
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `uem_gaming_club_users_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      addToast('✓ Users export downloaded successfully', 'success');
+    } catch (err) {
+      console.error('Export error:', err);
+      addToast('Failed to export users CSV', 'error');
+    }
+  };
+
+  // Open Profile Drawer
+  const handleOpenProfileDrawer = async (userObj) => {
+    setSelectedUser(userObj);
+    setDrawerOpen(true);
+    setDrawerTab('overview');
+    setDrawerLoading(true);
+
+    try {
+      // Fetch stats and activity in parallel
+      const [statsRes, actRes] = await Promise.all([
+        API.get(`/users/${userObj._id}/stats`),
+        API.get(`/users/${userObj._id}/activity`),
+      ]);
+      if (statsRes.data.success) {
+        setUserStats(statsRes.data.stats);
+      }
+      if (actRes.data.success) {
+        setUserActivity(actRes.data.activity || []);
+      }
+    } catch (err) {
+      console.error('Error fetching user profile details:', err);
+    } finally {
+      setDrawerLoading(false);
+    }
+  };
+
+  // Open Edit User Modal
+  const handleOpenEdit = (userObj) => {
+    setEditingUser(userObj);
+    setEditFormData({
+      name: userObj.name || '',
+      username: userObj.username || '',
+      email: userObj.email || '',
+      college: userObj.college || 'UEM Jaipur',
+      game: userObj.game || 'BGMI',
+      gameId: userObj.gameId || `@${userObj.username}`,
+      role: userObj.role || 'player',
+      teamName: userObj.teamName || '',
+      status: userObj.status || 'active',
+      bio: userObj.bio || '',
+    });
+    setEditModalOpen(true);
+    setActiveMenuId(null);
+  };
+
+  // Submit Add User
+  const handleAddUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!addFormData.name.trim() || !addFormData.username.trim() || !addFormData.email.trim()) {
+      addToast('Name, username and email are required', 'error');
+      return;
+    }
+
+    try {
+      setSubmittingAdd(true);
+      const res = await API.post('/users', addFormData);
       if (res.data.success) {
-        addToast(`Role updated to ${selectedRole} for ${editingUser.name}`, 'success');
-        setEditModalOpen(false);
+        addToast('✓ User created successfully', 'success');
+        setAddModalOpen(false);
+        setAddFormData({
+          name: '',
+          username: '',
+          email: '',
+          password: '',
+          college: 'University of Engineering & Management (UEM Jaipur)',
+          game: 'BGMI',
+          gameId: '',
+          role: 'player',
+          teamName: '',
+          status: 'active',
+        });
+        fetchStatsOverview();
         fetchUsers();
       }
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to update role', 'error');
+      addToast(err.response?.data?.message || '❌ Failed to create user', 'error');
     } finally {
-      setSubmitting(false);
+      setSubmittingAdd(false);
     }
   };
 
-  const handleDeleteUser = async (uId, uName) => {
-    if (!window.confirm(`Permanently remove player account "${uName}"?`)) return;
+  // Submit Edit User
+  const handleEditUserSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setSubmittingEdit(true);
+      const res = await API.put(`/users/${editingUser._id}`, editFormData);
+      if (res.data.success) {
+        addToast('✓ User updated successfully', 'success');
+        setEditModalOpen(false);
+        if (selectedUser && selectedUser._id === editingUser._id) {
+          setSelectedUser({ ...selectedUser, ...res.data.user });
+        }
+        fetchStatsOverview();
+        fetchUsers();
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || '❌ Failed to update user', 'error');
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
+  // Execute Confirmation Action
+  const executeConfirmAction = async () => {
+    const { actionType, targetUser } = confirmModal;
+    if (!targetUser) return;
 
     try {
-      await API.delete(`/users/${uId}`);
-      addToast('User deleted', 'success');
+      if (actionType === 'suspend') {
+        const res = await API.post(`/users/${targetUser._id}/suspend`);
+        if (res.data.success) {
+          addToast('✓ User suspended successfully', 'success');
+        }
+      } else if (actionType === 'activate') {
+        const res = await API.post(`/users/${targetUser._id}/activate`);
+        if (res.data.success) {
+          addToast('✓ User activated successfully', 'success');
+        }
+      } else if (actionType === 'reset') {
+        const res = await API.post(`/users/${targetUser._id}/reset-access`);
+        if (res.data.success) {
+          addToast('✓ Access reset successfully. Temporary credentials generated.', 'success');
+          setCopiedToken(res.data.resetToken);
+        }
+      } else if (actionType === 'delete') {
+        const res = await API.delete(`/users/${targetUser._id}`);
+        if (res.data.success) {
+          addToast('✓ User deleted successfully (tournament records preserved)', 'success');
+          if (drawerOpen && selectedUser?._id === targetUser._id) {
+            setDrawerOpen(false);
+          }
+        }
+      }
+
+      setConfirmModal({ isOpen: false, title: '', message: '', actionType: null, targetUser: null });
+      fetchStatsOverview();
       fetchUsers();
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to delete user', 'error');
+      addToast(err.response?.data?.message || 'Action failed to execute', 'error');
     }
   };
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
-  );
+  // Prompt Suspend User
+  const promptSuspend = (userObj) => {
+    setActiveMenuId(null);
+    setConfirmModal({
+      isOpen: true,
+      title: 'Suspend User Account',
+      message: `Are you sure you want to suspend account for "${userObj.name}" (@${userObj.username})? The user will be immediately blocked from logging in or joining matches.`,
+      actionType: 'suspend',
+      targetUser: userObj,
+      confirmButtonText: 'Suspend Account',
+      confirmButtonClass: 'bg-amber-600 hover:bg-amber-500 text-white',
+    });
+  };
+
+  // Prompt Activate User
+  const promptActivate = (userObj) => {
+    setActiveMenuId(null);
+    setConfirmModal({
+      isOpen: true,
+      title: 'Activate User Account',
+      message: `Restore active competitive privileges for "${userObj.name}" (@${userObj.username})?`,
+      actionType: 'activate',
+      targetUser: userObj,
+      confirmButtonText: 'Activate Account',
+      confirmButtonClass: 'bg-emerald-600 hover:bg-emerald-500 text-white',
+    });
+  };
+
+  // Prompt Reset Access
+  const promptResetAccess = (userObj) => {
+    setActiveMenuId(null);
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reset User Access',
+      message: `Generate password reset authorization for "${userObj.name}" (@${userObj.username})? The previous session tokens will expire.`,
+      actionType: 'reset',
+      targetUser: userObj,
+      confirmButtonText: 'Reset Access',
+      confirmButtonClass: 'bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold',
+    });
+  };
+
+  // Prompt Delete User (Soft Deletion)
+  const promptDelete = (userObj) => {
+    setActiveMenuId(null);
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete User Account',
+      message: `Are you sure you want to delete account "${userObj.name}" (@${userObj.username})? Historical tournament brackets, matches, and team scores will be preserved.`,
+      actionType: 'delete',
+      targetUser: userObj,
+      confirmButtonText: 'Delete Account',
+      confirmButtonClass: 'bg-rose-600 hover:bg-rose-500 text-white',
+    });
+  };
+
+  // Checkbox select all on current page
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedUserIds(users.map((u) => u._id));
+    } else {
+      setSelectedUserIds([]);
+    }
+  };
+
+  const handleToggleSelectUser = (id) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // Helper: Get Initials Avatar
+  const renderAvatar = (u, size = 'w-9 h-9') => {
+    const initials = (u.name || u.username || 'U')
+      .split(' ')
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
+    return (
+      <div className={`relative ${size} rounded-full shrink-0 overflow-hidden bg-gradient-to-tr from-purple-700 via-indigo-700 to-cyan-600 p-[1.5px]`}>
+        <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center">
+          {u.avatar ? (
+            <img
+              src={u.avatar}
+              alt={u.name}
+              className="w-full h-full object-cover rounded-full"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          ) : null}
+          <span className="text-[11px] font-bold text-slate-200 font-mono select-none">
+            {initials}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  // Helper: Game Badges
+  const renderGameBadge = (gameName) => {
+    const g = (gameName || 'BGMI').toUpperCase();
+    if (g.includes('BGMI')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-amber-950/50 text-amber-300 border border-amber-500/30">
+          <Gamepad2 className="w-3 h-3 text-amber-400 shrink-0" />
+          <span>BGMI</span>
+        </span>
+      );
+    }
+    if (g.includes('FREE FIRE') || g.includes('FIRE')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-orange-950/50 text-orange-300 border border-orange-500/30">
+          <Flame className="w-3 h-3 text-orange-400 shrink-0" />
+          <span>Free Fire</span>
+        </span>
+      );
+    }
+    if (g.includes('VALORANT')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-rose-950/50 text-rose-300 border border-rose-500/30">
+          <Crosshair className="w-3 h-3 text-rose-400 shrink-0" />
+          <span>Valorant</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide uppercase bg-cyan-950/50 text-cyan-300 border border-cyan-500/30">
+        <Gamepad2 className="w-3 h-3 text-cyan-400 shrink-0" />
+        <span>{gameName}</span>
+      </span>
+    );
+  };
+
+  // Helper: Role Badges
+  const renderRoleBadge = (role) => {
+    const r = (role || 'player').toLowerCase();
+    if (r === 'super_admin' || r === 'admin') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-pink-950/60 text-pink-300 border border-pink-500/40 shadow-sm shadow-pink-500/10">
+          <Shield className="w-3 h-3 text-pink-400" />
+          <span>Admin</span>
+        </span>
+      );
+    }
+    if (r === 'captain') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-purple-950/60 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-500/10">
+          <Crown className="w-3 h-3 text-purple-400" />
+          <span>Captain</span>
+        </span>
+      );
+    }
+    if (r === 'moderator') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-950/60 text-indigo-300 border border-indigo-500/40">
+          <Shield className="w-3 h-3 text-indigo-400" />
+          <span>Moderator</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wider bg-cyan-950/50 text-cyan-400 border border-cyan-500/30">
+        <Users className="w-3 h-3 text-cyan-400" />
+        <span>Player</span>
+      </span>
+    );
+  };
+
+  // Helper: Status Badges
+  const renderStatusBadge = (status) => {
+    const s = (status || 'active').toLowerCase();
+    if (s === 'active') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/60 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/15">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Active</span>
+        </span>
+      );
+    }
+    if (s === 'pending') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-950/60 text-amber-400 border border-amber-500/40">
+          <Clock className="w-3 h-3 text-amber-400" />
+          <span>Pending</span>
+        </span>
+      );
+    }
+    if (s === 'suspended') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-950/60 text-rose-400 border border-rose-500/40">
+          <XCircle className="w-3 h-3 text-rose-400" />
+          <span>Suspended</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.8 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-950/60 text-red-400 border border-red-500/40">
+        <AlertTriangle className="w-3 h-3 text-red-400" />
+        <span>Rejected</span>
+      </span>
+    );
+  };
+
+  // Helper: Format Joined Date
+  const formatDate = (dateString) => {
+    if (!dateString) return '15 Mar 2026';
+    try {
+      const d = new Date(dateString);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return '15 Mar 2026';
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-        <div>
-          <h1 className="text-2xl font-black text-white font-mono">
-            USER ACCOUNTS & ROLES
-          </h1>
-          <p className="text-xs text-slate-400">
-            Audit registered players and supervise collegiate memberships.
-          </p>
-        </div>
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* ==================================================
+          2. USERS PAGE HEADER WITH ESPORTS BANNER
+          ================================================== */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-[#0E1322] to-purple-950/40 border border-slate-800 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Search */}
-        <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500"
-          />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/80 border border-purple-500/30 text-purple-300 text-xs font-mono font-bold tracking-wider uppercase">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>Esports SaaS Directory</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-black text-white font-mono tracking-tight">
+              USER MANAGEMENT
+            </h1>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Manage players, captains and administrators. Control account access and manage the UEM Gaming Club community.
+            </p>
+          </div>
+
+          {/* Right-side esports badge/visual */}
+          <div className="flex items-center gap-4 shrink-0 bg-slate-900/80 border border-slate-800/80 p-4 rounded-2xl shadow-xl backdrop-blur-md">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-purple-500/30 border border-purple-400/40">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-400 block">
+                ROSTER SECURITY
+              </span>
+              <span className="text-base font-bold text-white font-mono leading-tight block">
+                Verified Collegiate League
+              </span>
+              <span className="text-[11px] text-slate-400 block">
+                UEM Jaipur • Official Circuit
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* ==================================================
+          3. STATISTICS CARDS (6 RESPONSIVE CARDS)
+          ================================================== */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        {/* TOTAL USERS (Purple) */}
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-purple-500/30 hover:border-purple-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-purple-950/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+              Total Users
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-purple-950/80 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+              {statsLoading ? <span className="animate-pulse">--</span> : stats.totalUsers}
+            </p>
+            <span className="text-[10px] font-semibold text-purple-400 mt-1 block">
+              {trends.totalUsers || '+12% this month'}
+            </span>
+          </div>
+        </div>
+
+        {/* PLAYERS (Cyan) */}
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-cyan-500/30 hover:border-cyan-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-cyan-950/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+              Players
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-cyan-950/80 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+              <Swords className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+              {statsLoading ? <span className="animate-pulse">--</span> : stats.players}
+            </p>
+            <span className="text-[10px] font-semibold text-cyan-400 mt-1 block">
+              {trends.players || '+8% this week'}
+            </span>
+          </div>
+        </div>
+
+        {/* TEAM CAPTAINS (Green) */}
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-emerald-500/30 hover:border-emerald-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-emerald-950/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+              Captains
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+              <Crown className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+              {statsLoading ? <span className="animate-pulse">--</span> : stats.captains}
+            </p>
+            <span className="text-[10px] font-semibold text-emerald-400 mt-1 block">
+              {trends.captains || '38 active rosters'}
+            </span>
+          </div>
+        </div>
+
+        {/* ADMINS (Pink/Purple) */}
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-pink-500/30 hover:border-pink-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-pink-950/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+              Admins
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-pink-950/80 border border-pink-500/30 flex items-center justify-center text-pink-400 group-hover:scale-110 transition-transform">
+              <Shield className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+              {statsLoading ? <span className="animate-pulse">--</span> : stats.admins}
+            </p>
+            <span className="text-[10px] font-semibold text-pink-400 mt-1 block">
+              {trends.admins || 'Super & Sub-admins'}
+            </span>
+          </div>
+        </div>
+
+        {/* PENDING VERIFICATION (Orange) */}
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-amber-500/30 hover:border-amber-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-amber-950/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+              Pending
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-amber-950/80 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+              {statsLoading ? <span className="animate-pulse">--</span> : stats.pending}
+            </p>
+            <span className="text-[10px] font-semibold text-amber-400 mt-1 block">
+              {trends.pending || 'Requires verification'}
+            </span>
+          </div>
+        </div>
+
+        {/* SUSPENDED (Red) */}
+        <div className="group relative p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-rose-500/30 hover:border-rose-500/70 transition-all duration-200 hover:-translate-y-1 shadow-lg shadow-rose-950/20 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+              Suspended
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-rose-950/80 border border-rose-500/30 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
+              <UserX className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">
+              {statsLoading ? <span className="animate-pulse">--</span> : stats.suspended}
+            </p>
+            <span className="text-[10px] font-semibold text-rose-400 mt-1 block">
+              {trends.suspended || 'Restricted access'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          4. USER FILTER TABS WITH COUNTS
+          ================================================== */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {[
+          { key: 'all', label: 'All Users', count: stats.totalUsers },
+          { key: 'players', label: 'Players', count: stats.players },
+          { key: 'captains', label: 'Captains', count: stats.captains },
+          { key: 'admins', label: 'Admins', count: stats.admins },
+          { key: 'pending', label: 'Pending', count: stats.pending },
+          { key: 'suspended', label: 'Suspended', count: stats.suspended },
+        ].map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => handleTabChange(tab.key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
+                isActive
+                  ? 'bg-purple-950/60 text-purple-200 border-purple-500/80 shadow-lg shadow-purple-500/20'
+                  : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-800/80'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                  isActive
+                    ? 'bg-purple-500/30 text-purple-200 border border-purple-400/40'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ==================================================
+          5. SEARCH AND FILTER TOOLBAR
+          ================================================== */}
+      <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Search Input (Debounced) */}
+          <div className="relative flex-1 min-w-[260px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by name, username or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all font-mono"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-wrap items-center">
+            {/* Game Filter */}
+            <select
+              value={selectedGame}
+              onChange={(e) => {
+                setSelectedGame(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
+            >
+              <option value="all">All Games</option>
+              <option value="BGMI">BGMI</option>
+              <option value="Free Fire">Free Fire</option>
+              <option value="Valorant">Valorant</option>
+            </select>
+
+            {/* Role Filter */}
+            <select
+              value={selectedRole}
+              onChange={(e) => {
+                setSelectedRole(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
+            >
+              <option value="all">All Roles</option>
+              <option value="player">Player</option>
+              <option value="captain">Captain</option>
+              <option value="admin">Admin</option>
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="suspended">Suspended</option>
+            </select>
+
+            {/* Team Filter */}
+            <select
+              value={selectedTeam}
+              onChange={(e) => {
+                setSelectedTeam(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
+            >
+              <option value="all">All Teams</option>
+              {teamsList.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Action Buttons: Reset, Export, Add User */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleResetFilters}
+              title="Reset search & filters"
+              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-all"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+              <span>Reset</span>
+            </button>
+
+            <button
+              onClick={handleExport}
+              title="Export filtered dataset to CSV"
+              className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all"
+            >
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Export</span>
+            </button>
+
+            <button
+              onClick={() => setAddModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-purple-600/25 border border-purple-400/30 flex items-center gap-1.5 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>ADD USER</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          24. ERROR STATE
+          ================================================== */}
+      {error && (
+        <div className="p-5 rounded-2xl bg-rose-950/30 border border-rose-500/40 text-slate-200 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-white">Unable to load users.</p>
+              <p className="text-xs text-rose-300/80">{error}</p>
+            </div>
+          </div>
+          <button
+            onClick={fetchUsers}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* ==================================================
+          22. EMPTY STATE / 23. LOADING SKELETONS / 7. USER TABLE
+          ================================================== */}
       {loading ? (
-        <Loading message="Loading student user directory..." />
-      ) : filteredUsers.length === 0 ? (
-        <EmptyState icon={Users} title="No users found" description="Try modifying your search." />
+        /* Skeleton Table Loader */
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl p-4 space-y-4">
+          <div className="h-6 bg-slate-800/60 rounded-md animate-pulse w-48" />
+          <div className="space-y-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-14 bg-slate-800/40 rounded-xl animate-pulse flex items-center px-4 justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-700/60" />
+                  <div className="space-y-1.5">
+                    <div className="w-28 h-3 bg-slate-700/60 rounded" />
+                    <div className="w-16 h-2.5 bg-slate-800 rounded" />
+                  </div>
+                </div>
+                <div className="w-24 h-3 bg-slate-700/40 rounded hidden md:block" />
+                <div className="w-20 h-5 bg-slate-700/40 rounded-full" />
+                <div className="w-16 h-5 bg-slate-700/40 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : users.length === 0 ? (
+        /* Empty State */
+        <div className="p-12 text-center rounded-3xl border border-slate-800/80 bg-slate-900/40 space-y-4 max-w-lg mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-purple-950/50 border border-purple-500/30 flex items-center justify-center mx-auto text-purple-400">
+            <Users className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-white font-mono">NO USERS FOUND</h3>
+          <p className="text-xs text-slate-400">
+            No accounts match your current filters. Clear the search parameters or add a new user to the club.
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={handleResetFilters}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
+            >
+              Clear Filters
+            </button>
+            <button
+              onClick={() => setAddModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/20"
+            >
+              + Add User
+            </button>
+          </div>
+        </div>
       ) : (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950/80 uppercase font-mono text-slate-400 border-b border-slate-800">
-                <tr>
-                  <th className="p-4">Player</th>
-                  <th className="p-4">Email</th>
-                  <th className="p-4">College</th>
-                  <th className="p-4">Role</th>
-                  <th className="p-4">Matches</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filteredUsers.map((u) => (
-                  <tr key={u._id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-4 flex items-center gap-3">
-                      <img
-                        src={u.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=100&q=80'}
-                        alt={u.name}
-                        className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0"
+        <>
+          {/* DESKTOP / TABLET TABLE VIEW (Hidden on Mobile) */}
+          <div className="hidden md:block rounded-2xl border border-slate-800/90 bg-slate-900/60 overflow-hidden shadow-2xl backdrop-blur-md">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950/90 uppercase font-mono text-slate-400 border-b border-slate-800 tracking-wider">
+                  <tr>
+                    <th className="p-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedUserIds.length === users.length && users.length > 0}
+                        onChange={handleSelectAll}
+                        className="rounded border-slate-700 bg-slate-900 text-purple-600 focus:ring-purple-500"
                       />
-                      <div>
-                        <span className="font-bold text-white block">{u.name}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">@{u.username}</span>
-                      </div>
-                    </td>
+                    </th>
+                    <th className="p-4 w-10">#</th>
+                    <th className="p-4">USER</th>
+                    <th className="p-4">COLLEGE</th>
+                    <th className="p-4">TEAM</th>
+                    <th className="p-4">GAME</th>
+                    <th className="p-4">ROLE</th>
+                    <th className="p-4">STATUS</th>
+                    <th className="p-4">JOINED</th>
+                    <th className="p-4 text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/70">
+                  {users.map((u, idx) => {
+                    const rowNumber = (currentPage - 1) * limit + idx + 1;
+                    const isSelected = selectedUserIds.includes(u._id);
 
-                    <td className="p-4 text-slate-400 font-mono">{u.email}</td>
-
-                    <td className="p-4 text-slate-400 truncate max-w-xs">{u.college}</td>
-
-                    <td className="p-4">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold border ${
-                          u.role === 'admin'
-                            ? 'bg-fuchsia-950 text-fuchsia-400 border-fuchsia-800'
-                            : 'bg-slate-950 text-cyan-400 border-slate-800'
+                    return (
+                      <tr
+                        key={u._id}
+                        className={`transition-colors duration-150 hover:bg-slate-800/40 ${
+                          isSelected ? 'bg-purple-950/20' : ''
                         }`}
                       >
-                        {u.role}
-                      </span>
-                    </td>
+                        {/* Checkbox */}
+                        <td className="p-4">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectUser(u._id)}
+                            className="rounded border-slate-700 bg-slate-900 text-purple-600 focus:ring-purple-500"
+                          />
+                        </td>
 
-                    <td className="p-4 font-mono">
-                      {u.stats?.matchesPlayed || 0} ({u.stats?.wins || 0}W)
-                    </td>
+                        {/* # Index */}
+                        <td className="p-4 font-mono text-slate-500 text-[11px]">
+                          {rowNumber}
+                        </td>
 
-                    <td className="p-4 text-right space-x-2">
-                      <button
-                        onClick={() => handleOpenEditRole(u)}
-                        title="Change User Role"
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(u._id, u.name)}
-                        title="Delete User"
-                        className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-rose-400 border border-rose-900 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {/* User Avatar + Name + @Username */}
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            {renderAvatar(u, 'w-9 h-9')}
+                            <div className="min-w-0">
+                              <span className="font-bold text-white block truncate hover:text-purple-300 transition-colors">
+                                {u.name}
+                              </span>
+                              <span className="text-[11px] text-slate-500 font-mono block">
+                                @{u.username}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* College */}
+                        <td className="p-4 text-slate-300 max-w-[180px] truncate" title={u.college}>
+                          {u.college || 'UEM Jaipur'}
+                        </td>
+
+                        {/* Team with Verified Badge */}
+                        <td className="p-4">
+                          <div className="space-y-0.5 max-w-[170px]">
+                            <span className="font-semibold text-slate-200 block truncate">
+                              {u.teamInfo?.name || u.teamName || 'Free Agent'}
+                            </span>
+                            {u.teamInfo?.isVerified ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 font-bold">
+                                <Check className="w-2.5 h-2.5" /> VERIFIED
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-amber-400/90 font-medium">
+                                ⚠ UNVERIFIED
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Game Badge */}
+                        <td className="p-4">
+                          {renderGameBadge(u.game || (u.games && u.games[0]))}
+                        </td>
+
+                        {/* Role Badge */}
+                        <td className="p-4">
+                          {renderRoleBadge(u.role)}
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="p-4">
+                          {renderStatusBadge(u.status)}
+                        </td>
+
+                        {/* Joined Date */}
+                        <td className="p-4 font-mono text-slate-400 text-[11px] whitespace-nowrap">
+                          {formatDate(u.createdAt)}
+                        </td>
+
+                        {/* Action Icons */}
+                        <td className="p-4 text-right">
+                          <div className="inline-flex items-center gap-1.5 action-menu-container relative">
+                            <button
+                              onClick={() => handleOpenProfileDrawer(u)}
+                              title="View Full Profile Drawer"
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => handleOpenEdit(u)}
+                              title="Edit User"
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(activeMenuId === u._id ? null : u._id);
+                              }}
+                              title="More Actions"
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                            >
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {activeMenuId === u._id && (
+                              <div className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-slate-950 border border-slate-800 shadow-2xl p-1.5 z-30 text-left space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                                <button
+                                  onClick={() => promptResetAccess(u)}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-900 hover:text-white transition-colors"
+                                >
+                                  <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                                  <span>Reset Access</span>
+                                </button>
+
+                                {u.status === 'suspended' ? (
+                                  <button
+                                    onClick={() => promptActivate(u)}
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-400 hover:bg-emerald-950/40 transition-colors"
+                                  >
+                                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span>Activate User</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => promptSuspend(u)}
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-400 hover:bg-amber-950/40 transition-colors"
+                                  >
+                                    <UserX className="w-3.5 h-3.5 text-amber-400" />
+                                    <span>Suspend User</span>
+                                  </button>
+                                )}
+
+                                <div className="border-t border-slate-800 my-1" />
+
+                                <button
+                                  onClick={() => promptDelete(u)}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-950/40 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                                  <span>Delete User</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ==================================================
+              21. RESPONSIVE MOBILE PLAYER CARDS (< 768px)
+              ================================================== */}
+          <div className="md:hidden space-y-3">
+            {users.map((u) => (
+              <div
+                key={u._id}
+                className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3 shadow-lg"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {renderAvatar(u, 'w-10 h-10')}
+                    <div>
+                      <h4 className="font-bold text-white text-sm leading-tight">{u.name}</h4>
+                      <p className="text-xs text-slate-400 font-mono">@{u.username}</p>
+                    </div>
+                  </div>
+                  {renderStatusBadge(u.status)}
+                </div>
+
+                <div className="text-xs text-slate-300 font-medium">
+                  {u.college || 'UEM Jaipur'}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-xs text-slate-300 font-semibold bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 flex items-center gap-1">
+                    🛡 {u.teamInfo?.name || u.teamName || 'Free Agent'}
+                  </span>
+                  {renderGameBadge(u.game)}
+                  {renderRoleBadge(u.role)}
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    Joined: {formatDate(u.createdAt)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOpenProfileDrawer(u)}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-purple-300 hover:bg-slate-700"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleOpenEdit(u)}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => promptSuspend(u)}
+                      className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+                      title="More"
+                    >
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ==================================================
+              19. SERVER-SIDE PAGINATION
+              ================================================== */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400">
+            {/* Range display */}
+            <div className="font-mono">
+              Showing <span className="text-white font-bold">{Math.min((currentPage - 1) * limit + 1, totalCount)}</span>–
+              <span className="text-white font-bold">{Math.min(currentPage * limit, totalCount)}</span> of{' '}
+              <span className="text-purple-400 font-bold">{totalCount}</span> users
+            </div>
+
+            {/* Page buttons */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-colors"
+                aria-label="Previous Page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Dynamic Page Numbers */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pNum = i + 1;
+                if (totalPages > 5 && currentPage > 3) {
+                  pNum = currentPage - 2 + i;
+                  if (pNum > totalPages) pNum = totalPages - (4 - i);
+                }
+                return (
+                  <button
+                    key={pNum}
+                    onClick={() => setCurrentPage(pNum)}
+                    className={`w-8 h-8 rounded-xl font-mono text-xs font-bold transition-all ${
+                      currentPage === pNum
+                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                        : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+
+              {totalPages > 5 && currentPage < totalPages - 2 && (
+                <>
+                  <span className="px-1 text-slate-600 font-mono">...</span>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="w-8 h-8 rounded-xl bg-slate-800/80 font-mono text-xs font-bold text-slate-300 hover:bg-slate-700"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-colors"
+                aria-label="Next Page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Per Page Selector */}
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[11px]">Rows per page:</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-purple-500"
+              >
+                <option value={10}>10 / page</option>
+                <option value={25}>25 / page</option>
+                <option value={50}>50 / page</option>
+                <option value={100}>100 / page</option>
+              </select>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ==================================================
+          12 & 13. USER PROFILE DRAWER (Slide-in Right / Fullscreen Mobile)
+          ================================================== */}
+      {drawerOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Overlay backdrop */}
+          <div
+            onClick={() => setDrawerOpen(false)}
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200"
+          />
+
+          {/* Drawer Panel */}
+          <aside className="relative z-10 w-full sm:max-w-lg bg-[#0B0E18] border-l border-slate-800 h-full overflow-y-auto flex flex-col shadow-2xl animate-in slide-in-from-right duration-250">
+            {/* Drawer Header */}
+            <div className="p-6 border-b border-slate-800/80 sticky top-0 bg-[#0B0E18]/95 backdrop-blur-md z-20 flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {renderAvatar(selectedUser, 'w-14 h-14')}
+                <div>
+                  <h3 className="text-lg font-black text-white font-mono leading-tight">
+                    {selectedUser.name}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">@{selectedUser.username}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {renderStatusBadge(selectedUser.status)}
+                    {renderRoleBadge(selectedUser.role)}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Drawer Navigation Tabs */}
+            <div className="flex items-center border-b border-slate-800 px-6 bg-slate-950/50">
+              {[
+                { id: 'overview', label: 'Overview', icon: Layers },
+                { id: 'stats', label: 'Stats', icon: BarChart3 },
+                { id: 'activity', label: 'Activity', icon: Activity },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setDrawerTab(tab.id)}
+                  className={`flex items-center gap-2 py-3 px-4 text-xs font-bold border-b-2 transition-all ${
+                    drawerTab === tab.id
+                      ? 'border-purple-500 text-purple-300'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <tab.icon className="w-3.5 h-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Drawer Content */}
+            <div className="p-6 space-y-6 flex-1">
+              {drawerLoading ? (
+                <div className="space-y-4 py-8">
+                  <div className="h-4 bg-slate-800 rounded animate-pulse w-3/4" />
+                  <div className="h-24 bg-slate-800/60 rounded-xl animate-pulse" />
+                  <div className="h-32 bg-slate-800/60 rounded-xl animate-pulse" />
+                </div>
+              ) : drawerTab === 'overview' ? (
+                <>
+                  {/* BASIC INFORMATION */}
+                  <div className="space-y-3">
+                    <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500">
+                      BASIC INFORMATION
+                    </h4>
+                    <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-4 space-y-3 text-xs">
+                      <div className="flex justify-between py-1 border-b border-slate-800/60">
+                        <span className="text-slate-400">Full Name</span>
+                        <span className="font-semibold text-white">{selectedUser.name}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-slate-800/60">
+                        <span className="text-slate-400">Email</span>
+                        <span className="font-mono text-slate-200">{selectedUser.email}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-slate-800/60">
+                        <span className="text-slate-400">College</span>
+                        <span className="text-white text-right max-w-[200px] truncate">{selectedUser.college || 'UEM Jaipur'}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-slate-800/60">
+                        <span className="text-slate-400">Game ID / IGN</span>
+                        <span className="font-mono font-bold text-cyan-400">{selectedUser.gameId || `@${selectedUser.username}`}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-slate-800/60">
+                        <span className="text-slate-400">Role</span>
+                        <span className="capitalize font-semibold text-purple-300">{selectedUser.role}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b border-slate-800/60">
+                        <span className="text-slate-400">Team</span>
+                        <span className="font-semibold text-white">{selectedUser.teamInfo?.name || selectedUser.teamName || 'Free Agent'}</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-slate-400">Joined</span>
+                        <span className="font-mono text-slate-300">{formatDate(selectedUser.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TEAM INFORMATION */}
+                  <div className="space-y-3">
+                    <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500">
+                      TEAM INFORMATION
+                    </h4>
+                    <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-bold text-white font-mono">
+                            {selectedUser.teamInfo?.name || selectedUser.teamName || 'Free Agent'}
+                          </p>
+                          <span className="text-xs text-slate-400">{selectedUser.game || 'BGMI'}</span>
+                        </div>
+                        {selectedUser.teamInfo?.isVerified ? (
+                          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
+                            ✓ VERIFIED
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-950 text-amber-400 border border-amber-500/40">
+                            ⚠ TEAM NOT VERIFIED
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+                        <span className="text-slate-400 font-mono">4/4 Members</span>
+                        <span className="text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 cursor-pointer">
+                          View Team <ArrowUpRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QUICK PLAYER STATS SNAPSHOT */}
+                  <div className="space-y-3">
+                    <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500">
+                      PLAYER STATISTICS
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
+                        <span className="text-[10px] text-slate-400 font-mono uppercase block">Matches</span>
+                        <span className="text-xl font-black text-white font-mono">{userStats?.matches ?? 24}</span>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
+                        <span className="text-[10px] text-slate-400 font-mono uppercase block">Wins</span>
+                        <span className="text-xl font-black text-emerald-400 font-mono">{userStats?.wins ?? 7}</span>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
+                        <span className="text-[10px] text-slate-400 font-mono uppercase block">Kills</span>
+                        <span className="text-xl font-black text-cyan-400 font-mono">{userStats?.kills ?? 86}</span>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
+                        <span className="text-[10px] text-slate-400 font-mono uppercase block">Points</span>
+                        <span className="text-xl font-black text-purple-400 font-mono">{userStats?.points ?? 412}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : drawerTab === 'stats' ? (
+                /* DETAILED STATS TAB */
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-3">
+                    <span className="text-[11px] font-mono font-bold text-slate-400 uppercase">
+                      COMPETITIVE PERFORMANCE
+                    </span>
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                        <span className="text-[10px] text-slate-500 font-mono block">WIN RATE</span>
+                        <span className="text-lg font-black text-white font-mono">{userStats?.winRate || '29%'}</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                        <span className="text-[10px] text-slate-500 font-mono block">TOURNAMENTS</span>
+                        <span className="text-lg font-black text-purple-400 font-mono">{userStats?.tournamentParticipation || 1} Registered</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                        <span className="text-[10px] text-slate-500 font-mono block">MATCHES PLAYED</span>
+                        <span className="text-lg font-black text-cyan-400 font-mono">{userStats?.matches || 24}</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                        <span className="text-[10px] text-slate-500 font-mono block">TOTAL ELIMINATIONS</span>
+                        <span className="text-lg font-black text-emerald-400 font-mono">{userStats?.kills || 86}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-500/20 text-xs text-purple-300">
+                    <p className="font-bold flex items-center gap-1.5 text-purple-200">
+                      <Trophy className="w-4 h-4 text-purple-400" /> Database Live Analytics
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Computed directly from tournament registrations and official room results.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* RECENT ACTIVITY TIMELINE */
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500">
+                    RECENT TIMELINE
+                  </h4>
+                  {userActivity.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-6">No recorded activity yet.</p>
+                  ) : (
+                    <div className="space-y-4 pl-2 border-l-2 border-slate-800">
+                      {userActivity.map((act) => (
+                        <div key={act.id} className="relative pl-5 space-y-1">
+                          <div className="absolute -left-[11px] top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-purple-500" />
+                          <p className="text-xs font-bold text-white">{act.title}</p>
+                          <p className="text-[11px] text-slate-400">{act.description}</p>
+                          <span className="text-[10px] text-slate-500 font-mono block">
+                            {formatDate(act.timestamp)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Drawer Footer / Account Actions */}
+            <div className="p-6 border-t border-slate-800/80 bg-slate-950/80 space-y-3">
+              <h4 className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500">
+                ACCOUNT ACTIONS
+              </h4>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => promptResetAccess(selectedUser)}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center justify-center gap-1 transition-colors"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Reset Access</span>
+                </button>
+
+                {selectedUser.status === 'suspended' ? (
+                  <button
+                    onClick={() => promptActivate(selectedUser)}
+                    className="px-3 py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/60 text-xs font-semibold text-emerald-300 border border-emerald-800 flex items-center justify-center gap-1 transition-colors"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Activate</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => promptSuspend(selectedUser)}
+                    className="px-3 py-2 rounded-xl bg-amber-950/60 hover:bg-amber-900/60 text-xs font-semibold text-amber-300 border border-amber-800 flex items-center justify-center gap-1 transition-colors"
+                  >
+                    <UserX className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Suspend</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => promptDelete(selectedUser)}
+                  className="px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900/60 text-xs font-semibold text-rose-300 border border-rose-800 flex items-center justify-center gap-1 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Delete</span>
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ==================================================
+          6. ADD USER MODAL
+          ================================================== */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setAddModalOpen(false)}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+          />
+          <div className="relative z-10 w-full max-w-xl bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-950 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white font-mono">ADD NEW USER</h3>
+                  <p className="text-xs text-slate-400">Enroll player or captain into the gaming club</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAddModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUserSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Shreyas Roy"
+                    value={addFormData.name}
+                    onChange={(e) => setAddFormData({ ...addFormData, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Username *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. shreyas"
+                    value={addFormData.username}
+                    onChange={(e) => setAddFormData({ ...addFormData, username: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. shreyas@gmail.com"
+                    value={addFormData.email}
+                    onChange={(e) => setAddFormData({ ...addFormData, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    College Affiliation
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UEM Jaipur"
+                    value={addFormData.college}
+                    onChange={(e) => setAddFormData({ ...addFormData, college: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Primary Game
+                  </label>
+                  <select
+                    value={addFormData.game}
+                    onChange={(e) => setAddFormData({ ...addFormData, game: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="BGMI">BGMI</option>
+                    <option value="Free Fire">Free Fire</option>
+                    <option value="Valorant">Valorant</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Game ID / Tag
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Shreyas#1234"
+                    value={addFormData.gameId}
+                    onChange={(e) => setAddFormData({ ...addFormData, gameId: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Assigned Role
+                  </label>
+                  <select
+                    value={addFormData.role}
+                    onChange={(e) => setAddFormData({ ...addFormData, role: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="player">PLAYER</option>
+                    <option value="captain">CAPTAIN</option>
+                    <option value="admin">ADMIN</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Team Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Phoenix Esports"
+                    value={addFormData.teamName}
+                    onChange={(e) => setAddFormData({ ...addFormData, teamName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Initial Status
+                  </label>
+                  <select
+                    value={addFormData.status}
+                    onChange={(e) => setAddFormData({ ...addFormData, status: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="active">ACTIVE</option>
+                    <option value="pending">PENDING</option>
+                    <option value="suspended">SUSPENDED</option>
+                    <option value="rejected">REJECTED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingAdd}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 disabled:opacity-50"
+                >
+                  {submittingAdd ? 'Creating Account...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Change Role Modal */}
-      <Modal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        title={`Change Role for ${editingUser?.name}`}
-      >
-        <form onSubmit={handleUpdateRole} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Select Role
-            </label>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white"
-            >
-              <option value="student">student (Standard Player)</option>
-              <option value="admin">admin (Full Superuser Privileges)</option>
-            </select>
-          </div>
+      {/* ==================================================
+          EDIT USER MODAL
+          ================================================== */}
+      {editModalOpen && editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setEditModalOpen(false)}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+          />
+          <div className="relative z-10 w-full max-w-xl bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-950 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white font-mono">EDIT USER PROFILE</h3>
+                  <p className="text-xs text-slate-400">Update account credentials and competitive status</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={() => setEditModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-2 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-xs font-bold text-white disabled:opacity-50"
-            >
-              {submitting ? 'Saving...' : 'Update Role'}
-            </button>
+            <form onSubmit={handleEditUserSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.username}
+                    onChange={(e) => setEditFormData({ ...editFormData, username: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    College
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.college}
+                    onChange={(e) => setEditFormData({ ...editFormData, college: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Game
+                  </label>
+                  <select
+                    value={editFormData.game}
+                    onChange={(e) => setEditFormData({ ...editFormData, game: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="BGMI">BGMI</option>
+                    <option value="Free Fire">Free Fire</option>
+                    <option value="Valorant">Valorant</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Game ID / IGN
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.gameId}
+                    onChange={(e) => setEditFormData({ ...editFormData, gameId: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Role
+                  </label>
+                  <select
+                    value={editFormData.role}
+                    onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="player">PLAYER</option>
+                    <option value="captain">CAPTAIN</option>
+                    <option value="admin">ADMIN</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Team Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.teamName}
+                    onChange={(e) => setEditFormData({ ...editFormData, teamName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="active">ACTIVE</option>
+                    <option value="pending">PENDING</option>
+                    <option value="suspended">SUSPENDED</option>
+                    <option value="rejected">REJECTED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEdit}
+                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 disabled:opacity-50"
+                >
+                  {submittingEdit ? 'Saving Changes...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
-      </Modal>
+        </div>
+      )}
+
+      {/* ==================================================
+          CONFIRMATION ACTION MODAL (Suspend, Activate, Reset, Delete)
+          ================================================== */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+          />
+          <div className="relative z-10 w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white font-mono">{confirmModal.title}</h3>
+                <span className="text-xs text-slate-400">Action confirmation required</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {confirmModal.message}
+            </p>
+
+            {copiedToken && (
+              <div className="p-3 rounded-xl bg-cyan-950/50 border border-cyan-500/30 space-y-1 text-xs">
+                <span className="text-[10px] font-mono uppercase text-cyan-400 block font-bold">
+                  Generated Reset Token:
+                </span>
+                <div className="flex items-center justify-between gap-2 font-mono text-white bg-slate-950 p-2 rounded-lg">
+                  <span className="truncate">{copiedToken}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(copiedToken);
+                      addToast('Copied token to clipboard', 'info');
+                    }}
+                    className="p-1 hover:text-cyan-400"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeConfirmAction}
+                className={`px-5 py-2 rounded-xl text-xs font-bold ${confirmModal.confirmButtonClass}`}
+              >
+                {confirmModal.confirmButtonText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

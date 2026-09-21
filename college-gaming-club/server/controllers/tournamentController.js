@@ -1,6 +1,7 @@
 const Tournament = require('../models/Tournament');
 const Team = require('../models/Team');
 const Match = require('../models/Match');
+const TournamentRegistration = require('../models/TournamentRegistration');
 
 // Helper to slugify tournament name
 const slugify = (text) => {
@@ -125,6 +126,10 @@ exports.getTournamentById = async (req, res, next) => {
       if (!isAssignedToThisLobby && currentUserId && matchObj.teams) {
         isAssignedToThisLobby = matchObj.teams.some((team) => {
           if (!team) return false;
+          // Lobby Rule: Unverified team cannot access lobby
+          const isTeamVerified = Boolean(team.isVerified || team.status === 'verified');
+          if (!isTeamVerified) return false;
+
           const capId = (team.captain?._id || team.captain)?.toString();
           const leadId = (team.leader?._id || team.leader)?.toString();
           if (capId === currentUserId || leadId === currentUserId) return true;
@@ -530,6 +535,73 @@ exports.generateBracket = async (req, res, next) => {
       success: true,
       message: `Generated ${createdMatches.length} bracket matches`,
       matches: createdMatches,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify and authorize tournament lobby access
+// @route   POST /api/tournaments/:id/lobbies/:lobbyId/access
+// @access  Private (Registered Player)
+exports.verifyLobbyAccess = async (req, res, next) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    const isStaff = ['admin', 'super_admin', 'moderator', 'staff', 'coordinator'].includes(req.user.role);
+    if (isStaff) {
+      return res.status(200).json({ success: true, accessGranted: true, message: 'Staff override granted.' });
+    }
+
+    // Find user's squad registration for this tournament
+    const registration = await TournamentRegistration.findOne({
+      tournament: tournament._id,
+      $or: [
+        { captain: req.user._id },
+        { leader: req.user._id },
+        { 'players.user': req.user._id },
+      ],
+    });
+
+    if (!registration) {
+      return res.status(403).json({
+        success: false,
+        code: 'NOT_TEAM_MEMBER',
+        message: 'You are not a registered player on any team for this tournament.',
+      });
+    }
+
+    // 1. Team verification rule: Unverified team cannot access lobby
+    const isVerified = Boolean(registration.isVerified || registration.status === 'verified');
+    if (!isVerified) {
+      return res.status(403).json({
+        success: false,
+        code: 'TEAM_NOT_VERIFIED',
+        message: 'Your team verification is pending. An administrator must verify your squad before lobby access is unlocked.',
+      });
+    }
+
+    // 2. Correct game check
+    if (registration.game && tournament.game) {
+      const regGame = registration.game.toLowerCase().trim();
+      const tourneyGame = tournament.game.toLowerCase().trim();
+      if (!regGame.includes(tourneyGame) && !tourneyGame.includes(regGame)) {
+        return res.status(403).json({
+          success: false,
+          code: 'GAME_MISMATCH',
+          message: 'Squad game title does not match tournament game title.',
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      accessGranted: true,
+      teamName: registration.teamName,
+      message: 'Lobby access authorized.',
     });
   } catch (error) {
     next(error);

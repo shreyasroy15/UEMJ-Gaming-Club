@@ -9,6 +9,7 @@ const {
   deleteTournament,
   registerTeam,
   generateBracket,
+  verifyLobbyAccess,
 } = require('../controllers/tournamentController');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
 const { staffOnly, adminOnly } = require('../middleware/adminMiddleware');
@@ -52,6 +53,7 @@ router.get('/:id/public-teams', getPublicTeams);
 router.get('/:id/admin-registrations', protect, staffOnly, getAdminRegistrations);
 
 // Direct Tournament Lobby Routes (Esports Manager Flow)
+router.post('/:id/lobbies/:lobbyId/access', protect, verifyLobbyAccess);
 router.post('/:id/lobbies', protect, staffOnly, createDirectLobby);
 router.put('/:id/lobbies/:lobbyId', protect, staffOnly, updateDirectLobby);
 router.delete('/:id/lobbies/:lobbyId', protect, staffOnly, deleteDirectLobby);

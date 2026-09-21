@@ -49,8 +49,34 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'admin'],
+      enum: ['student', 'player', 'captain', 'moderator', 'admin', 'super_admin'],
       default: 'student',
+    },
+    status: {
+      type: String,
+      enum: ['active', 'pending', 'suspended', 'rejected', 'deleted'],
+      default: 'active',
+    },
+    game: {
+      type: String,
+      default: 'BGMI',
+    },
+    gameId: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    teamName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
     },
     bio: {
       type: String,

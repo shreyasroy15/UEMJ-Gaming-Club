@@ -30,7 +30,7 @@ const Login = () => {
       if (res.success) {
         addToast(`Welcome back, ${res.user.name}!`, 'success');
         // Navigate to intended destination or default based on role
-        const defaultRoute = res.user.role === 'admin' || res.user.role === 'staff' ? '/admin' : '/';
+        const defaultRoute = res.user.role === 'admin' || res.user.role === 'super_admin' ? '/admin/users' : '/dashboard';
         navigate(from && from !== '/login' ? from : defaultRoute, { replace: true });
       } else {
         addToast(res.message || 'Invalid credentials', 'error');
@@ -56,7 +56,7 @@ const Login = () => {
             SIGN IN TO ARENA
           </h2>
           <p className="text-xs text-slate-400">
-            Enter your college gaming credentials to access tournaments & rosters.
+            Sign in with your Student or Administrator account credentials.
           </p>
         </div>
 

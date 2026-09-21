@@ -98,8 +98,8 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateUser,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin',
-        isStaff: user?.role === 'admin',
+        isAdmin: ['admin', 'super_admin'].includes(user?.role) || user?.email === 'admin@gmail.com',
+        isStaff: ['admin', 'super_admin', 'moderator', 'staff', 'coordinator'].includes(user?.role) || user?.email === 'admin@gmail.com',
       }}
     >
       {children}

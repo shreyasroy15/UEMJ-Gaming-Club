@@ -122,6 +122,31 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    // Check account status: deleted or deactivated
+    if (user.isDeleted || user.status === 'deleted') {
+      return res.status(403).json({
+        success: false,
+        message: 'This account has been deleted or deactivated.',
+      });
+    }
+
+    // Check account status: suspended
+    if (user.status === 'suspended') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Please contact club administration.',
+      });
+    }
+
+    // Restrict login to student and admin accounts only
+    const allowedRoles = ['student', 'admin', 'super_admin', 'player', 'captain'];
+    if (!allowedRoles.includes(user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access restricted to student and admin accounts only.',
+      });
+    }
+
     sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);
