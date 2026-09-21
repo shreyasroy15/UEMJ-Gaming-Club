@@ -198,10 +198,10 @@ const AdminAnnouncements = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-white font-mono">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
             CLUB ANNOUNCEMENTS
           </h1>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-600 mt-0.5">
             Publish official notices, pin critical updates, and broadcast tournament alerts.
           </p>
         </div>
@@ -215,13 +215,13 @@ const AdminAnnouncements = () => {
                 placeholder="Search announcements..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-9 py-2 sm:py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
+                className="w-full pl-9 pr-9 py-2 sm:py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-cyan-500 font-mono shadow-sm"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -243,14 +243,14 @@ const AdminAnnouncements = () => {
       ) : announcements.length === 0 ? (
         <EmptyState icon={Megaphone} title="No announcements found" description="Create an announcement to broadcast." />
       ) : filteredAnnouncements.length === 0 ? (
-        <div className="p-8 text-center rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
-          <p className="text-xs text-slate-400 font-mono">
+        <div className="p-8 text-center rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-2">
+          <p className="text-xs text-slate-600 font-mono">
             No announcements found matching "{search}".
           </p>
           <button
             type="button"
             onClick={() => setSearch('')}
-            className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono font-bold"
+            className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-cyan-700 border border-slate-200 text-xs font-mono font-bold"
           >
             Clear Search
           </button>
@@ -260,11 +260,11 @@ const AdminAnnouncements = () => {
           {filteredAnnouncements.map((ann) => (
             <div
               key={ann._id}
-              className="p-3.5 sm:p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:border-slate-700 transition-colors"
+              className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:border-slate-300 transition-colors"
             >
               <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
                 {ann.image && (
-                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-800 shrink-0 bg-slate-950">
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
                     <img
                       src={ann.image}
                       alt={ann.title}
@@ -278,33 +278,33 @@ const AdminAnnouncements = () => {
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     {ann.pinned && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-0.5">
                         <Pin className="w-2.5 h-2.5" /> Pinned
                       </span>
                     )}
-                    <span className="px-2 py-0.5 rounded text-[9px] sm:text-[10px] uppercase font-bold bg-slate-950 text-cyan-400 border border-slate-800 font-mono">
+                    <span className="px-2 py-0.5 rounded text-[9px] sm:text-[10px] uppercase font-bold bg-slate-100 text-cyan-700 border border-slate-200 font-mono">
                       {ann.category}
                     </span>
                     <span className="text-[10px] sm:text-[11px] text-slate-500 font-mono">
                       {new Date(ann.publishedAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <h3 className="text-sm font-bold text-white font-mono truncate">{ann.title}</h3>
-                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{ann.content}</p>
+                  <h3 className="text-sm font-bold text-slate-900 font-mono truncate">{ann.title}</h3>
+                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{ann.content}</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
+              <div className="flex items-center justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                 <button
                   onClick={() => handleOpenEdit(ann)}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
                   title="Edit Announcement"
                 >
                   <Edit className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => handleDelete(ann._id, ann.title)}
-                  className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-rose-400 border border-rose-900 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
                   title="Delete Announcement"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -324,7 +324,7 @@ const AdminAnnouncements = () => {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
               Title *
             </label>
             <input
@@ -332,19 +332,19 @@ const AdminAnnouncements = () => {
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:items-center">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Category
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs sm:text-sm text-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500"
               >
                 <option value="General">General</option>
                 <option value="Tournament">Tournament</option>
@@ -355,12 +355,12 @@ const AdminAnnouncements = () => {
             </div>
 
             <div className="flex items-center sm:pt-5">
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={formData.pinned}
                   onChange={(e) => setFormData({ ...formData, pinned: e.target.checked })}
-                  className="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0 w-4 h-4"
+                  className="rounded bg-slate-100 border-slate-300 text-cyan-600 focus:ring-0 w-4 h-4 cursor-pointer"
                 />
                 Pin to top of bulletins
               </label>
@@ -370,14 +370,14 @@ const AdminAnnouncements = () => {
           {/* Announcement Image / Banner with Cloudinary Upload */}
           <div className="space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-1">
-              <label className="block text-xs font-bold text-slate-300 uppercase">
+              <label className="block text-xs font-bold text-slate-700 uppercase">
                 Announcement Banner / Image
               </label>
               {formData.image && (
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-50 text-cyan-700 border border-cyan-200 flex items-center gap-1">
                   {formData.image.includes('cloudinary.com') ? (
                     <>
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Cloudinary Hosted
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Cloudinary Hosted
                     </>
                   ) : (
                     'Direct Image URL'
@@ -402,18 +402,18 @@ const AdminAnnouncements = () => {
                 type="button"
                 disabled={uploadingImage || uploadingUrl}
                 onClick={() => fileInputRef.current?.click()}
-                className="p-3.5 rounded-xl border border-dashed border-slate-700 hover:border-cyan-500/80 bg-slate-950/70 hover:bg-cyan-950/20 text-slate-300 hover:text-white transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="p-3.5 rounded-xl border border-dashed border-slate-300 hover:border-cyan-500 bg-slate-50 hover:bg-cyan-50/50 text-slate-600 hover:text-slate-900 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {uploadingImage ? (
                   <>
-                    <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
-                    <span className="text-xs font-mono font-bold text-cyan-300">
+                    <Loader2 className="w-5 h-5 text-cyan-600 animate-spin" />
+                    <span className="text-xs font-mono font-bold text-cyan-700">
                       Uploading to Cloudinary...
                     </span>
                   </>
                 ) : (
                   <>
-                    <UploadCloud className="w-5 h-5 text-cyan-400" />
+                    <UploadCloud className="w-5 h-5 text-cyan-600" />
                     <span className="text-xs font-bold font-mono">Upload Image File</span>
                     <span className="text-[10px] text-slate-500">PNG, JPG, WEBP to Cloudinary</span>
                   </>
@@ -421,9 +421,9 @@ const AdminAnnouncements = () => {
               </button>
 
               {/* Paste URL with Cloudinary Upload */}
-              <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/70 flex flex-col justify-between gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-fuchsia-400 shrink-0" />
+              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-2">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-fuchsia-500 shrink-0" />
                   <span className="truncate">Or Image URL to Cloudinary</span>
                 </span>
                 <div className="flex flex-col min-[480px]:flex-row items-stretch min-[480px]:items-center gap-1.5">
@@ -432,14 +432,14 @@ const AdminAnnouncements = () => {
                     value={formData.image}
                     onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                     placeholder="https://..."
-                    className="flex-1 min-w-0 px-2.5 py-2 min-[480px]:py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    className="flex-1 min-w-0 px-2.5 py-2 min-[480px]:py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-sky-500 font-mono"
                   />
                   <button
                     type="button"
                     disabled={!formData.image || uploadingUrl || uploadingImage}
                     onClick={handleUploadUrlToCloudinary}
                     title="Upload remote URL to Cloudinary"
-                    className="px-3 py-2 min-[480px]:py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-mono text-[11px] min-[480px]:text-[10px] font-bold shrink-0 disabled:opacity-40 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    className="px-3 py-2 min-[480px]:py-1.5 rounded-lg bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-mono text-[11px] min-[480px]:text-[10px] font-bold shrink-0 disabled:opacity-40 transition-all flex items-center justify-center gap-1 cursor-pointer"
                   >
                     {uploadingUrl ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -454,7 +454,7 @@ const AdminAnnouncements = () => {
 
             {/* Live Image Preview */}
             {formData.image && (
-              <div className="relative mt-2 rounded-xl overflow-hidden border border-slate-700 bg-slate-950 group">
+              <div className="relative mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 group">
                 <img
                   src={formData.image}
                   alt="Announcement Preview"
@@ -463,8 +463,8 @@ const AdminAnnouncements = () => {
                     e.target.style.display = 'none';
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent flex items-end justify-between p-3 gap-2">
-                  <span className="text-[10px] font-mono text-slate-300 truncate max-w-[180px] sm:max-w-xs">
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent flex items-end justify-between p-3 gap-2">
+                  <span className="text-[10px] font-mono text-slate-100 truncate max-w-[180px] sm:max-w-xs">
                     {formData.image}
                   </span>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -472,7 +472,7 @@ const AdminAnnouncements = () => {
                       href={formData.image}
                       target="_blank"
                       rel="noreferrer"
-                      className="p-1 rounded-lg bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700"
+                      className="p-1 rounded-lg bg-white/90 text-slate-800 hover:text-black border border-slate-200"
                       title="Open full image"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -480,7 +480,7 @@ const AdminAnnouncements = () => {
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, image: '' })}
-                      className="p-1 rounded-lg bg-rose-950/90 text-rose-300 hover:text-white border border-rose-800 cursor-pointer"
+                      className="p-1 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 border border-rose-300 cursor-pointer transition-colors"
                       title="Remove image"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -492,7 +492,7 @@ const AdminAnnouncements = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
               Content *
             </label>
             <textarea
@@ -500,22 +500,22 @@ const AdminAnnouncements = () => {
               required
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500"
             />
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-800">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="w-full sm:w-auto px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-xs font-bold text-slate-950 disabled:opacity-50 transition-colors shadow-lg shadow-cyan-500/20"
+              className="w-full sm:w-auto px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
             >
               {submitting ? 'Publishing...' : 'Save Announcement'}
             </button>

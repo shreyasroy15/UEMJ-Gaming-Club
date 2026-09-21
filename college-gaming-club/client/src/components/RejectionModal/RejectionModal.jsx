@@ -64,20 +64,20 @@ const RejectionModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-3xl bg-[#090e1f] border border-rose-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.9),0_0_30px_rgba(244,63,94,0.15)] p-5 sm:p-6 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-2xl p-5 sm:p-6 space-y-4 text-slate-800">
         {/* Modal Header */}
-        <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/10">
+        <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-400">
+            <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-600">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black text-white font-mono uppercase">
+              <h3 className="text-base sm:text-lg font-black text-slate-900 font-mono uppercase">
                 {title}
               </h3>
-              <p className="text-xs text-rose-300/80 font-mono">
-                Squad: <strong className="text-white">{teamName}</strong>
+              <p className="text-xs text-rose-600 font-mono">
+                Squad: <strong className="text-slate-900">{teamName}</strong>
               </p>
             </div>
           </div>
@@ -85,7 +85,7 @@ const RejectionModal = ({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -94,14 +94,14 @@ const RejectionModal = ({
         {/* Form Body */}
         <form onSubmit={handleConfirm} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-mono font-bold text-slate-700 uppercase tracking-wider block">
               Select Preset Rejection Cause:
             </label>
             <select
               value={selectedPreset}
               onChange={(e) => handlePresetChange(e.target.value)}
               disabled={submitting}
-              className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-medium text-white focus:outline-none focus:border-rose-500 transition-colors"
+              className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-rose-500 transition-colors"
             >
               {REJECTION_PRESETS.map((preset) => (
                 <option key={preset.id} value={preset.id}>
@@ -113,7 +113,7 @@ const RejectionModal = ({
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
+              <label className="text-xs font-mono font-bold text-slate-700 uppercase tracking-wider">
                 Rejection Message sent to Squad:
               </label>
               <span className="text-[10px] text-slate-500 font-mono">Editable</span>
@@ -124,26 +124,26 @@ const RejectionModal = ({
               onChange={(e) => setReasonText(e.target.value)}
               placeholder="Explain why the documents were rejected and what the squad needs to fix..."
               disabled={submitting}
-              className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-rose-500 transition-colors leading-relaxed resize-none"
+              className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-rose-500 transition-colors leading-relaxed resize-none"
               required
             />
           </div>
 
           {/* Info Notice */}
-          <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 leading-relaxed font-mono flex items-start gap-2">
-            <Send className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed font-mono flex items-start gap-2">
+            <Send className="w-4 h-4 text-cyan-600 shrink-0 mt-0.5" />
             <span>
               This reason will immediately trigger a high-priority notification to the captain and roster players with a 1-click link to re-upload their single merged PDF.
             </span>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/10">
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 rounded-xl text-xs font-bold font-mono text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-bold font-mono text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition cursor-pointer"
             >
               Cancel
             </button>

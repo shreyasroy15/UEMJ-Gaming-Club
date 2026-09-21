@@ -276,8 +276,8 @@ const AdminGameView = () => {
           {/* Active Tournament Highlights */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-white font-mono uppercase tracking-wide flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-400" />
+              <h2 className="text-base font-bold text-slate-900 font-mono uppercase tracking-wide flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-500" />
                 <span>{game.name} Tournaments</span>
               </h2>
               <Link
@@ -299,26 +299,26 @@ const AdminGameView = () => {
                 {tournaments.map((t) => (
                   <div
                     key={t._id}
-                    className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+                    className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 transition-all space-y-3 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded ${game.themeClass.badge}`}>
                           {t.status || 'Active'}
                         </span>
-                        <h3 className="text-base font-bold text-white font-mono mt-1">{t.name}</h3>
-                        <p className="text-xs text-slate-400 font-mono">Format: {t.format || 'Single Elimination'}</p>
+                        <h3 className="text-base font-bold text-slate-900 font-mono mt-1">{t.name}</h3>
+                        <p className="text-xs text-slate-600 font-mono">Format: {t.format || 'Single Elimination'}</p>
                       </div>
                       <Link
                         to={`/admin/matches?tournament=${t._id}`}
-                        className={`p-2 rounded-xl bg-slate-800 hover:bg-slate-700 ${game.themeClass.text}`}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"
                         title="Manage Matches"
                       >
                         <Swords className="w-4 h-4" />
                       </Link>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono text-slate-400">
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono text-slate-500">
                       <span>Rosters: {t.registeredTeams?.length || 0} teams</span>
                       <Link
                         to={`/admin/points-table?tournament=${t._id}`}
@@ -349,24 +349,24 @@ const AdminGameView = () => {
               {tournaments.map((t) => (
                 <div
                   key={t._id}
-                  className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div>
-                    <h3 className="text-sm font-bold text-white font-mono">{t.name}</h3>
-                    <p className="text-xs text-slate-400 font-mono">
+                    <h3 className="text-sm font-bold text-slate-900 font-mono">{t.name}</h3>
+                    <p className="text-xs text-slate-600 font-mono">
                       Status: {t.status} • Teams: {t.registeredTeams?.length || 0}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/admin/matches?tournament=${t._id}`}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-mono font-bold text-white hover:bg-slate-700"
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-mono font-bold text-slate-700 hover:bg-slate-200 border border-slate-200"
                     >
                       Matches
                     </Link>
                     <Link
                       to={`/admin/points-table?tournament=${t._id}`}
-                      className={`px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-mono font-bold ${game.themeClass.text} hover:bg-slate-700`}
+                      className={`px-3 py-1.5 rounded-lg bg-slate-100 text-xs font-mono font-bold ${game.themeClass.text} hover:bg-slate-200 border border-slate-200`}
                     >
                       Points Table
                     </Link>
@@ -392,29 +392,29 @@ const AdminGameView = () => {
               {matches.map((m) => (
                 <div
                   key={m._id}
-                  className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
                         m.status === 'live'
-                          ? 'bg-rose-950 text-rose-400 border border-rose-500/40'
-                          : 'bg-slate-800 text-slate-300'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
                       }`}>
                         {m.status}
                       </span>
-                      <span className="text-xs font-bold text-white font-mono">
+                      <span className="text-xs font-bold text-slate-900 font-mono">
                         {m.stageName || m.round || 'Round 1'} - {m.title || `Match #${m.matchNumber || 1}`}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 font-mono">
+                    <p className="text-xs text-slate-600 font-mono">
                       Tournament: {m.tournament?.name || 'Championship'}
                     </p>
                   </div>
 
                   <Link
                     to={`/admin/matches?tournament=${m.tournament?._id || ''}`}
-                    className={`px-3 py-1.5 rounded-xl bg-slate-800 text-xs font-mono font-bold ${game.themeClass.text} hover:bg-slate-700 shrink-0`}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 text-xs font-mono font-bold text-slate-700 hover:bg-slate-200 border border-slate-200 shrink-0"
                   >
                     Open in Matches Console →
                   </Link>
@@ -439,20 +439,20 @@ const AdminGameView = () => {
               {teams.map((t, idx) => (
                 <div
                   key={t._id || idx}
-                  className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2"
+                  className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-2"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center font-mono font-black text-cyan-400">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-mono font-black text-cyan-700">
                       {t.name ? t.name.slice(0, 2).toUpperCase() : 'TM'}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-bold text-white font-mono truncate">{t.name}</h4>
-                      <span className="text-[10px] text-slate-400 font-mono block truncate">
+                      <h4 className="text-sm font-bold text-slate-900 font-mono truncate">{t.name}</h4>
+                      <span className="text-[10px] text-slate-500 font-mono block truncate">
                         Tournament: {t.tournamentName}
                       </span>
                     </div>
                   </div>
-                  <span className="inline-block px-2 py-0.5 rounded text-[9px] font-mono uppercase bg-emerald-950/60 text-emerald-400 border border-emerald-500/30">
+                  <span className="inline-block px-2 py-0.5 rounded text-[9px] font-mono uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
                     Verified Roster
                   </span>
                 </div>
@@ -465,18 +465,18 @@ const AdminGameView = () => {
       {/* TAB: Points Standings */}
       {activeTab === 'points' && (
         <div className="space-y-4">
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-white font-mono">
+              <h3 className="text-base font-bold text-slate-900 font-mono">
                 {game.name} Standings & Points Table
               </h3>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">
+              <p className="text-xs text-slate-600 font-mono mt-0.5">
                 Official leaderboard scores, placement points, and kill telemetry.
               </p>
             </div>
             <Link
               to="/admin/points-table"
-              className={`px-4 py-2 rounded-xl text-xs font-mono font-bold text-slate-950 bg-gradient-to-r ${game.themeClass.gradient}`}
+              className={`px-4 py-2 rounded-xl text-xs font-mono font-bold text-white bg-gradient-to-r ${game.themeClass.gradient} shadow-sm`}
             >
               Full Standings Console →
             </Link>

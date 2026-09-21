@@ -1416,14 +1416,14 @@ const AdminMatches = () => {
 
         {/* Bulk Selection Bar */}
         {selectedTeamIds.length > 0 && (
-          <div className="sticky top-4 z-20 bg-slate-900 text-white border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
+          <div className="sticky top-4 z-20 bg-white text-slate-900 border border-slate-200 rounded-2xl p-4 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
             <div className="flex items-center gap-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-cyan-400 text-slate-950 font-black text-sm">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-sky-500 text-white font-black text-sm shadow-xs">
                 {selectedTeamIds.length}
               </span>
               <div>
-                <h4 className="text-sm font-bold text-white">Teams Selected for Lobby</h4>
-                <p className="text-xs text-slate-300">
+                <h4 className="text-sm font-bold text-slate-900">Teams Selected for Lobby</h4>
+                <p className="text-xs text-slate-500">
                   Assign these teams to an existing lobby or create a new lobby for them.
                 </p>
               </div>
@@ -1435,7 +1435,7 @@ const AdminMatches = () => {
                   <select
                     value={targetLobbyToAssign}
                     onChange={(e) => setTargetLobbyToAssign(e.target.value)}
-                    className="bg-slate-800 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-cyan-400 font-semibold"
+                    className="bg-white border border-slate-200 text-slate-800 text-xs rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-semibold shadow-xs cursor-pointer"
                   >
                     <option value="">Choose Target Lobby...</option>
                     {allLobbies.map((l) => (
@@ -2124,13 +2124,13 @@ const AdminMatches = () => {
               value={lobbyFormData.name}
               onChange={(e) => setLobbyFormData({ ...lobbyFormData, name: e.target.value })}
               placeholder="e.g. Lobby 1, Lobby 2, Finals Lobby"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 font-medium"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Maximum Teams
               </label>
               <input
@@ -2141,18 +2141,18 @@ const AdminMatches = () => {
                 onChange={(e) =>
                   setLobbyFormData({ ...lobbyFormData, maxTeams: Number(e.target.value) })
                 }
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Lobby Status
               </label>
               <select
                 value={lobbyFormData.status}
                 onChange={(e) => setLobbyFormData({ ...lobbyFormData, status: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium cursor-pointer"
               >
                 <option value="upcoming">Upcoming Lobby</option>
                 <option value="running">Running Lobby</option>
@@ -2161,17 +2161,17 @@ const AdminMatches = () => {
           </div>
 
           {!editingLobby && selectedTeamIds.length > 0 && (
-            <div className="p-3 bg-cyan-950/40 border border-cyan-500/30 rounded-xl text-xs text-cyan-300">
+            <div className="p-3 bg-cyan-50 border border-cyan-200 rounded-xl text-xs text-cyan-800">
               <strong>{selectedTeamIds.length} teams</strong> currently selected in the roster will
               be automatically assigned to this new lobby!
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setCreateLobbyModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition-colors"
             >
               Cancel
             </button>
@@ -2196,9 +2196,9 @@ const AdminMatches = () => {
         size="xl"
       >
         <form onSubmit={handleCreateLobbyFromTopTeams} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-800/40 p-4 rounded-xl border border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 New Lobby Name *
               </label>
               <input
@@ -2207,12 +2207,12 @@ const AdminMatches = () => {
                 value={qualifyLobbyName}
                 onChange={(e) => setQualifyLobbyName(e.target.value)}
                 placeholder="e.g. Finals Lobby, Grand Finale"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Max Capacity
               </label>
               <input
@@ -2221,29 +2221,29 @@ const AdminMatches = () => {
                 max="100"
                 value={qualifyMaxTeams}
                 onChange={(e) => setQualifyMaxTeams(Number(e.target.value))}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
               />
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600">
               Select top qualifying teams from each lobby column below. The selected teams will be merged into your new lobby:
             </p>
             <div className="relative w-full sm:w-64 shrink-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search team in lobbies..."
                 value={qualifySearchQuery}
                 onChange={(e) => setQualifySearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-8 pr-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono shadow-inner"
+                className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-8 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 font-mono shadow-xs"
               />
               {qualifySearchQuery && (
                 <button
                   type="button"
                   onClick={() => setQualifySearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -2264,13 +2264,13 @@ const AdminMatches = () => {
               return (
                 <div
                   key={lobby._id}
-                  className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between space-y-3"
+                  className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-xs"
                 >
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div>
-                        <h4 className="font-bold text-white text-sm">{lobby.name}</h4>
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <h4 className="font-bold text-slate-900 text-sm">{lobby.name}</h4>
+                        <span className="text-[10px] text-slate-500 font-mono">
                           {standings.length} Teams
                         </span>
                       </div>
@@ -2279,14 +2279,14 @@ const AdminMatches = () => {
                         <button
                           type="button"
                           onClick={() => selectTopNFromLobby(lobby._id, 4)}
-                          className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700"
+                          className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition-colors cursor-pointer"
                         >
                           Top 4
                         </button>
                         <button
                           type="button"
                           onClick={() => selectTopNFromLobby(lobby._id, 8)}
-                          className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700"
+                          className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer"
                         >
                           Top 8
                         </button>
@@ -2294,7 +2294,7 @@ const AdminMatches = () => {
                     </div>
 
                     {filteredStandings.length === 0 ? (
-                      <p className="text-slate-500 text-xs py-4 text-center">
+                      <p className="text-slate-400 text-xs py-4 text-center">
                         {standings.length === 0 ? 'No teams in lobby' : 'No teams match search'}
                       </p>
                     ) : (
@@ -2308,26 +2308,26 @@ const AdminMatches = () => {
                               onClick={() => toggleQualifyTeam(st.teamId)}
                               className={`p-2 rounded-lg border text-xs cursor-pointer transition flex items-center justify-between ${
                                 isChecked
-                                  ? 'bg-cyan-950/40 border-cyan-500 text-white'
-                                  : 'bg-slate-800/40 border-slate-800 hover:border-slate-700 text-slate-300'
+                                  ? 'bg-sky-50 border-sky-400 text-slate-900 shadow-2xs'
+                                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
                               }`}
                             >
                               <div className="flex items-center gap-2 truncate">
-                                <span className="font-mono text-[10px] text-slate-500">
+                                <span className="font-mono text-[10px] text-slate-400">
                                   #{idx + 1}
                                 </span>
                                 <span className="font-bold truncate">{st.teamName}</span>
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <span className="font-mono text-[10px] text-emerald-400">
+                                <span className="font-mono text-[10px] text-emerald-600 font-bold">
                                   {st.totalPoints} pts
                                 </span>
                                 <div
                                   className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${
                                     isChecked
-                                      ? 'bg-cyan-500 border-cyan-500 text-slate-950'
-                                      : 'border-slate-600 bg-slate-900'
+                                      ? 'bg-sky-600 border-sky-600 text-white'
+                                      : 'border-slate-300 bg-white'
                                   }`}
                                 >
                                   {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
@@ -2344,8 +2344,8 @@ const AdminMatches = () => {
             })}
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-            <span className="text-xs text-cyan-400 font-bold">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <span className="text-xs text-sky-700 font-bold">
               Total Teams Selected: {selectedQualifyTeamIds.length}
             </span>
 
@@ -2353,14 +2353,14 @@ const AdminMatches = () => {
               <button
                 type="button"
                 onClick={() => setQualifyModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || selectedQualifyTeamIds.length === 0}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-purple-600/20 disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-sm disabled:opacity-50 cursor-pointer"
               >
                 {submitting
                   ? 'Creating...'
@@ -2382,7 +2382,7 @@ const AdminMatches = () => {
         <form onSubmit={handleSaveRound} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Round Title *
               </label>
               <input
@@ -2391,12 +2391,12 @@ const AdminMatches = () => {
                 value={roundFormData.title}
                 onChange={(e) => setRoundFormData({ ...roundFormData, title: e.target.value })}
                 placeholder="e.g. Round 1, Round 2"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Map
               </label>
               <input
@@ -2404,14 +2404,14 @@ const AdminMatches = () => {
                 value={roundFormData.map}
                 onChange={(e) => setRoundFormData({ ...roundFormData, map: e.target.value })}
                 placeholder="e.g. Erangel, Miramar"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Scheduled Date & Time
               </label>
               <input
@@ -2420,18 +2420,18 @@ const AdminMatches = () => {
                 onChange={(e) =>
                   setRoundFormData({ ...roundFormData, scheduledAt: e.target.value })
                 }
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                 Match Status
               </label>
               <select
                 value={roundFormData.status}
                 onChange={(e) => setRoundFormData({ ...roundFormData, status: e.target.value })}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium cursor-pointer"
               >
                 <option value="scheduled">Scheduled</option>
                 <option value="live">Live / Running</option>
@@ -2440,29 +2440,29 @@ const AdminMatches = () => {
             </div>
           </div>
 
-          <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-800 space-y-3">
-            <h5 className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <h5 className="text-xs font-bold text-cyan-700 uppercase tracking-wider">
               Live Room Credentials (Optional)
             </h5>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500">
               When Room ID and Password are provided, this round and its lobby will automatically
               switch to Running!
             </p>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Room ID</label>
+                <label className="block text-[11px] text-slate-600 mb-1 font-semibold">Room ID</label>
                 <input
                   type="text"
                   value={roundFormData.roomId}
                   onChange={(e) => setRoundFormData({ ...roundFormData, roomId: e.target.value })}
                   placeholder="e.g. 593821"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-500 font-mono"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-sky-500 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Room Password</label>
+                <label className="block text-[11px] text-slate-600 mb-1 font-semibold">Room Password</label>
                 <input
                   type="text"
                   value={roundFormData.roomPassword}
@@ -2470,24 +2470,24 @@ const AdminMatches = () => {
                     setRoundFormData({ ...roundFormData, roomPassword: e.target.value })
                   }
                   placeholder="e.g. uemj2026"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-cyan-500 font-mono"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-sky-500 font-mono"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setRoundModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-black uppercase tracking-wider shadow-sm disabled:opacity-50 cursor-pointer transition-colors"
             >
               {submitting ? 'Saving...' : editingRound ? 'Update Round' : 'Save & Schedule'}
             </button>
@@ -2499,24 +2499,24 @@ const AdminMatches = () => {
       {/* FULL-SCREEN OVERLAY: INTERACTIVE MATCH RESULTS & POINTS ENTRY */}
       {/* ========================================================================= */}
       {pointsModalOpen && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col h-screen max-h-screen overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col h-screen max-h-screen overflow-hidden">
           {/* STICKY HEADER */}
-          <header className="sticky top-0 bg-slate-950 border-b border-slate-800 px-6 py-4 space-y-4 flex-shrink-0">
+          <header className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 space-y-4 flex-shrink-0 shadow-xs">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <h2 className="text-2xl font-black text-white font-mono mb-1 truncate">
+                <h2 className="text-2xl font-black text-slate-900 font-mono mb-1 truncate">
                   ENTER MATCH RESULTS
                 </h2>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-slate-400">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-slate-600">
                   <span className="font-mono">
                     {selectedRoundForPoints?.title || 'Round'}
                   </span>
-                  <span className="hidden sm:inline text-slate-700">•</span>
+                  <span className="hidden sm:inline text-slate-300">•</span>
                   <span className="text-slate-500">
                     {structure.tournament?.name}
                   </span>
-                  <span className="hidden sm:inline text-slate-700">•</span>
-                  <span className="font-mono text-cyan-400">
+                  <span className="hidden sm:inline text-slate-300">•</span>
+                  <span className="font-mono text-cyan-600 font-bold">
                     {activeLobby?.name || 'Lobby'}
                   </span>
                 </div>
@@ -2526,19 +2526,19 @@ const AdminMatches = () => {
               <button
                 type="button"
                 onClick={() => setPointsModalOpen(false)}
-                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition flex-shrink-0"
+                className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 border border-slate-200 transition flex-shrink-0 cursor-pointer"
                 aria-label="Close"
               >
-                <span className="text-xl">✕</span>
+                <span className="text-xl leading-none">✕</span>
               </button>
             </div>
 
             {/* Scoring System Info */}
-            <div className="p-3 bg-slate-800/60 rounded-lg border border-slate-800">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="text-xs">
-                  <span className="text-slate-400 block mb-1">SCORING SYSTEM:</span>
-                  <p className="text-slate-300 font-mono text-[11px]">
+                  <span className="text-slate-500 block mb-1 font-semibold">SCORING SYSTEM:</span>
+                  <p className="text-slate-700 font-mono text-[11px]">
                     {SCORING_PRESETS[selectedPresetKey]?.description}
                   </p>
                 </div>
@@ -2550,10 +2550,10 @@ const AdminMatches = () => {
                       key={p.key}
                       type="button"
                       onClick={() => handlePresetChange(p.key)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
                         selectedPresetKey === p.key
-                          ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                          : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                          ? 'bg-cyan-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-slate-200'
                       }`}
                     >
                       {p.name.split(' (')[0]}
@@ -2564,11 +2564,11 @@ const AdminMatches = () => {
 
               {/* Custom points editor if Custom is chosen */}
               {selectedPresetKey === 'custom' && (
-                <div className="pt-3 border-t border-slate-700 space-y-2">
+                <div className="pt-3 border-t border-slate-200 space-y-2">
                   <div className="flex items-center justify-between text-xs gap-3">
-                    <span className="font-bold text-white">Custom Position Points (1st - 10th):</span>
+                    <span className="font-bold text-slate-900">Custom Position Points (1st - 10th):</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-slate-400">Kill Point Rate:</span>
+                      <span className="text-slate-500 font-medium">Kill Point Rate:</span>
                       <input
                         type="number"
                         min="0"
@@ -2588,7 +2588,7 @@ const AdminMatches = () => {
                             })
                           );
                         }}
-                        className="w-14 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-white text-center font-bold"
+                        className="w-14 bg-white border border-slate-200 rounded px-2 py-0.5 text-xs text-slate-900 text-center font-bold focus:outline-none focus:border-cyan-500"
                       />
                     </div>
                   </div>
@@ -2596,7 +2596,7 @@ const AdminMatches = () => {
                   <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((pos) => (
                       <div key={pos} className="text-center">
-                        <span className="text-[10px] text-slate-500 block">#{pos}</span>
+                        <span className="text-[10px] text-slate-500 block font-medium">#{pos}</span>
                         <input
                           type="number"
                           min="0"
@@ -2615,7 +2615,7 @@ const AdminMatches = () => {
                               })
                             );
                           }}
-                          className="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-xs text-center font-bold text-cyan-400"
+                          className="w-full bg-white border border-slate-200 rounded px-1 py-1 text-xs text-center font-bold text-cyan-700 focus:outline-none focus:border-cyan-500"
                         />
                       </div>
                     ))}
@@ -2625,16 +2625,16 @@ const AdminMatches = () => {
             </div>
 
             {/* Tap-to-Rank Banner */}
-            <div className="p-3 bg-gradient-to-r from-cyan-950/60 to-purple-950/60 rounded-lg border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="p-3 bg-gradient-to-r from-sky-50 to-indigo-50 rounded-xl border border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-cyan-500 text-slate-950 font-black text-xs">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-cyan-600 text-white font-black text-xs">
                   #{nextAvailablePosition}
                 </span>
                 <div>
-                  <span className="text-white font-bold block">
+                  <span className="text-slate-900 font-bold block">
                     Tap-to-Rank ACTIVE: Next rank = <strong>#{nextAvailablePosition}</strong>
                   </span>
-                  <span className="text-slate-400 text-[10px]">
+                  <span className="text-slate-500 text-[10px]">
                     Tap card to rank • Tap again to clear • Type position to override
                   </span>
                 </div>
@@ -2653,7 +2653,7 @@ const AdminMatches = () => {
                   );
                   addToast('Cleared all team ranks', 'info');
                 }}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs font-semibold whitespace-nowrap flex-shrink-0"
+                className="px-3 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 text-xs font-semibold whitespace-nowrap flex-shrink-0 cursor-pointer shadow-xs"
               >
                 Reset Ranks
               </button>
@@ -2662,19 +2662,19 @@ const AdminMatches = () => {
             {/* Search Team for Points / Rank Update */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
               <div className="relative flex-1 max-w-lg">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400 pointer-events-none" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-600 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search team name or tag to update position & kills..."
                   value={pointsSearchQuery}
                   onChange={(e) => setPointsSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-10 pr-10 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono shadow-inner transition"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-2 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-cyan-500 font-mono shadow-xs transition"
                 />
                 {pointsSearchQuery && (
                   <button
                     type="button"
                     onClick={() => setPointsSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 transition cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5 transition cursor-pointer"
                     title="Clear search"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -2682,16 +2682,16 @@ const AdminMatches = () => {
                 )}
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-mono text-slate-400 shrink-0">
+              <div className="flex items-center gap-2 text-xs font-mono text-slate-500 shrink-0">
                 <span>
-                  Showing <strong className="text-cyan-400">{filteredResultsData.length}</strong> of{' '}
-                  <strong className="text-white">{roundResultsData.length}</strong> teams
+                  Showing <strong className="text-cyan-600">{filteredResultsData.length}</strong> of{' '}
+                  <strong className="text-slate-900">{roundResultsData.length}</strong> teams
                 </span>
                 {pointsSearchQuery && (
                   <button
                     type="button"
                     onClick={() => setPointsSearchQuery('')}
-                    className="text-cyan-400 hover:underline text-[11px] ml-1 cursor-pointer"
+                    className="text-cyan-600 hover:underline text-[11px] ml-1 cursor-pointer font-semibold"
                   >
                     Reset
                   </button>
@@ -2701,17 +2701,17 @@ const AdminMatches = () => {
           </header>
 
           {/* SCROLLABLE MAIN AREA */}
-          <main className="flex-1 overflow-y-auto px-6 py-6 min-h-0 custom-scrollbar overscroll-contain">
+          <main className="flex-1 overflow-y-auto px-6 py-6 min-h-0 bg-slate-50/50 custom-scrollbar overscroll-contain">
             {filteredResultsData.length === 0 ? (
               <div className="py-16 text-center space-y-3">
-                <Search className="w-8 h-8 text-slate-600 mx-auto" />
-                <p className="text-sm font-mono text-slate-300">
+                <Search className="w-8 h-8 text-slate-400 mx-auto" />
+                <p className="text-sm font-mono text-slate-600">
                   No team found matching "{pointsSearchQuery}" in this match round.
                 </p>
                 <button
                   type="button"
                   onClick={() => setPointsSearchQuery('')}
-                  className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono font-bold transition cursor-pointer"
+                  className="px-4 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-cyan-600 border border-slate-200 text-xs font-mono font-bold transition cursor-pointer shadow-xs"
                 >
                   Show All Teams ({roundResultsData.length})
                 </button>
@@ -2729,10 +2729,10 @@ const AdminMatches = () => {
                     onClick={() => handleTapTeamRank(item.teamId)}
                     className={`group relative rounded-xl p-4 transition-all duration-200 cursor-pointer border flex flex-col justify-between select-none ${
                       isWinner
-                        ? 'bg-amber-500/10 border-amber-500/60 shadow-lg shadow-amber-500/10'
+                        ? 'bg-amber-50/90 border-amber-300 shadow-sm'
                         : isRanked
-                        ? 'bg-cyan-950/30 border-cyan-500/60 shadow-md shadow-cyan-500/10'
-                        : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600'
+                        ? 'bg-sky-50/90 border-sky-300 shadow-xs'
+                        : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
                     }`}
                   >
                     <div>
@@ -2742,7 +2742,7 @@ const AdminMatches = () => {
                           {/* Position input / badge */}
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700 flex-shrink-0"
+                            className="flex items-center gap-1 bg-white rounded-lg p-1 border border-slate-200 flex-shrink-0 shadow-xs"
                           >
                             <span className="text-[10px] text-slate-400 font-mono pl-1">POS:</span>
                             <input
@@ -2752,35 +2752,35 @@ const AdminMatches = () => {
                               value={item.position || ''}
                               placeholder="-"
                               onChange={(e) => handleOverridePosition(item.teamId, e.target.value)}
-                              className="w-8 bg-transparent text-center text-xs font-black text-white focus:outline-none focus:text-cyan-400"
+                              className="w-8 bg-transparent text-center text-xs font-black text-slate-900 focus:outline-none focus:text-cyan-600"
                             />
                           </div>
 
                           {item.teamTag && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-cyan-400 border border-slate-700 truncate">
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-cyan-700 border border-slate-200 truncate">
                               [{item.teamTag}]
                             </span>
                           )}
                         </div>
 
                         {isWinner ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
-                            <Crown className="w-3 h-3 text-amber-400" />
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
+                            <Crown className="w-3 h-3 text-amber-600" />
                             1st
                           </span>
                         ) : isRanked ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex-shrink-0 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200 flex-shrink-0 whitespace-nowrap">
                             #{item.position}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-500 italic flex-shrink-0 whitespace-nowrap">Tap</span>
+                          <span className="text-[10px] text-slate-400 italic flex-shrink-0 whitespace-nowrap">Tap</span>
                         )}
                       </div>
 
-                      <h4 className="text-sm font-black text-white group-hover:text-cyan-300 transition-colors truncate mb-1">
+                      <h4 className="text-sm font-black text-slate-900 group-hover:text-cyan-600 transition-colors truncate mb-1">
                         {item.teamName}
                       </h4>
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <p className="text-[11px] text-slate-500 truncate">
                         Captain: {item.captain}
                       </p>
                     </div>
@@ -2788,19 +2788,19 @@ const AdminMatches = () => {
                     {/* Kills & Bonus Controls */}
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className="mt-3 pt-3 border-t border-slate-700/60 space-y-2.5 text-xs"
+                      className="mt-3 pt-3 border-t border-slate-100 space-y-2.5 text-xs"
                     >
                       {/* Kills Input */}
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                          <Flame className="w-3 h-3 text-rose-400" />
+                        <span className="text-slate-500 text-[11px] flex items-center gap-1">
+                          <Flame className="w-3 h-3 text-rose-500" />
                           Kills:
                         </span>
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => handleUpdateKills(item.teamId, -1)}
-                            className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                            className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
@@ -2809,12 +2809,12 @@ const AdminMatches = () => {
                             min="0"
                             value={item.kills}
                             onChange={(e) => handleUpdateKills(item.teamId, e.target.value)}
-                            className="w-10 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-white"
+                            className="w-10 bg-white border border-slate-200 rounded py-0.5 text-center text-xs font-bold text-slate-900 focus:outline-none focus:border-cyan-500"
                           />
                           <button
                             type="button"
                             onClick={() => handleUpdateKills(item.teamId, 1)}
-                            className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                            className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -2823,15 +2823,15 @@ const AdminMatches = () => {
 
                       {/* Bonus Points Input */}
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                          <Award className="w-3 h-3 text-purple-400" />
+                        <span className="text-slate-500 text-[11px] flex items-center gap-1">
+                          <Award className="w-3 h-3 text-purple-500" />
                           Bonus:
                         </span>
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => handleUpdateBonus(item.teamId, -1)}
-                            className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                            className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
@@ -2839,12 +2839,12 @@ const AdminMatches = () => {
                             type="number"
                             value={item.bonusPoints}
                             onChange={(e) => handleUpdateBonus(item.teamId, e.target.value)}
-                            className="w-10 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-white"
+                            className="w-10 bg-white border border-slate-200 rounded py-0.5 text-center text-xs font-bold text-slate-900 focus:outline-none focus:border-cyan-500"
                           />
                           <button
                             type="button"
                             onClick={() => handleUpdateBonus(item.teamId, 1)}
-                            className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center font-bold text-xs"
+                            className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -2852,11 +2852,11 @@ const AdminMatches = () => {
                       </div>
 
                       {/* Live Calculation Pill */}
-                      <div className="pt-2 border-t border-slate-700/40 flex items-center justify-between font-mono text-[11px]">
-                        <span className="text-slate-400">
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between font-mono text-[11px]">
+                        <span className="text-slate-500">
                           {item.positionPoints}p + {item.killPoints}k
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
+                        <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                           {item.totalPoints} PTS
                         </span>
                       </div>
@@ -2869,19 +2869,19 @@ const AdminMatches = () => {
           </main>
 
           {/* STICKY FOOTER */}
-          <footer className="sticky bottom-0 bg-slate-950 border-t border-slate-800 px-6 py-4 flex-shrink-0">
+          <footer className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex-shrink-0 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="text-xs text-slate-400 space-y-1 sm:space-y-0">
+              <div className="text-xs text-slate-600 space-y-1 sm:space-y-0">
                 <div>
                   Ranked:{' '}
-                  <strong className="text-white">
+                  <strong className="text-slate-900">
                     {roundResultsData.filter((r) => r.position > 0).length}
                   </strong>{' '}
                   / {roundResultsData.length}
                 </div>
                 <div className="sm:ml-4 sm:inline">
                   Winner:{' '}
-                  <strong className="text-amber-400">
+                  <strong className="text-amber-600">
                     {roundResultsData.find((r) => r.position === 1)?.teamName || 'None'}
                   </strong>
                 </div>
@@ -2891,7 +2891,7 @@ const AdminMatches = () => {
                 <button
                   type="button"
                   onClick={() => setPointsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
@@ -2900,7 +2900,7 @@ const AdminMatches = () => {
                   type="button"
                   onClick={handleSaveMatchResults}
                   disabled={submitting}
-                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                  className="px-6 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black uppercase tracking-wider shadow-sm disabled:opacity-50 flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all"
                 >
                   <Save className="w-4 h-4" />
                   <span>{submitting ? 'Saving...' : 'Save & Update'}</span>
@@ -2933,13 +2933,13 @@ const AdminMatches = () => {
         title={`Enter Room Credentials for ${quickCredsMatch?.title || 'Round'}`}
       >
         <div className="space-y-4">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-600">
             Saving credentials here will publish them live to verified players and automatically switch
             both the round and parent lobby status to <strong>RUNNING</strong>.
           </p>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
               Room ID *
             </label>
             <input
@@ -2947,12 +2947,12 @@ const AdminMatches = () => {
               value={quickRoomId}
               onChange={(e) => setQuickRoomId(e.target.value)}
               placeholder="e.g. 784920"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-cyan-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
               Room Password *
             </label>
             <input
@@ -2960,21 +2960,21 @@ const AdminMatches = () => {
               value={quickRoomPassword}
               onChange={(e) => setQuickRoomPassword(e.target.value)}
               placeholder="e.g. uemjpass"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-cyan-500"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button
               onClick={() => setQuickCredsMatch(null)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveQuickCreds}
               disabled={submitting || !quickRoomId.trim() || !quickRoomPassword.trim()}
-              className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider shadow-sm disabled:opacity-50 cursor-pointer transition-all"
             >
               {submitting ? 'Publishing...' : 'Save & Set to Running'}
             </button>
@@ -2992,17 +2992,17 @@ const AdminMatches = () => {
       >
         {viewingTeam && (
           <div className="space-y-4">
-            <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-700">
               <span>
-                Captain: <strong>{viewingTeam.captain?.name || viewingTeam.leader || 'N/A'}</strong>
+                Captain: <strong className="text-slate-900">{viewingTeam.captain?.name || viewingTeam.leader || 'N/A'}</strong>
               </span>
               <span>
-                Phone: <strong>{viewingTeam.captain?.phone || 'N/A'}</strong>
+                Phone: <strong className="text-slate-900">{viewingTeam.captain?.phone || 'N/A'}</strong>
               </span>
             </div>
 
             <div className="space-y-2">
-              <h5 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
+              <h5 className="text-xs font-bold uppercase text-slate-500 tracking-wider">
                 Players ({viewingTeam.players?.length || 0})
               </h5>
 
@@ -3010,18 +3010,18 @@ const AdminMatches = () => {
                 {(viewingTeam.players || []).map((p, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-slate-800/40 rounded-xl border border-slate-800 flex items-center justify-between text-xs"
+                    className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs"
                   >
                     <div>
-                      <span className="text-white font-bold block">
+                      <span className="text-slate-900 font-bold block">
                         {p.inGameName || p.user?.name || `Player ${idx + 1}`}
                       </span>
-                      <span className="text-slate-400 text-[11px]">
+                      <span className="text-slate-500 text-[11px]">
                         IGN ID: {p.inGameId || 'N/A'}
                       </span>
                     </div>
 
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono">
                       {p.role || 'Member'}
                     </span>
                   </div>
@@ -3029,10 +3029,10 @@ const AdminMatches = () => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-800">
+            <div className="flex justify-end pt-3 border-t border-slate-100">
               <button
                 onClick={() => setRosterModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition-colors"
               >
                 Close
               </button>

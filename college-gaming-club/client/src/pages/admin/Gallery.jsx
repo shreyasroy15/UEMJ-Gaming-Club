@@ -201,19 +201,19 @@ const AdminGallery = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-black text-white font-mono tracking-wide">
+          <h1 className="text-2xl font-black text-slate-900 font-mono tracking-wide">
             MEDIA & GALLERY ASSETS
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-600 mt-1">
             Showcase collegiate moments, victory podiums, and battle station photography.
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-xs font-bold text-white shadow-lg shadow-cyan-500/25 hover:from-cyan-400 hover:to-indigo-500 transition-all cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-xs font-bold text-white shadow-sm hover:from-cyan-500 hover:to-indigo-500 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Add Photo
         </button>
@@ -233,17 +233,17 @@ const AdminGallery = () => {
           {gallery.map((item) => (
             <div
               key={item._id}
-              className="rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 overflow-hidden flex flex-col justify-between transition-all duration-300 group shadow-lg"
+              className="rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 overflow-hidden flex flex-col justify-between transition-all duration-300 group shadow-sm"
             >
               {/* Image Preview Box */}
-              <div className="h-48 w-full bg-slate-950 overflow-hidden relative">
+              <div className="h-48 w-full bg-slate-100 overflow-hidden relative">
                 <img 
                   src={item.image} 
                   alt={item.title} 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = 'https://placehold.co/600x400/0f172a/38bdf8?text=Image+Unavailable';
+                    e.target.src = 'https://placehold.co/600x400/f1f5f9/64748b?text=Image+Unavailable';
                   }}
                 />
                 
@@ -253,7 +253,7 @@ const AdminGallery = () => {
                     type="button"
                     onClick={() => setPreviewImage(item)}
                     title="View Full Size"
-                    className="p-1.5 rounded-lg bg-slate-950/80 text-slate-300 border border-slate-700 hover:bg-slate-800 hover:text-white transition-colors"
+                    className="p-1.5 rounded-lg bg-white/90 text-slate-700 border border-slate-200 hover:bg-white transition-colors shadow-xs"
                   >
                     <Eye className="w-3.5 h-3.5" />
                   </button>
@@ -261,15 +261,15 @@ const AdminGallery = () => {
                     type="button"
                     onClick={() => handleCopyLink(item.image, item._id)}
                     title="Copy Image URL"
-                    className="p-1.5 rounded-lg bg-slate-950/80 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950 transition-colors"
+                    className="p-1.5 rounded-lg bg-white/90 text-cyan-700 border border-cyan-200 hover:bg-cyan-50 transition-colors shadow-xs"
                   >
-                    {copiedId === item._id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedId === item._id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(item._id)}
                     title="Delete photo"
-                    className="p-1.5 rounded-lg bg-rose-950/80 text-rose-400 border border-rose-800/60 hover:bg-rose-900 transition-colors"
+                    className="p-1.5 rounded-lg bg-white/90 text-rose-600 border border-rose-200 hover:bg-rose-50 transition-colors shadow-xs"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -281,7 +281,7 @@ const AdminGallery = () => {
                     href={item.image}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-950/80 text-[10px] text-slate-300 border border-slate-800 hover:text-cyan-400 truncate max-w-full backdrop-blur-sm"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/90 text-[10px] text-slate-700 border border-slate-200 hover:text-cyan-700 truncate max-w-full backdrop-blur-sm shadow-xs"
                   >
                     <ExternalLink className="w-2.5 h-2.5 shrink-0" />
                     <span className="truncate">{item.image}</span>
@@ -290,18 +290,18 @@ const AdminGallery = () => {
               </div>
 
               {/* Meta information */}
-              <div className="p-3.5 space-y-1.5 bg-slate-900/90">
+              <div className="p-3.5 space-y-1.5 bg-white">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+                  <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">
                     {item.category}
                   </span>
-                  <span className="text-[10px] font-mono text-slate-400 truncate">{item.event}</span>
+                  <span className="text-[10px] font-mono text-slate-500 truncate">{item.event}</span>
                 </div>
-                <h4 className="text-xs font-bold text-white font-mono truncate" title={item.title}>
+                <h4 className="text-xs font-bold text-slate-900 font-mono truncate" title={item.title}>
                   {item.title}
                 </h4>
                 {item.description && (
-                  <p className="text-[11px] text-slate-400 line-clamp-2">
+                  <p className="text-[11px] text-slate-600 line-clamp-2">
                     {item.description}
                   </p>
                 )}
@@ -317,17 +317,17 @@ const AdminGallery = () => {
           
           {/* Option Selector Tabs */}
           <div>
-            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
               Choose Method
             </label>
-            <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-950 border border-slate-800 gap-1">
+            <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-100 border border-slate-200 gap-1">
               <button
                 type="button"
                 onClick={() => setMode('upload')}
                 className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
                   mode === 'upload'
-                    ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md shadow-cyan-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 }`}
               >
                 <Upload className="w-3.5 h-3.5" />
@@ -339,8 +339,8 @@ const AdminGallery = () => {
                 onClick={() => setMode('url')}
                 className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
                   mode === 'url'
-                    ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md shadow-cyan-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 }`}
               >
                 <LinkIcon className="w-3.5 h-3.5" />
@@ -353,10 +353,10 @@ const AdminGallery = () => {
           {mode === 'upload' && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                   Select Photos *
                 </label>
-                <div className="relative border-2 border-dashed border-slate-800 hover:border-cyan-500/50 rounded-xl p-4 text-center bg-slate-950/50 transition-colors">
+                <div className="relative border-2 border-dashed border-slate-300 hover:border-cyan-500 rounded-xl p-4 text-center bg-slate-50 hover:bg-cyan-50/30 transition-colors">
                   <input
                     type="file"
                     multiple
@@ -365,11 +365,11 @@ const AdminGallery = () => {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div className="flex flex-col items-center justify-center gap-1.5 pointer-events-none">
-                    <Upload className="w-6 h-6 text-cyan-400" />
-                    <p className="text-xs font-semibold text-slate-200">
+                    <Upload className="w-6 h-6 text-cyan-600" />
+                    <p className="text-xs font-semibold text-slate-800">
                       Click or drag photos here to upload
                     </p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[10px] text-slate-500">
                       Supports JPG, PNG, WEBP, GIF (Up to 10MB each)
                     </p>
                   </div>
@@ -379,12 +379,12 @@ const AdminGallery = () => {
               {/* Selected Files Preview List */}
               {filePreviews.length > 0 && (
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500">
                     <span>Selected Photos ({filePreviews.length}):</span>
                     <button
                       type="button"
                       onClick={() => setFiles([])}
-                      className="text-rose-400 hover:underline"
+                      className="text-rose-600 hover:underline font-semibold"
                     >
                       Clear All
                     </button>
@@ -393,23 +393,23 @@ const AdminGallery = () => {
                     {filePreviews.map((preview, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800/80 gap-2"
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 gap-2"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <img
                             src={preview.url}
                             alt={preview.name}
-                            className="w-10 h-10 rounded object-cover border border-slate-700 shrink-0"
+                            className="w-10 h-10 rounded object-cover border border-slate-200 shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="text-xs text-white truncate font-medium">{preview.name}</p>
-                            <p className="text-[10px] text-slate-400">{preview.size} MB</p>
+                            <p className="text-xs text-slate-900 truncate font-medium">{preview.name}</p>
+                            <p className="text-[10px] text-slate-500">{preview.size} MB</p>
                           </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveFile(idx)}
-                          className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-950/40"
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -425,7 +425,7 @@ const AdminGallery = () => {
           {mode === 'url' && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                   Image URL *
                 </label>
                 <div className="relative">
@@ -438,30 +438,30 @@ const AdminGallery = () => {
                       setImageUrl(e.target.value);
                       setUrlPreviewValid(null);
                     }}
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500 focus:outline-none"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:outline-none"
                   />
-                  <LinkIcon className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                  <LinkIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
 
               {/* Live URL Preview */}
               {imageUrl.trim() && (
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-slate-400 uppercase">Live Image Preview:</span>
+                    <span className="font-bold text-slate-500 uppercase">Live Image Preview:</span>
                     {urlPreviewValid === true && (
-                      <span className="text-emerald-400 flex items-center gap-1 font-bold">
+                      <span className="text-emerald-600 flex items-center gap-1 font-bold">
                         <Check className="w-3 h-3" /> Image Loaded
                       </span>
                     )}
                     {urlPreviewValid === false && (
-                      <span className="text-rose-400 flex items-center gap-1 font-bold">
+                      <span className="text-rose-600 flex items-center gap-1 font-bold">
                         <AlertCircle className="w-3 h-3" /> Failed to load image
                       </span>
                     )}
                   </div>
 
-                  <div className="h-36 w-full rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-800">
+                  <div className="h-36 w-full rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center border border-slate-200">
                     <img
                       src={imageUrl.trim()}
                       alt="URL Preview"
@@ -478,14 +478,14 @@ const AdminGallery = () => {
           {/* Category & Event Tag */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Category *
               </label>
               <select
                 required
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:border-cyan-500 focus:bg-white focus:outline-none"
               >
                 {CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -494,7 +494,7 @@ const AdminGallery = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Event Tag
               </label>
               <input
@@ -502,14 +502,14 @@ const AdminGallery = () => {
                 placeholder="e.g. Finals 2025"
                 value={formData.event}
                 onChange={(e) => setFormData({ ...formData, event: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500 focus:outline-none"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:outline-none"
               />
             </div>
           </div>
 
           {/* Title / Caption */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
               Title / Caption {mode === 'upload' && '(Optional)'}
             </label>
             <input
@@ -517,23 +517,23 @@ const AdminGallery = () => {
               placeholder="e.g. Grand Trophy Presentation"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:outline-none"
             />
           </div>
 
           {/* Modal Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || (mode === 'upload' && files.length === 0) || (mode === 'url' && !imageUrl.trim())}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-xs font-bold text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
             >
               {submitting
                 ? mode === 'upload' ? 'Uploading Photos...' : 'Saving Photo...'
@@ -551,7 +551,7 @@ const AdminGallery = () => {
           title={previewImage.title || 'Photo Details'}
         >
           <div className="space-y-4">
-            <div className="max-h-[60vh] overflow-hidden rounded-xl bg-slate-950 flex items-center justify-center border border-slate-800">
+            <div className="max-h-[60vh] overflow-hidden rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200">
               <img
                 src={previewImage.image}
                 alt={previewImage.title}
@@ -559,23 +559,23 @@ const AdminGallery = () => {
               />
             </div>
 
-            <div className="space-y-2 p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+            <div className="space-y-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Category:</span>
-                <span className="font-bold text-cyan-400 uppercase">{previewImage.category}</span>
+                <span className="text-slate-500">Category:</span>
+                <span className="font-bold text-cyan-700 uppercase">{previewImage.category}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Event Tag:</span>
-                <span className="font-mono text-white">{previewImage.event}</span>
+                <span className="text-slate-500">Event Tag:</span>
+                <span className="font-mono text-slate-900 font-bold">{previewImage.event}</span>
               </div>
               <div>
-                <span className="text-slate-400 block mb-1">Image Link:</span>
+                <span className="text-slate-500 block mb-1">Image Link:</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     readOnly
                     value={previewImage.image}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-300 font-mono"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-800 font-mono"
                   />
                   <button
                     type="button"

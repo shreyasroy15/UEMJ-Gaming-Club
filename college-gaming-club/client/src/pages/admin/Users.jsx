@@ -1324,16 +1324,16 @@ const AdminUsers = () => {
           />
 
           {/* Drawer Panel */}
-          <aside className="relative z-10 w-full sm:max-w-lg bg-[#0B0E18] border-l border-slate-800 h-full overflow-y-auto flex flex-col shadow-2xl animate-in slide-in-from-right duration-250">
+          <aside className="relative z-10 w-full sm:max-w-lg bg-white border-l border-slate-200 h-full overflow-y-auto flex flex-col shadow-2xl animate-in slide-in-from-right duration-250">
             {/* Drawer Header */}
-            <div className="p-6 border-b border-slate-800/80 sticky top-0 bg-[#0B0E18]/95 backdrop-blur-md z-20 flex items-start justify-between gap-4">
+            <div className="p-6 border-b border-slate-100 sticky top-0 bg-white/95 backdrop-blur-md z-20 flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 {renderAvatar(selectedUser, 'w-14 h-14', 'text-xl')}
                 <div>
-                  <h3 className="text-lg font-black text-white font-mono leading-tight">
+                  <h3 className="text-lg font-black text-slate-900 font-mono leading-tight">
                     {selectedUser.name}
                   </h3>
-                  <p className="text-xs text-slate-400 font-mono">@{selectedUser.username}</p>
+                  <p className="text-xs text-slate-500 font-mono">@{selectedUser.username}</p>
                   <div className="flex items-center gap-2 mt-1.5">
                     {renderStatusBadge(selectedUser.status)}
                     {renderRoleBadge(selectedUser.role)}
@@ -1343,14 +1343,14 @@ const AdminUsers = () => {
 
               <button
                 onClick={() => setDrawerOpen(false)}
-                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white"
+                className="p-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Drawer Navigation Tabs */}
-            <div className="flex items-center border-b border-slate-800 px-6 bg-slate-950/50">
+            <div className="flex items-center border-b border-slate-100 px-6 bg-slate-50/70">
               {[
                 { id: 'overview', label: 'Overview', icon: Layers },
                 { id: 'stats', label: 'Stats', icon: BarChart3 },
@@ -1359,10 +1359,10 @@ const AdminUsers = () => {
                 <button
                   key={tab.id}
                   onClick={() => setDrawerTab(tab.id)}
-                  className={`flex items-center gap-2 py-3 px-4 text-xs font-bold border-b-2 transition-all ${
+                  className={`flex items-center gap-2 py-3 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
                     drawerTab === tab.id
-                      ? 'border-purple-500 text-purple-300'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                      ? 'border-purple-600 text-purple-700 bg-white shadow-2xs'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   <tab.icon className="w-3.5 h-3.5" />
@@ -1375,9 +1375,9 @@ const AdminUsers = () => {
             <div className="p-6 space-y-6 flex-1">
               {drawerLoading ? (
                 <div className="space-y-4 py-8">
-                  <div className="h-4 bg-slate-800 rounded animate-pulse w-3/4" />
-                  <div className="h-24 bg-slate-800/60 rounded-xl animate-pulse" />
-                  <div className="h-32 bg-slate-800/60 rounded-xl animate-pulse" />
+                  <div className="h-4 bg-slate-100 rounded animate-pulse w-3/4" />
+                  <div className="h-24 bg-slate-100 rounded-xl animate-pulse" />
+                  <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />
                 </div>
               ) : drawerTab === 'overview' ? (
                 <>
@@ -1386,34 +1386,34 @@ const AdminUsers = () => {
                     <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500">
                       BASIC INFORMATION
                     </h4>
-                    <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-4 space-y-3 text-xs">
-                      <div className="flex justify-between py-1 border-b border-slate-800/60">
-                        <span className="text-slate-400">Full Name</span>
-                        <span className="font-semibold text-white">{selectedUser.name}</span>
+                    <div className="rounded-2xl bg-slate-50/80 border border-slate-200 p-4 space-y-3 text-xs">
+                      <div className="flex justify-between py-1 border-b border-slate-200/60">
+                        <span className="text-slate-500">Full Name</span>
+                        <span className="font-semibold text-slate-900">{selectedUser.name}</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-slate-800/60">
-                        <span className="text-slate-400">Email</span>
-                        <span className="font-mono text-slate-200">{selectedUser.email}</span>
+                      <div className="flex justify-between py-1 border-b border-slate-200/60">
+                        <span className="text-slate-500">Email</span>
+                        <span className="font-mono text-slate-800">{selectedUser.email}</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-slate-800/60">
-                        <span className="text-slate-400">College</span>
-                        <span className="text-white text-right max-w-[200px] truncate">{selectedUser.college || 'UEM Jaipur'}</span>
+                      <div className="flex justify-between py-1 border-b border-slate-200/60">
+                        <span className="text-slate-500">College</span>
+                        <span className="text-slate-900 text-right max-w-[200px] truncate">{selectedUser.college || 'UEM Jaipur'}</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-slate-800/60">
-                        <span className="text-slate-400">Game ID / IGN</span>
-                        <span className="font-mono font-bold text-cyan-400">{selectedUser.gameId || `@${selectedUser.username}`}</span>
+                      <div className="flex justify-between py-1 border-b border-slate-200/60">
+                        <span className="text-slate-500">Game ID / IGN</span>
+                        <span className="font-mono font-bold text-sky-700">{selectedUser.gameId || `@${selectedUser.username}`}</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-slate-800/60">
-                        <span className="text-slate-400">Role</span>
-                        <span className="capitalize font-semibold text-purple-300">{selectedUser.role}</span>
+                      <div className="flex justify-between py-1 border-b border-slate-200/60">
+                        <span className="text-slate-500">Role</span>
+                        <span className="capitalize font-semibold text-purple-700">{selectedUser.role}</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-slate-800/60">
-                        <span className="text-slate-400">Team</span>
-                        <span className="font-semibold text-white">{selectedUser.teamInfo?.name || selectedUser.teamName || 'Free Agent'}</span>
+                      <div className="flex justify-between py-1 border-b border-slate-200/60">
+                        <span className="text-slate-500">Team</span>
+                        <span className="font-semibold text-slate-900">{selectedUser.teamInfo?.name || selectedUser.teamName || 'Free Agent'}</span>
                       </div>
                       <div className="flex justify-between py-1">
-                        <span className="text-slate-400">Joined</span>
-                        <span className="font-mono text-slate-300">{formatDate(selectedUser.createdAt)}</span>
+                        <span className="text-slate-500">Joined</span>
+                        <span className="font-mono text-slate-700">{formatDate(selectedUser.createdAt)}</span>
                       </div>
                     </div>
                   </div>
@@ -1425,11 +1425,11 @@ const AdminUsers = () => {
                         TEAM INFORMATION
                       </h4>
                       {selectedUser.teamInfo?.isFreeAgent || (!selectedUser.teamName || selectedUser.teamName.toLowerCase() === 'free agent') ? (
-                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-cyan-950/60 text-cyan-400 border border-cyan-500/30">
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
                           SOLO PLAYER
                         </span>
                       ) : (
-                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-purple-950/60 text-purple-300 border border-purple-500/30">
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
                           {selectedUser.teamInfo?.roleInTeam || (selectedUser.role === 'captain' ? 'CAPTAIN' : 'ROSTER PLAYER')}
                         </span>
                       )}
@@ -1437,38 +1437,38 @@ const AdminUsers = () => {
 
                     {selectedUser.teamInfo?.isFreeAgent || (!selectedUser.teamName || selectedUser.teamName.toLowerCase() === 'free agent') ? (
                       /* FREE AGENT CARD */
-                      <div className="rounded-2xl bg-slate-900/60 border border-cyan-500/30 p-4 space-y-3 shadow-lg shadow-cyan-950/20">
+                      <div className="rounded-2xl bg-white border border-sky-200 p-4 space-y-3 shadow-xs">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-cyan-950/50 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600 shrink-0">
                               <Shield className="w-5 h-5" />
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                              <p className="text-sm font-bold text-slate-900 font-mono flex items-center gap-2">
                                 Free Agent
-                                <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                                <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                                   Unassigned
                                 </span>
                               </p>
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-slate-500">
                                 {selectedUser.game || 'BGMI'} • Individual Competitor
                               </span>
                             </div>
                           </div>
-                          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/40">
+                          <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-sky-50 text-sky-700 border border-sky-200">
                             ⚡ FREE AGENT
                           </span>
                         </div>
 
-                        <p className="text-xs text-slate-400 leading-relaxed">
+                        <p className="text-xs text-slate-600 leading-relaxed">
                           This player is currently not assigned to any collegiate esports squad and is available for team recruitment.
                         </p>
 
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-800/60 text-xs">
-                          <span className="text-slate-400 font-mono">0 Squad Members (Solo)</span>
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                          <span className="text-slate-500 font-mono">0 Squad Members (Solo)</span>
                           <button
                             onClick={() => handleOpenAssignTeam(selectedUser)}
-                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold flex items-center gap-1.5 transition-all text-xs shadow-md shadow-purple-600/20"
+                            className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold flex items-center gap-1.5 transition-all text-xs shadow-xs cursor-pointer"
                           >
                             <UserPlus className="w-3.5 h-3.5" />
                             <span>Assign to Team</span>
@@ -1477,51 +1477,51 @@ const AdminUsers = () => {
                       </div>
                     ) : (
                       /* ACTIVE TEAM SQUAD CARD */
-                      <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-4 space-y-3">
+                      <div className="rounded-2xl bg-white border border-slate-200 p-4 space-y-3 shadow-xs">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-purple-950/50 border border-purple-500/30 flex items-center justify-center text-purple-300 shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700 shrink-0">
                               <Shield className="w-5 h-5" />
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                              <p className="text-sm font-bold text-slate-900 font-mono flex items-center gap-2">
                                 {selectedUser.teamInfo?.name || selectedUser.teamName}
                                 {selectedUser.teamInfo?.tag && (
-                                  <span className="text-[10px] font-mono text-purple-300 bg-purple-950 px-1.5 py-0.5 rounded border border-purple-800">
+                                  <span className="text-[10px] font-mono text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
                                     [{selectedUser.teamInfo.tag}]
                                   </span>
                                 )}
                               </p>
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-slate-500">
                                 {selectedUser.teamInfo?.game || selectedUser.game || 'BGMI'}
                               </span>
                             </div>
                           </div>
                           {selectedUser.teamInfo?.isVerified ? (
-                            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                               <Check className="w-3 h-3" /> VERIFIED
                             </span>
                           ) : (
-                            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-950 text-amber-400 border border-amber-500/40 flex items-center gap-1">
+                            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
                               <AlertTriangle className="w-3 h-3" /> UNVERIFIED SQUAD
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-800/60 text-xs">
-                          <span className="text-slate-400 font-mono">
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                          <span className="text-slate-500 font-mono">
                             {selectedUser.teamInfo?.memberCount || 1} {selectedUser.teamInfo?.memberCount === 1 ? 'Member' : 'Members'}
                           </span>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleOpenAssignTeam(selectedUser)}
-                              className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all cursor-pointer"
                             >
                               Change Team
                             </button>
                             <button
                               onClick={() => handleViewTeam(selectedUser.teamInfo?.name || selectedUser.teamName)}
-                              className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg hover:bg-cyan-950/40 border border-cyan-500/20"
+                              className="text-sky-700 hover:text-sky-800 font-semibold flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg hover:bg-sky-50 border border-sky-200 cursor-pointer"
                             >
                               <span>View Team</span>
                               <ArrowUpRight className="w-3.5 h-3.5" />
@@ -1538,21 +1538,21 @@ const AdminUsers = () => {
                       PLAYER STATISTICS
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
-                        <span className="text-[10px] text-slate-400 font-mono uppercase block">Matches</span>
-                        <span className="text-xl font-black text-white font-mono">{userStats?.matches ?? 24}</span>
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
+                        <span className="text-[10px] text-slate-500 font-mono uppercase block">Matches</span>
+                        <span className="text-xl font-black text-slate-900 font-mono">{userStats?.matches ?? 24}</span>
                       </div>
-                      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
-                        <span className="text-[10px] text-slate-400 font-mono uppercase block">Wins</span>
-                        <span className="text-xl font-black text-emerald-400 font-mono">{userStats?.wins ?? 7}</span>
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
+                        <span className="text-[10px] text-slate-500 font-mono uppercase block">Wins</span>
+                        <span className="text-xl font-black text-emerald-600 font-mono">{userStats?.wins ?? 7}</span>
                       </div>
-                      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
-                        <span className="text-[10px] text-slate-400 font-mono uppercase block">Kills</span>
-                        <span className="text-xl font-black text-cyan-400 font-mono">{userStats?.kills ?? 86}</span>
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
+                        <span className="text-[10px] text-slate-500 font-mono uppercase block">Kills</span>
+                        <span className="text-xl font-black text-sky-600 font-mono">{userStats?.kills ?? 86}</span>
                       </div>
-                      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-slate-800 text-center">
-                        <span className="text-[10px] text-slate-400 font-mono uppercase block">Points</span>
-                        <span className="text-xl font-black text-purple-400 font-mono">{userStats?.points ?? 412}</span>
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
+                        <span className="text-[10px] text-slate-500 font-mono uppercase block">Points</span>
+                        <span className="text-xl font-black text-purple-600 font-mono">{userStats?.points ?? 412}</span>
                       </div>
                     </div>
                   </div>
@@ -1560,35 +1560,35 @@ const AdminUsers = () => {
               ) : drawerTab === 'stats' ? (
                 /* DETAILED STATS TAB */
                 <div className="space-y-4">
-                  <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-3">
-                    <span className="text-[11px] font-mono font-bold text-slate-400 uppercase">
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                    <span className="text-[11px] font-mono font-bold text-slate-600 uppercase">
                       COMPETITIVE PERFORMANCE
                     </span>
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                         <span className="text-[10px] text-slate-500 font-mono block">WIN RATE</span>
-                        <span className="text-lg font-black text-white font-mono">{userStats?.winRate || '29%'}</span>
+                        <span className="text-lg font-black text-slate-900 font-mono">{userStats?.winRate || '29%'}</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                         <span className="text-[10px] text-slate-500 font-mono block">TOURNAMENTS</span>
-                        <span className="text-lg font-black text-purple-400 font-mono">{userStats?.tournamentParticipation || 1} Registered</span>
+                        <span className="text-lg font-black text-purple-600 font-mono">{userStats?.tournamentParticipation || 1} Registered</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                         <span className="text-[10px] text-slate-500 font-mono block">MATCHES PLAYED</span>
-                        <span className="text-lg font-black text-cyan-400 font-mono">{userStats?.matches || 24}</span>
+                        <span className="text-lg font-black text-sky-600 font-mono">{userStats?.matches || 24}</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                         <span className="text-[10px] text-slate-500 font-mono block">TOTAL ELIMINATIONS</span>
-                        <span className="text-lg font-black text-emerald-400 font-mono">{userStats?.kills || 86}</span>
+                        <span className="text-lg font-black text-emerald-600 font-mono">{userStats?.kills || 86}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-500/20 text-xs text-purple-300">
-                    <p className="font-bold flex items-center gap-1.5 text-purple-200">
-                      <Trophy className="w-4 h-4 text-purple-400" /> Database Live Analytics
+                  <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200 text-xs text-purple-900">
+                    <p className="font-bold flex items-center gap-1.5 text-purple-950">
+                      <Trophy className="w-4 h-4 text-purple-600" /> Database Live Analytics
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-1">
+                    <p className="text-[11px] text-slate-600 mt-1">
                       Computed directly from tournament registrations and official room results.
                     </p>
                   </div>
@@ -1602,13 +1602,13 @@ const AdminUsers = () => {
                   {userActivity.length === 0 ? (
                     <p className="text-xs text-slate-400 text-center py-6">No recorded activity yet.</p>
                   ) : (
-                    <div className="space-y-4 pl-2 border-l-2 border-slate-800">
+                    <div className="space-y-4 pl-2 border-l-2 border-slate-200">
                       {userActivity.map((act) => (
                         <div key={act.id} className="relative pl-5 space-y-1">
-                          <div className="absolute -left-[11px] top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-purple-500" />
-                          <p className="text-xs font-bold text-white">{act.title}</p>
-                          <p className="text-[11px] text-slate-400">{act.description}</p>
-                          <span className="text-[10px] text-slate-500 font-mono block">
+                          <div className="absolute -left-[11px] top-1 w-4 h-4 rounded-full bg-white border-2 border-purple-600 shadow-xs" />
+                          <p className="text-xs font-bold text-slate-900">{act.title}</p>
+                          <p className="text-[11px] text-slate-500">{act.description}</p>
+                          <span className="text-[10px] text-slate-400 font-mono block">
                             {formatDate(act.timestamp)}
                           </span>
                         </div>
@@ -1620,42 +1620,42 @@ const AdminUsers = () => {
             </div>
 
             {/* Drawer Footer / Account Actions */}
-            <div className="p-6 border-t border-slate-800/80 bg-slate-950/80 space-y-3">
+            <div className="p-6 border-t border-slate-100 bg-slate-50 space-y-3">
               <h4 className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500">
                 ACCOUNT ACTIONS
               </h4>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => promptResetAccess(selectedUser)}
-                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center justify-center gap-1 transition-colors"
+                  className="px-3 py-2 rounded-xl bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 border border-slate-200 flex items-center justify-center gap-1 transition-colors shadow-xs cursor-pointer"
                 >
-                  <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                  <KeyRound className="w-3.5 h-3.5 text-sky-600" />
                   <span>Reset Access</span>
                 </button>
 
                 {selectedUser.status === 'suspended' ? (
                   <button
                     onClick={() => promptActivate(selectedUser)}
-                    className="px-3 py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/60 text-xs font-semibold text-emerald-300 border border-emerald-800 flex items-center justify-center gap-1 transition-colors"
+                    className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center justify-center gap-1 transition-colors cursor-pointer"
                   >
-                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Activate</span>
                   </button>
                 ) : (
                   <button
                     onClick={() => promptSuspend(selectedUser)}
-                    className="px-3 py-2 rounded-xl bg-amber-950/60 hover:bg-amber-900/60 text-xs font-semibold text-amber-300 border border-amber-800 flex items-center justify-center gap-1 transition-colors"
+                    className="px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-xs font-semibold text-amber-800 border border-amber-200 flex items-center justify-center gap-1 transition-colors cursor-pointer"
                   >
-                    <UserX className="w-3.5 h-3.5 text-amber-400" />
+                    <UserX className="w-3.5 h-3.5 text-amber-600" />
                     <span>Suspend</span>
                   </button>
                 )}
 
                 <button
                   onClick={() => promptDelete(selectedUser)}
-                  className="px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900/60 text-xs font-semibold text-rose-300 border border-rose-800 flex items-center justify-center gap-1 transition-colors"
+                  className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700 border border-rose-200 flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                   <span>Delete</span>
                 </button>
               </div>
@@ -1671,22 +1671,22 @@ const AdminUsers = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             onClick={() => setEditModalOpen(false)}
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150"
           />
-          <div className="relative z-10 w-full max-w-xl bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div className="relative z-10 w-full max-w-xl bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-950 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600">
                   <Edit3 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white font-mono">EDIT USER PROFILE</h3>
-                  <p className="text-xs text-slate-400">Update account credentials and competitive status</p>
+                  <h3 className="text-lg font-bold text-slate-900 font-mono">EDIT USER PROFILE</h3>
+                  <p className="text-xs text-slate-500">Update account credentials and competitive status</p>
                 </div>
               </div>
               <button
                 onClick={() => setEditModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1695,7 +1695,7 @@ const AdminUsers = () => {
             <form onSubmit={handleEditUserSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     Full Name
                   </label>
                   <input
@@ -1703,12 +1703,12 @@ const AdminUsers = () => {
                     required
                     value={editFormData.name}
                     onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-purple-600 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     Username
                   </label>
                   <input
@@ -1716,14 +1716,14 @@ const AdminUsers = () => {
                     required
                     value={editFormData.username}
                     onChange={(e) => setEditFormData({ ...editFormData, username: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-purple-600 font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     Email Address
                   </label>
                   <input
@@ -1731,32 +1731,32 @@ const AdminUsers = () => {
                     required
                     value={editFormData.email}
                     onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-purple-600 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     College
                   </label>
                   <input
                     type="text"
                     value={editFormData.college}
                     onChange={(e) => setEditFormData({ ...editFormData, college: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-purple-600 font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     Game
                   </label>
                   <select
                     value={editFormData.game}
                     onChange={(e) => setEditFormData({ ...editFormData, game: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-purple-600"
                   >
                     <option value="BGMI">BGMI</option>
                     <option value="Free Fire">Free Fire</option>
@@ -1765,25 +1765,25 @@ const AdminUsers = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     Game ID / IGN
                   </label>
                   <input
                     type="text"
                     value={editFormData.gameId}
                     onChange={(e) => setEditFormData({ ...editFormData, gameId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-purple-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     Role
                   </label>
                   <select
                     value={editFormData.role}
                     onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-purple-600"
                   >
                     <option value="player">PLAYER</option>
                     <option value="captain">CAPTAIN</option>
@@ -1794,25 +1794,25 @@ const AdminUsers = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     Team Name
                   </label>
                   <input
                     type="text"
                     value={editFormData.teamName}
                     onChange={(e) => setEditFormData({ ...editFormData, teamName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-purple-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                     Status
                   </label>
                   <select
                     value={editFormData.status}
                     onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-purple-600"
                   >
                     <option value="active">ACTIVE</option>
                     <option value="pending">PENDING</option>
@@ -1822,18 +1822,18 @@ const AdminUsers = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingEdit}
-                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-xs font-bold text-white shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {submittingEdit ? 'Saving Changes...' : 'Save Changes'}
                 </button>
@@ -1850,22 +1850,22 @@ const AdminUsers = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             onClick={() => setAssignTeamModalOpen(false)}
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150"
           />
-          <div className="relative z-10 w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div className="relative z-10 w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600">
                   <UserPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white font-mono">ASSIGN TEAM ROSTER</h3>
-                  <p className="text-xs text-slate-400">Assign player to a competitive team squad</p>
+                  <h3 className="text-base font-bold text-slate-900 font-mono">ASSIGN TEAM ROSTER</h3>
+                  <p className="text-xs text-slate-500">Assign player to a competitive team squad</p>
                 </div>
               </div>
               <button
                 onClick={() => setAssignTeamModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1873,20 +1873,20 @@ const AdminUsers = () => {
 
             <form onSubmit={handleAssignTeamSubmit} className="space-y-4">
               {/* Selected User Info */}
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
                 {renderAvatar(assigningUser, 'w-10 h-10')}
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-white truncate">{assigningUser.name}</p>
-                  <p className="text-[11px] text-slate-400 font-mono">@{assigningUser.username}</p>
+                  <p className="text-xs font-bold text-slate-900 truncate">{assigningUser.name}</p>
+                  <p className="text-[11px] text-slate-500 font-mono">@{assigningUser.username}</p>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
                   {assigningUser.game || 'BGMI'}
                 </span>
               </div>
 
               {/* Team Selection or Entry */}
               <div>
-                <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                   Target Team Name
                 </label>
                 <div className="space-y-2">
@@ -1899,7 +1899,7 @@ const AdminUsers = () => {
                         setAssignTeamName(e.target.value);
                       }
                     }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-purple-600"
                   >
                     <option value="">-- Choose Existing Team or Custom --</option>
                     <option value="Free Agent">⚡ Free Agent (Unassigned / Solo)</option>
@@ -1916,7 +1916,7 @@ const AdminUsers = () => {
                     placeholder="Enter or customize team name (e.g. Sentinel Esports)"
                     value={assignTeamName}
                     onChange={(e) => setAssignTeamName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-purple-600"
                   />
                 </div>
                 <span className="text-[10px] text-slate-500 font-mono mt-1 block">
@@ -1926,31 +1926,31 @@ const AdminUsers = () => {
 
               {/* Role in Team */}
               <div>
-                <label className="block text-xs font-mono uppercase text-slate-300 font-bold mb-1">
+                <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
                   Roster Role
                 </label>
                 <select
                   value={assignRole}
                   onChange={(e) => setAssignRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white font-mono focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-purple-600"
                 >
                   <option value="player">ROSTER PLAYER</option>
                   <option value="captain">TEAM CAPTAIN 👑</option>
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setAssignTeamModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingAssign}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-lg shadow-purple-600/30 disabled:opacity-50 transition-all flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-xs font-bold text-white shadow-sm disabled:opacity-50 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   {submittingAssign ? (
                     <>
@@ -1974,36 +1974,36 @@ const AdminUsers = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150"
           />
-          <div className="relative z-10 w-full max-w-md bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+          <div className="relative z-10 w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white font-mono">{confirmModal.title}</h3>
-                <span className="text-xs text-slate-400">Action confirmation required</span>
+                <h3 className="text-base font-bold text-slate-900 font-mono">{confirmModal.title}</h3>
+                <span className="text-xs text-slate-500">Action confirmation required</span>
               </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-700 leading-relaxed">
               {confirmModal.message}
             </p>
 
             {copiedToken && (
-              <div className="p-3 rounded-xl bg-cyan-950/50 border border-cyan-500/30 space-y-1 text-xs">
-                <span className="text-[10px] font-mono uppercase text-cyan-400 block font-bold">
+              <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 space-y-1 text-xs">
+                <span className="text-[10px] font-mono uppercase text-sky-800 block font-bold">
                   Generated Reset Token:
                 </span>
-                <div className="flex items-center justify-between gap-2 font-mono text-white bg-slate-950 p-2 rounded-lg">
+                <div className="flex items-center justify-between gap-2 font-mono text-slate-900 bg-white border border-slate-200 p-2 rounded-lg">
                   <span className="truncate">{copiedToken}</span>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(copiedToken);
                       addToast('Copied token to clipboard', 'info');
                     }}
-                    className="p-1 hover:text-cyan-400"
+                    className="p-1 hover:text-sky-600 cursor-pointer"
                   >
                     <Copy className="w-3.5 h-3.5" />
                   </button>
@@ -2011,18 +2011,18 @@ const AdminUsers = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={executeConfirmAction}
-                className={`px-5 py-2 rounded-xl text-xs font-bold ${confirmModal.confirmButtonClass}`}
+                className={`px-5 py-2 rounded-xl text-xs font-bold cursor-pointer ${confirmModal.confirmButtonClass}`}
               >
                 {confirmModal.confirmButtonText}
               </button>

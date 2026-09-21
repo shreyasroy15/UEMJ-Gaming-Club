@@ -272,22 +272,22 @@ const FormBuilder = () => {
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-16">
       {/* Top Header Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <Link
             to="/admin/tournaments"
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
                 {tournament?.game || 'Tournament'}
               </span>
-              <span className="text-xs text-slate-400 font-mono">Dynamic Form Builder</span>
+              <span className="text-xs text-slate-500 font-mono">Dynamic Form Builder</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white font-mono mt-0.5">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 font-mono mt-0.5">
               {tournament?.name}
             </h1>
           </div>
@@ -295,13 +295,13 @@ const FormBuilder = () => {
 
         {/* View Toggle & Save Button */}
         <div className="flex items-center gap-2">
-          <div className="flex p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold">
+          <div className="flex p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold">
             <button
               onClick={() => setActiveMode('builder')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 activeMode === 'builder'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Edit3 className="w-3.5 h-3.5" /> Builder
@@ -313,8 +313,8 @@ const FormBuilder = () => {
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 activeMode === 'preview'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Eye className="w-3.5 h-3.5" /> Live Preview
@@ -324,7 +324,7 @@ const FormBuilder = () => {
           <button
             onClick={handleSaveForm}
             disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-xs font-bold text-white shadow-lg shadow-emerald-600/20 disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-sm disabled:opacity-50 cursor-pointer transition-colors"
           >
             <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Form'}
           </button>
@@ -334,17 +334,17 @@ const FormBuilder = () => {
       {activeMode === 'builder' ? (
         <div className="space-y-6">
           {/* 1. SQUAD SIZING & PLAYER COUNT CONFIGURATION */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/40 border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h2 className="text-sm font-bold text-white uppercase font-mono flex items-center gap-2">
-                <Settings className="w-4 h-4 text-indigo-400" /> Player Count & Squad Configuration
+          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 uppercase font-mono flex items-center gap-2">
+                <Settings className="w-4 h-4 text-indigo-600" /> Player Count & Squad Configuration
               </h2>
-              <span className="text-[11px] text-slate-400 font-mono">Controls squad rules & deadlines</span>
+              <span className="text-[11px] text-slate-500 font-mono">Controls squad rules & deadlines</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-mono font-bold text-slate-300">
+                <label className="block text-xs font-mono font-bold text-slate-700">
                   Required Players *
                 </label>
                 <input
@@ -353,15 +353,15 @@ const FormBuilder = () => {
                   max="10"
                   value={minTeamSize}
                   onChange={(e) => setMinTeamSize(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono font-bold"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-mono font-bold"
                 />
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-500">
                   e.g. 2 for Duo, 4 for Squad.
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-mono font-bold text-slate-300">
+                <label className="block text-xs font-mono font-bold text-slate-700">
                   Maximum Players *
                 </label>
                 <input
@@ -370,35 +370,35 @@ const FormBuilder = () => {
                   max="12"
                   value={maxTeamSize}
                   onChange={(e) => setMaxTeamSize(Math.max(minTeamSize, parseInt(e.target.value) || minTeamSize))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono font-bold"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-mono font-bold"
                 />
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-500">
                   Total cap with optional slots.
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-mono font-bold text-slate-300">
+                <label className="block text-xs font-mono font-bold text-slate-700">
                   Allow Substitutes
                 </label>
                 <div className="flex items-center gap-3 pt-2">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
                     <input
                       type="checkbox"
                       checked={allowSubstitutes}
                       onChange={(e) => setAllowSubstitutes(e.target.checked)}
-                      className="w-4 h-4 rounded text-indigo-500 bg-slate-950 border-slate-800 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded text-indigo-600 bg-white border-slate-300 focus:ring-0 cursor-pointer"
                     />
                     <span>Enable Subs</span>
                   </label>
                 </div>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-500">
                   Extra slots become substitute.
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-mono font-bold text-slate-300">
+                <label className="block text-xs font-mono font-bold text-slate-700">
                   Max Substitutes
                 </label>
                 <input
@@ -408,60 +408,60 @@ const FormBuilder = () => {
                   value={maxSubstitutes}
                   disabled={!allowSubstitutes}
                   onChange={(e) => setMaxSubstitutes(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono font-bold disabled:opacity-40"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-mono font-bold disabled:opacity-40"
                 />
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-500">
                   Usually 1 for esports.
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-mono font-bold text-slate-300 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" /> Identity Proof Deadline *
+                <label className="block text-xs font-mono font-bold text-slate-700 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" /> Identity Proof Deadline *
                 </label>
                 <input
                   type="datetime-local"
                   value={identityProofDeadline}
                   onChange={(e) => setIdentityProofDeadline(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-mono"
                 />
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-500">
                   After this deadline, user uploads are closed.
                 </p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[11px] text-slate-300 flex items-start gap-2">
-              <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-xl bg-sky-50/60 border border-sky-200/80 text-[11px] text-slate-700 flex items-start gap-2">
+              <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
               <span>
                 <strong>Squad Architecture:</strong> Initial registration shows exactly{' '}
-                <span className="text-cyan-300 font-bold font-mono">{minTeamSize} required player slot(s)</span>.
-                Captains can use <span className="text-indigo-300 font-bold font-mono">[+ Add Player]</span> to add optional slots
+                <span className="text-sky-700 font-bold font-mono">{minTeamSize} required player slot(s)</span>.
+                Captains can use <span className="text-indigo-700 font-bold font-mono">[+ Add Player]</span> to add optional slots
                 up to {maxTeamSize}. Once all required players complete their player profiles, the{' '}
-                <strong className="text-amber-300">ONE Team Identity Proof PDF</strong> upload unlocks.
+                <strong className="text-amber-700">ONE Team Identity Proof PDF</strong> upload unlocks.
               </span>
             </div>
           </div>
 
           {/* 2. FORM METADATA & PRESETS CARD */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-              <h2 className="text-sm font-bold text-white uppercase font-mono flex items-center gap-2">
-                <FileCode className="w-4 h-4 text-cyan-400" /> Form Settings & Presets
+          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 uppercase font-mono flex items-center gap-2">
+                <FileCode className="w-4 h-4 text-sky-600" /> Form Settings & Presets
               </h2>
 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleApplyPreset('bgmi')}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-amber-400 border border-slate-700 flex items-center gap-1.5 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-[11px] font-bold text-amber-700 border border-amber-200 flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <Sparkles className="w-3 h-3" /> Load BGMI Preset
                 </button>
                 <button
                   type="button"
                   onClick={() => handleApplyPreset('free_fire')}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-rose-400 border border-slate-700 flex items-center gap-1.5 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-[11px] font-bold text-rose-700 border border-rose-200 flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <Sparkles className="w-3 h-3" /> Load Free Fire Preset
                 </button>
@@ -470,23 +470,23 @@ const FormBuilder = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="block text-xs font-mono font-bold text-slate-300">Form Title</label>
+                <label className="block text-xs font-mono font-bold text-slate-700">Form Title</label>
                 <input
                   type="text"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
                   placeholder="e.g. BGMI Tech Fest 2026 Registration"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block text-xs font-mono font-bold text-slate-300">Form Description / Guidelines</label>
+                <label className="block text-xs font-mono font-bold text-slate-700">Form Description / Guidelines</label>
                 <input
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
                   placeholder="e.g. All squads must upload one consolidated college proof PDF."
                 />
               </div>
@@ -495,21 +495,21 @@ const FormBuilder = () => {
 
           {/* 3. QUICK STATS BANNER */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
               <span className="block text-[10px] text-slate-500 uppercase font-mono font-bold">Total Questions</span>
-              <span className="text-lg font-black text-cyan-400 font-mono">{questions.length}</span>
+              <span className="text-lg font-black text-sky-600 font-mono">{questions.length}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
               <span className="block text-[10px] text-slate-500 uppercase font-mono font-bold">Team Scope (Once)</span>
-              <span className="text-lg font-black text-indigo-400 font-mono">{teamQuestions.length}</span>
+              <span className="text-lg font-black text-indigo-600 font-mono">{teamQuestions.length}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
               <span className="block text-[10px] text-slate-500 uppercase font-mono font-bold">Player Template Fields</span>
-              <span className="text-lg font-black text-fuchsia-400 font-mono">{playerQuestions.length}</span>
+              <span className="text-lg font-black text-fuchsia-600 font-mono">{playerQuestions.length}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
+            <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
               <span className="block text-[10px] text-slate-500 uppercase font-mono font-bold">Required Fields</span>
-              <span className="text-lg font-black text-emerald-400 font-mono">
+              <span className="text-lg font-black text-emerald-600 font-mono">
                 {questions.filter((q) => q.required).length}
               </span>
             </div>
@@ -517,12 +517,12 @@ const FormBuilder = () => {
 
           {/* 4. SECTION 1: TEAM QUESTIONS (FILLED ONCE FOR SQUAD) */}
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-white uppercase font-mono flex items-center gap-2">
-                  <Users className="w-4 h-4 text-indigo-400" /> 1. Team Fields ({teamQuestions.length})
+                <h3 className="text-sm font-bold text-slate-900 uppercase font-mono flex items-center gap-2">
+                  <Users className="w-4 h-4 text-indigo-600" /> 1. Team Fields ({teamQuestions.length})
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-[11px] text-slate-600 mt-0.5">
                   Filled <strong>once</strong> for the entire squad (Team Category, Team Identity Proof PDF, Bio).
                 </p>
               </div>
@@ -530,7 +530,7 @@ const FormBuilder = () => {
               <button
                 type="button"
                 onClick={() => handleAddQuestion('team')}
-                className="px-3 py-1.5 rounded-xl bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-xs font-bold text-indigo-300 flex items-center gap-1.5 cursor-pointer shrink-0"
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Team Field
               </button>
@@ -546,17 +546,17 @@ const FormBuilder = () => {
 
           {/* 5. SECTION 2: PLAYER FIELD TEMPLATE (BLUEPRINT REPEATED FOR EACH PLAYER) */}
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-4 rounded-2xl bg-sky-50/70 border border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white uppercase font-mono flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-cyan-400" /> 2. Reusable Player Field Template ({playerQuestions.length})
+                  <h3 className="text-sm font-bold text-slate-900 uppercase font-mono flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-sky-600" /> 2. Reusable Player Field Template ({playerQuestions.length})
                   </h3>
-                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-cyan-950 text-cyan-300 border border-cyan-500/40">
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-sky-100 text-sky-700 border border-sky-300">
                     Blueprint Auto-Repeats
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-300 mt-0.5">
+                <p className="text-[11px] text-slate-600 mt-0.5">
                   ⚡ <strong>Defined ONCE:</strong> Repeated automatically for Player 1 (Leader), Player 2, Player 3, etc.
                   (Identity Proof is handled at the team level, NOT per-player).
                 </p>
@@ -565,7 +565,7 @@ const FormBuilder = () => {
               <button
                 type="button"
                 onClick={() => handleAddQuestion('player')}
-                className="px-3 py-1.5 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-700/60 text-xs font-bold text-cyan-300 flex items-center gap-1.5 cursor-pointer shrink-0"
+                className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-xs font-bold text-white shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Player Field
               </button>
@@ -582,9 +582,9 @@ const FormBuilder = () => {
       ) : (
         /* ================= LIVE STUDENT PREVIEW MODE ================= */
         <div className="space-y-6">
-          <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-indigo-400 shrink-0" />
+              <Eye className="w-4 h-4 text-indigo-600 shrink-0" />
               <span>
                 <strong>Interactive Student Preview:</strong> Required Starters ({minTeamSize}) with dynamic{' '}
                 <strong>[+ Add Player]</strong> capability up to Maximum Players ({maxTeamSize}).
@@ -592,14 +592,14 @@ const FormBuilder = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono text-cyan-300">
+              <span className="text-[11px] font-mono text-indigo-700 font-bold">
                 Slots in Preview: {previewSlotCount} / {maxTeamSize}
               </span>
               {previewSlotCount < maxTeamSize && (
                 <button
                   type="button"
                   onClick={handlePreviewAddSlot}
-                  className="px-2.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                 >
                   <UserPlus className="w-3 h-3" /> + Add Player
                 </button>
@@ -609,29 +609,29 @@ const FormBuilder = () => {
 
           <div className="max-w-3xl mx-auto space-y-6">
             {/* Team Questions Section in Preview */}
-            <div className="p-6 rounded-3xl bg-slate-900/90 border border-indigo-900/50 shadow-2xl space-y-4">
-              <div className="pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-indigo-400 uppercase">
+            <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4">
+              <div className="pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-indigo-600 uppercase">
                   <Users className="w-4 h-4" /> Team Details (Filled Once)
                 </div>
-                <h3 className="text-base font-bold text-white font-mono mt-1">Squad Information</h3>
+                <h3 className="text-base font-bold text-slate-900 font-mono mt-1">Squad Information</h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-300 font-mono">Team Name *</label>
+                  <label className="block text-xs font-bold text-slate-700 font-mono">Team Name *</label>
                   <input
                     type="text"
                     placeholder="e.g. Apex Predators"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-300 font-mono">Team Tag</label>
+                  <label className="block text-xs font-bold text-slate-700 font-mono">Team Tag</label>
                   <input
                     type="text"
                     placeholder="e.g. APEX"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
                   />
                 </div>
               </div>
@@ -642,16 +642,16 @@ const FormBuilder = () => {
 
                 return (
                   <div key={q.id} className="space-y-1.5 pt-2">
-                    <label className="block text-xs font-bold text-slate-200">
-                      {q.label} {q.required && <span className="text-rose-400">*</span>}
+                    <label className="block text-xs font-bold text-slate-800">
+                      {q.label} {q.required && <span className="text-rose-500">*</span>}
                     </label>
-                    {q.helpText && <p className="text-[11px] text-slate-400">{q.helpText}</p>}
+                    {q.helpText && <p className="text-[11px] text-slate-500">{q.helpText}</p>}
 
                     {q.fieldType === 'dropdown' ? (
                       <select
                         value={previewValues[q.id] || ''}
                         onChange={(e) => handlePreviewChange(q.id, e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
                       >
                         <option value="">{q.placeholder || 'Select an option'}</option>
                         {q.options?.map((opt, i) => (
@@ -666,7 +666,7 @@ const FormBuilder = () => {
                         value={previewValues[q.id] || ''}
                         onChange={(e) => handlePreviewChange(q.id, e.target.value)}
                         placeholder={q.placeholder || ''}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
                       />
                     )}
                   </div>
@@ -678,10 +678,10 @@ const FormBuilder = () => {
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-white font-mono uppercase flex items-center gap-2">
-                    <User className="w-4 h-4 text-cyan-400" /> Player Slots ({previewSlotCount} Active Slots)
+                  <h3 className="text-sm font-bold text-slate-900 font-mono uppercase flex items-center gap-2">
+                    <User className="w-4 h-4 text-sky-600" /> Player Slots ({previewSlotCount} Active Slots)
                   </h3>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Each slot below auto-renders the Player Field Template blueprint (no document uploads inside player slots).
                   </p>
                 </div>
@@ -690,7 +690,7 @@ const FormBuilder = () => {
                   <button
                     type="button"
                     onClick={handlePreviewAddSlot}
-                    className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+                    className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                   >
                     <UserPlus className="w-3.5 h-3.5" /> [+ Add Player Slot]
                   </button>
@@ -706,26 +706,26 @@ const FormBuilder = () => {
                 return (
                   <div
                     key={`slot-${slotNum}`}
-                    className={`p-6 rounded-3xl border shadow-xl space-y-4 ${
+                    className={`p-6 rounded-3xl border shadow-sm space-y-4 ${
                       isCaptain
-                        ? 'bg-slate-900/90 border-amber-900/40'
+                        ? 'bg-white border-amber-300'
                         : isSubstitute
-                        ? 'bg-slate-900/80 border-purple-900/40'
-                        : 'bg-slate-900/90 border-cyan-900/40'
+                        ? 'bg-white border-purple-300'
+                        : 'bg-white border-slate-200'
                     }`}
                   >
                     {/* Slot Header */}
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                       <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-xl bg-slate-950 border border-slate-800 text-cyan-400 flex items-center justify-center font-mono font-bold text-xs">
+                        <span className="w-7 h-7 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 flex items-center justify-center font-mono font-bold text-xs">
                           {slotNum}
                         </span>
                         <div>
-                          <h4 className="text-sm font-bold text-white font-mono">
+                          <h4 className="text-sm font-bold text-slate-900 font-mono">
                             PLAYER {slotNum}{' '}
                             {isCaptain ? '(Team Leader)' : isSubstitute ? '(Substitute)' : '(Required Starter)'}
                           </h4>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-[10px] text-slate-500">
                             {isRequiredStarter ? 'Mandatory for squad completion' : 'Optional player slot'}
                           </span>
                         </div>
@@ -735,10 +735,10 @@ const FormBuilder = () => {
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
                             isCaptain
-                              ? 'bg-amber-950 text-amber-300 border border-amber-700/50'
+                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
                               : isSubstitute
-                              ? 'bg-purple-950 text-purple-300 border border-purple-700/50'
-                              : 'bg-indigo-950 text-indigo-300 border border-indigo-700/50'
+                              ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                              : 'bg-sky-50 text-sky-800 border border-sky-200'
                           }`}
                         >
                           {isCaptain ? 'Team Leader' : isSubstitute ? 'Substitute' : 'Starter'}
@@ -748,7 +748,7 @@ const FormBuilder = () => {
                           <button
                             type="button"
                             onClick={() => handlePreviewRemoveSlot(slotNum)}
-                            className="p-1 rounded-lg bg-red-950 hover:bg-red-900 text-red-300 cursor-pointer"
+                            className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
                             title="Remove optional slot"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -770,27 +770,27 @@ const FormBuilder = () => {
                             }`}
                           >
                             <div className="flex items-center justify-between">
-                              <label className="block text-xs font-bold text-slate-200">
-                                {q.label} {q.required && <span className="text-rose-400">*</span>}
+                              <label className="block text-xs font-bold text-slate-800">
+                                {q.label} {q.required && <span className="text-rose-500">*</span>}
                               </label>
                               {!q.isPublic && (
-                                <span className="text-[10px] text-amber-400 flex items-center gap-1 font-mono">
+                                <span className="text-[10px] text-amber-700 flex items-center gap-1 font-mono">
                                   <Lock className="w-3 h-3" /> Private
                                 </span>
                               )}
                             </div>
-                            {q.helpText && <p className="text-[10px] text-slate-400">{q.helpText}</p>}
+                            {q.helpText && <p className="text-[10px] text-slate-500">{q.helpText}</p>}
 
                             {q.fieldType === 'image_upload' ? (
-                              <div className="p-3 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 text-center text-xs text-slate-400">
-                                <Upload className="w-4 h-4 mx-auto mb-1 text-cyan-400" />
-                                <span className="text-slate-300 font-semibold">Upload Photo</span>
+                              <div className="p-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center text-xs text-slate-600">
+                                <Upload className="w-4 h-4 mx-auto mb-1 text-sky-600" />
+                                <span className="text-slate-700 font-semibold">Upload Photo</span>
                               </div>
                             ) : q.fieldType === 'dropdown' ? (
                               <select
                                 value={previewValues[fieldKey] || ''}
                                 onChange={(e) => handlePreviewChange(fieldKey, e.target.value)}
-                                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
                               >
                                 <option value="">{q.placeholder || 'Select an option'}</option>
                                 {q.options?.map((opt, i) => (
@@ -805,7 +805,7 @@ const FormBuilder = () => {
                                 value={previewValues[fieldKey] || ''}
                                 onChange={(e) => handlePreviewChange(fieldKey, e.target.value)}
                                 placeholder={q.placeholder || ''}
-                                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
                               />
                             )}
                           </div>
@@ -819,9 +819,9 @@ const FormBuilder = () => {
               {previewSlotCount < maxTeamSize && (
                 <div
                   onClick={handlePreviewAddSlot}
-                  className="p-4 rounded-2xl border-2 border-dashed border-slate-800 hover:border-cyan-500/50 bg-slate-950/30 text-center cursor-pointer group transition-all"
+                  className="p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:border-sky-500 bg-white text-center cursor-pointer group transition-all"
                 >
-                  <span className="text-xs font-bold font-mono text-slate-400 group-hover:text-cyan-400 flex items-center justify-center gap-1.5">
+                  <span className="text-xs font-bold font-mono text-slate-600 group-hover:text-sky-600 flex items-center justify-center gap-1.5">
                     <Plus className="w-4 h-4" /> [+ Add Player {previewSlotCount + 1} Slot (Optional)]
                   </span>
                 </div>
@@ -829,33 +829,33 @@ const FormBuilder = () => {
             </div>
 
             {/* Dedicated ONE Team Identity Proof Upload (Combined PDF) */}
-            <div className="p-6 rounded-3xl bg-slate-900/90 border border-amber-900/40 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="p-6 rounded-3xl bg-white border border-amber-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-amber-400" />
-                  <h4 className="text-sm font-bold text-white font-mono uppercase">
+                  <Shield className="w-4 h-4 text-amber-600" />
+                  <h4 className="text-sm font-bold text-slate-900 font-mono uppercase">
                     3. Team Identity / College Proof (Single Combined PDF)
                   </h4>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-red-950 text-red-300 border border-red-800">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-rose-50 text-rose-700 border border-rose-200">
                   🔒 Private / Admin Only
                 </span>
               </div>
 
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-slate-600">
                 Upload ONE PDF containing the identity/college proof of all registered team members. For UEM students, include the required IEMCRP/college proof for each member.
               </p>
 
-              <div className="p-5 rounded-2xl border-2 border-dashed border-amber-800/60 bg-amber-950/10 text-center space-y-2">
-                <FileText className="w-8 h-8 mx-auto text-amber-400" />
-                <div className="text-xs font-bold text-white">
+              <div className="p-5 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/40 text-center space-y-2">
+                <FileText className="w-8 h-8 mx-auto text-amber-600" />
+                <div className="text-xs font-bold text-slate-900">
                   ONE Combined Team Identity Proof (PDF)
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   ⚡ Unlocks automatically once all {minTeamSize} required starters have filled their player profiles.
                 </p>
                 {identityProofDeadline && (
-                  <p className="text-[10px] text-amber-400 font-mono">
+                  <p className="text-[10px] text-amber-700 font-mono font-semibold">
                     Submission Deadline: {new Date(identityProofDeadline).toLocaleString()}
                   </p>
                 )}
@@ -878,16 +878,16 @@ const FormBuilder = () => {
         key={q.id || idx}
         className={`p-4 sm:p-5 rounded-2xl border transition-all ${
           isTeamIdentityProof
-            ? 'bg-slate-900/80 border-amber-900/60 shadow-lg shadow-amber-950/20'
+            ? 'bg-white border-amber-300 shadow-sm'
             : isTeam
-            ? 'bg-slate-900/80 border-indigo-900/60 shadow-lg shadow-indigo-950/20'
-            : 'bg-slate-900/80 border-slate-800 shadow-lg'
+            ? 'bg-white border-indigo-200 shadow-sm'
+            : 'bg-white border-slate-200 shadow-sm'
         }`}
       >
         {/* Card Header & Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 flex items-center justify-center text-xs font-bold font-mono">
+            <span className="w-6 h-6 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold font-mono">
               {idx + 1}
             </span>
 
@@ -895,10 +895,10 @@ const FormBuilder = () => {
             <span
               className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase ${
                 isTeamIdentityProof
-                  ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
                   : isTeam
-                  ? 'bg-indigo-950 text-indigo-300 border border-indigo-700/60'
-                  : 'bg-cyan-950 text-cyan-300 border border-cyan-700/60'
+                  ? 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+                  : 'bg-sky-50 text-sky-800 border border-sky-200'
               }`}
             >
               {isTeamIdentityProof
@@ -909,7 +909,7 @@ const FormBuilder = () => {
             </span>
 
             {isTeamIdentityProof && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-red-950 text-red-300 border border-red-800">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase bg-rose-50 text-rose-700 border border-rose-200">
                 🔒 Private / Admin Only
               </span>
             )}
@@ -921,7 +921,7 @@ const FormBuilder = () => {
               type="button"
               onClick={() => handleMove(idx, 'up')}
               disabled={idx === 0}
-              className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-400 disabled:opacity-30 cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-30 cursor-pointer transition-colors"
               title="Move Up"
             >
               <ChevronUp className="w-3.5 h-3.5" />
@@ -930,7 +930,7 @@ const FormBuilder = () => {
               type="button"
               onClick={() => handleMove(idx, 'down')}
               disabled={idx === questions.length - 1}
-              className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-400 disabled:opacity-30 cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-30 cursor-pointer transition-colors"
               title="Move Down"
             >
               <ChevronDown className="w-3.5 h-3.5" />
@@ -939,7 +939,7 @@ const FormBuilder = () => {
               <button
                 type="button"
                 onClick={() => handleDeleteQuestion(idx)}
-                className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900 text-red-300 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
                 title="Delete Question"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -952,24 +952,24 @@ const FormBuilder = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           {/* Label */}
           <div className="md:col-span-6 space-y-1">
-            <label className="block text-[11px] font-mono font-bold text-slate-300">Question Label / Title *</label>
+            <label className="block text-[11px] font-mono font-bold text-slate-700">Question Label / Title *</label>
             <input
               type="text"
               value={q.label}
               onChange={(e) => handleUpdateQuestion(idx, { label: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 font-medium"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-medium"
               placeholder="e.g. In-Game Name (IGN)"
             />
           </div>
 
           {/* Field Type Select */}
           <div className="md:col-span-3 space-y-1">
-            <label className="block text-[11px] font-mono font-bold text-slate-300">Field Input Type</label>
+            <label className="block text-[11px] font-mono font-bold text-slate-700">Field Input Type</label>
             <select
               value={q.fieldType}
               disabled={isTeamIdentityProof}
               onChange={(e) => handleUpdateQuestion(idx, { fieldType: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 disabled:opacity-60"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 disabled:opacity-60"
             >
               {FIELD_TYPES.map((ft) => (
                 <option key={ft.id} value={ft.id}>
@@ -981,12 +981,12 @@ const FormBuilder = () => {
 
           {/* Scope Selection */}
           <div className="md:col-span-3 space-y-1">
-            <label className="block text-[11px] font-mono font-bold text-slate-300">Target Scope</label>
+            <label className="block text-[11px] font-mono font-bold text-slate-700">Target Scope</label>
             <select
               value={q.scope}
               disabled={isTeamIdentityProof}
               onChange={(e) => handleUpdateQuestion(idx, { scope: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400 disabled:opacity-60"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 disabled:opacity-60"
             >
               <option value="player">Player Template (Repeated)</option>
               <option value="team">Team Scope (Once)</option>
@@ -995,26 +995,26 @@ const FormBuilder = () => {
 
           {/* Help Text / Guidance */}
           <div className="md:col-span-8 space-y-1">
-            <label className="block text-[11px] font-mono font-bold text-slate-300">
+            <label className="block text-[11px] font-mono font-bold text-slate-700">
               Guidance / Help Instructions
             </label>
             <input
               type="text"
               value={q.helpText || ''}
               onChange={(e) => handleUpdateQuestion(idx, { helpText: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               placeholder="e.g. Upload ONE PDF containing identity proof of all members"
             />
           </div>
 
           {/* Placeholder */}
           <div className="md:col-span-4 space-y-1">
-            <label className="block text-[11px] font-mono font-bold text-slate-300">Placeholder Text</label>
+            <label className="block text-[11px] font-mono font-bold text-slate-700">Placeholder Text</label>
             <input
               type="text"
               value={q.placeholder || ''}
               onChange={(e) => handleUpdateQuestion(idx, { placeholder: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-400"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               placeholder="e.g. 5123456789"
             />
           </div>
@@ -1022,8 +1022,8 @@ const FormBuilder = () => {
 
         {/* Options Management for Choice Fields */}
         {hasOptions && (
-          <div className="mt-4 p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
-            <label className="block text-[11px] font-mono font-bold text-slate-300">
+          <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <label className="block text-[11px] font-mono font-bold text-slate-700">
               Selection Options ({q.options?.length || 0})
             </label>
             <div className="space-y-1.5">
@@ -1037,7 +1037,7 @@ const FormBuilder = () => {
                       newOpts[optIdx] = e.target.value;
                       handleUpdateQuestion(idx, { options: newOpts });
                     }}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-sky-500"
                   />
                   <button
                     type="button"
@@ -1045,7 +1045,7 @@ const FormBuilder = () => {
                       const newOpts = q.options.filter((_, oI) => oI !== optIdx);
                       handleUpdateQuestion(idx, { options: newOpts });
                     }}
-                    className="p-1 text-slate-400 hover:text-red-400 cursor-pointer"
+                    className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1057,7 +1057,7 @@ const FormBuilder = () => {
                   const newOpts = [...(q.options || []), `Option ${(q.options?.length || 0) + 1}`];
                   handleUpdateQuestion(idx, { options: newOpts });
                 }}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-cyan-400 hover:underline mt-1 cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:underline mt-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" /> Add Choice
               </button>
@@ -1066,7 +1066,7 @@ const FormBuilder = () => {
         )}
 
         {/* Toggles Row */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-slate-800/80 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-slate-100 text-xs">
           <div className="flex items-center gap-6">
             {/* Required Toggle */}
             <label className="flex items-center gap-2 cursor-pointer">
@@ -1074,9 +1074,9 @@ const FormBuilder = () => {
                 type="checkbox"
                 checked={q.required}
                 onChange={(e) => handleUpdateQuestion(idx, { required: e.target.checked })}
-                className="w-4 h-4 rounded text-cyan-500 bg-slate-950 border-slate-800 focus:ring-0 cursor-pointer"
+                className="w-4 h-4 rounded text-sky-600 bg-white border-slate-300 focus:ring-0 cursor-pointer"
               />
-              <span className="font-bold text-slate-200">Required Field</span>
+              <span className="font-bold text-slate-800">Required Field</span>
             </label>
 
             {/* Public Visibility Toggle */}
@@ -1086,13 +1086,13 @@ const FormBuilder = () => {
                 checked={isTeamIdentityProof ? false : q.isPublic}
                 disabled={isTeamIdentityProof}
                 onChange={(e) => handleUpdateQuestion(idx, { isPublic: e.target.checked })}
-                className="w-4 h-4 rounded text-indigo-500 bg-slate-950 border-slate-800 focus:ring-0 cursor-pointer disabled:opacity-50"
+                className="w-4 h-4 rounded text-indigo-600 bg-white border-slate-300 focus:ring-0 cursor-pointer disabled:opacity-50"
               />
-              <span className="font-bold text-slate-300 flex items-center gap-1">
+              <span className="font-bold text-slate-700 flex items-center gap-1">
                 {isTeamIdentityProof || !q.isPublic ? (
-                  <Lock className="w-3 h-3 text-amber-400" />
+                  <Lock className="w-3 h-3 text-amber-600" />
                 ) : (
-                  <Globe className="w-3 h-3 text-emerald-400" />
+                  <Globe className="w-3 h-3 text-emerald-600" />
                 )}
                 {isTeamIdentityProof
                   ? 'Private / Admin Only (Enforced)'
@@ -1104,7 +1104,7 @@ const FormBuilder = () => {
           </div>
 
           <span className="text-[10px] text-slate-500 font-mono">
-            Key: <code className="text-slate-400">{q.id}</code>
+            Key: <code className="text-slate-700 bg-slate-100 px-1 py-0.5 rounded">{q.id}</code>
           </span>
         </div>
       </div>

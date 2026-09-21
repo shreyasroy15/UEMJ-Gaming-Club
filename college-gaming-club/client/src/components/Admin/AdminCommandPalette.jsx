@@ -179,9 +179,7 @@ const AdminCommandPalette = ({ isOpen, onClose }) => {
               <X className="w-4 h-4" />
             </button>
           )}
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white border border-slate-200 text-[10px] font-mono text-slate-500 shadow-xs">
-            ESC
-          </kbd>
+
         </div>
 
         {/* Results Container */}
@@ -309,11 +307,6 @@ const AdminCommandPalette = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-          <span>Navigate with mouse or keyboard</span>
-          <span className="text-sky-600 font-semibold">UEMJ Admin Core</span>
-        </div>
       </div>
     </div>
   );

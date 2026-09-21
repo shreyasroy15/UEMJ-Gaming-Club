@@ -347,7 +347,7 @@ const AdminTournaments = () => {
 
       {/* Search & Filter Bar */}
       {tournaments.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800 shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -355,13 +355,13 @@ const AdminTournaments = () => {
               placeholder="Search tournaments by name or game..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-950 border border-slate-700/80 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono shadow-inner transition"
+              className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white font-mono shadow-sm transition"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 transition cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 transition cursor-pointer"
                 title="Clear"
               >
                 <X className="w-3.5 h-3.5" />
@@ -371,11 +371,11 @@ const AdminTournaments = () => {
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-slate-500" />
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-mono"
+                className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-mono"
               >
                 <option value="all">All Statuses ({tournaments.length})</option>
                 <option value="upcoming">Upcoming</option>
@@ -384,9 +384,9 @@ const AdminTournaments = () => {
               </select>
             </div>
 
-            <div className="text-xs font-mono text-slate-400 hidden sm:block">
-              Showing <span className="text-cyan-400 font-bold">{filteredTournaments.length}</span> of{' '}
-              <span className="text-white font-bold">{tournaments.length}</span>
+            <div className="text-xs font-mono text-slate-500 hidden sm:block">
+              Showing <span className="text-cyan-700 font-bold">{filteredTournaments.length}</span> of{' '}
+              <span className="text-slate-900 font-bold">{tournaments.length}</span>
             </div>
           </div>
         </div>
@@ -402,9 +402,9 @@ const AdminTournaments = () => {
           description="Create your first collegiate tournament to kick off the season."
         />
       ) : filteredTournaments.length === 0 ? (
-        <div className="p-10 text-center rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
-          <Search className="w-8 h-8 text-slate-600 mx-auto" />
-          <p className="text-sm text-slate-300 font-mono font-bold">
+        <div className="p-10 text-center rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+          <Search className="w-8 h-8 text-slate-400 mx-auto" />
+          <p className="text-sm text-slate-700 font-mono font-bold">
             No tournaments found matching "{searchQuery}"
           </p>
           <button
@@ -412,134 +412,256 @@ const AdminTournaments = () => {
               setSearchQuery('');
               setStatusFilter('all');
             }}
-            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono font-bold transition cursor-pointer"
+            className="px-4 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-cyan-700 border border-slate-200 text-xs font-mono font-bold transition cursor-pointer"
           >
             Clear Search & Filters
           </button>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[750px] text-left text-xs text-slate-300">
-              <thead className="bg-slate-950/80 uppercase font-mono text-slate-400 border-b border-slate-800">
-                <tr>
-                  <th className="p-4">Tournament Name</th>
-                  <th className="p-4">Game</th>
-                  <th className="p-4">Roster Size</th>
-                  <th className="p-4 text-center">Teams Registered</th>
-                  <th className="p-4">Prize Pool</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filteredTournaments.map((t) => (
-                  <tr key={t._id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-4 font-bold text-white font-mono">
-                      <Link
-                        to={`/tournaments/${t.slug || t._id}`}
-                        className="hover:text-cyan-400 flex items-center gap-1.5"
-                      >
-                        {t.name} <ExternalLink className="w-3 h-3 text-slate-500" />
-                      </Link>
-                    </td>
-
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono font-bold">
+        <div className="space-y-4">
+          {/* MOBILE TOURNAMENTS CARDS VIEW (< md) */}
+          <div className="block md:hidden space-y-3.5">
+            {filteredTournaments.map((t) => (
+              <div
+                key={t._id}
+                className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-3.5"
+              >
+                {/* Header: Title & Status */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      to={`/tournaments/${t.slug || t._id}`}
+                      className="font-bold text-slate-900 font-mono text-sm hover:text-cyan-600 flex items-center gap-1.5 truncate"
+                    >
+                      <span className="truncate">{t.name}</span>
+                      <ExternalLink className="w-3 h-3 text-slate-400 shrink-0" />
+                    </Link>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[10px] font-bold">
                         {t.game}
                       </span>
-                    </td>
-
-                    <td className="p-4 text-slate-300 font-mono">
-                      {t.minTeamSize || 4} Starters {t.allowSubstitutes !== false ? `+ ${t.maxSubstitutes || 1} Sub` : ''}
-                    </td>
-
-                    <td className="p-4 text-center font-mono font-semibold">
-                      <span className="text-cyan-400">{t.registeredTeams?.length || 0}</span> / {t.maxTeams}
-                    </td>
-
-                    <td className="p-4 font-mono font-bold text-amber-400">
-                      ₹{t.prizePool?.total?.toLocaleString()}
-                    </td>
-
-                    <td className="p-4">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          t.status === 'live' || t.status === 'ongoing'
-                            ? 'bg-rose-950 text-rose-400 border border-rose-800'
-                            : t.status === 'completed'
-                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                            : t.status === 'cancelled'
-                            ? 'bg-red-950/80 text-red-400 border border-red-800'
-                            : 'bg-slate-900 text-cyan-400 border border-slate-800'
-                        }`}
-                      >
-                        {t.status}
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {t.minTeamSize || 4} Starters
                       </span>
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="p-4 text-right space-x-1.5">
-                      {/* Form Builder Button */}
-                      <Link
-                        to={`/admin/tournaments/${t._id}/form`}
-                        title="Edit Dynamic Registration Form"
-                        className="p-1.5 rounded-lg bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-800/60 transition-colors inline-block align-middle cursor-pointer"
-                      >
-                        <FileCode className="w-3.5 h-3.5" />
-                      </Link>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono shrink-0 ${
+                      t.status === 'live' || t.status === 'ongoing'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : t.status === 'completed'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : t.status === 'cancelled'
+                        ? 'bg-red-50 text-red-700 border border-red-200'
+                        : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                    }`}
+                  >
+                    {t.status}
+                  </span>
+                </div>
 
-                      {/* Manage Stages, Lobbies & Matches */}
-                      <Link
-                        to={`/admin/matches?tournament=${t._id}`}
-                        title="Manage Stages, Lobbies & Match Fixtures"
-                        className="p-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition-colors inline-block align-middle cursor-pointer"
-                      >
-                        <Swords className="w-3.5 h-3.5" />
-                      </Link>
+                {/* Progress & Prize Pool */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                  <div className="flex justify-between items-center text-xs font-mono">
+                    <span className="text-slate-600">Registered:</span>
+                    <span className="text-cyan-700 font-bold">
+                      {t.registeredTeams?.length || 0} / {t.maxTeams} Teams
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-cyan-500 rounded-full"
+                      style={{
+                        width: `${Math.min(100, Math.round(((t.registeredTeams?.length || 0) / (t.maxTeams || 16)) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200/60 font-mono">
+                    <span className="text-slate-600">Prize Pool:</span>
+                    <span className="font-bold text-amber-600">₹{t.prizePool?.total?.toLocaleString()}</span>
+                  </div>
+                </div>
 
-                      {/* View & Verify Teams */}
-                      <button
-                        onClick={() => handleViewTeams(t)}
-                        title="View Registered Teams & Verify Documents"
-                        className="p-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition-colors cursor-pointer"
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                      </button>
+                {/* Mobile Action Buttons Bar */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <Link
+                    to={`/admin/matches?tournament=${t._id}`}
+                    className="flex-1 min-w-[70px] py-2 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold font-mono flex items-center justify-center gap-1 shadow-sm"
+                  >
+                    <Swords className="w-3.5 h-3.5" />
+                    <span>Matches</span>
+                  </Link>
 
-                      {/* Generate Bracket */}
-                      <button
-                        onClick={() => handleGenerateBracket(t._id, t.name)}
-                        title="Generate Elimination Brackets"
-                        className="p-1.5 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 transition-colors cursor-pointer"
-                      >
-                        <GitBranch className="w-3.5 h-3.5" />
-                      </button>
+                  <button
+                    onClick={() => handleViewTeams(t)}
+                    className="flex-1 min-w-[70px] py-2 px-2.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-xs font-bold font-mono flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Teams</span>
+                  </button>
 
-                      {/* Edit */}
-                      <button
-                        onClick={() => handleOpenEdit(t)}
-                        title="Edit Tournament"
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
+                  <Link
+                    to={`/admin/tournaments/${t._id}/form`}
+                    title="Form Builder"
+                    className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 cursor-pointer"
+                  >
+                    <FileCode className="w-3.5 h-3.5" />
+                  </Link>
 
-                      {/* Delete */}
-                      <button
-                        onClick={() => handleDelete(t._id, t.name)}
-                        title="Delete Tournament"
-                        className="p-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-rose-400 border border-rose-900 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
+                  <button
+                    onClick={() => handleGenerateBracket(t._id, t.name)}
+                    title="Brackets"
+                    className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 cursor-pointer"
+                  >
+                    <GitBranch className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => handleOpenEdit(t)}
+                    title="Edit Tournament"
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(t._id, t.name)}
+                    title="Delete Tournament"
+                    className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DESKTOP / TABLET TABLE VIEW (Hidden on Mobile) */}
+          <div className="hidden md:block rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[750px] text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 uppercase font-mono text-slate-600 border-b border-slate-200">
+                  <tr>
+                    <th className="p-4">Tournament Name</th>
+                    <th className="p-4">Game</th>
+                    <th className="p-4">Roster Size</th>
+                    <th className="p-4 text-center">Teams Registered</th>
+                    <th className="p-4">Prize Pool</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredTournaments.map((t) => (
+                    <tr key={t._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-4 font-bold text-slate-900 font-mono">
+                        <Link
+                          to={`/tournaments/${t.slug || t._id}`}
+                          className="hover:text-cyan-600 flex items-center gap-1.5"
+                        >
+                          {t.name} <ExternalLink className="w-3 h-3 text-slate-400" />
+                        </Link>
+                      </td>
+
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono font-bold">
+                          {t.game}
+                        </span>
+                      </td>
+
+                      <td className="p-4 text-slate-600 font-mono">
+                        {t.minTeamSize || 4} Starters {t.allowSubstitutes !== false ? `+ ${t.maxSubstitutes || 1} Sub` : ''}
+                      </td>
+
+                      <td className="p-4 text-center font-mono font-semibold">
+                        <span className="text-cyan-700 font-bold">{t.registeredTeams?.length || 0}</span> / {t.maxTeams}
+                      </td>
+
+                      <td className="p-4 font-mono font-bold text-amber-600">
+                        ₹{t.prizePool?.total?.toLocaleString()}
+                      </td>
+
+                      <td className="p-4">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                            t.status === 'live' || t.status === 'ongoing'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : t.status === 'completed'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : t.status === 'cancelled'
+                              ? 'bg-red-50 text-red-700 border border-red-200'
+                              : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                          }`}
+                        >
+                          {t.status}
+                        </span>
+                      </td>
+
+                      <td className="p-4 text-right space-x-1.5">
+                        {/* Form Builder Button */}
+                        <Link
+                          to={`/admin/tournaments/${t._id}/form`}
+                          title="Edit Dynamic Registration Form"
+                          className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors inline-block align-middle cursor-pointer shadow-xs"
+                        >
+                          <FileCode className="w-3.5 h-3.5" />
+                        </Link>
+
+                        {/* Manage Stages, Lobbies & Matches */}
+                        <Link
+                          to={`/admin/matches?tournament=${t._id}`}
+                          title="Manage Stages, Lobbies & Match Fixtures"
+                          className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors inline-block align-middle cursor-pointer shadow-xs"
+                        >
+                          <Swords className="w-3.5 h-3.5" />
+                        </Link>
+
+                        {/* View & Verify Teams */}
+                        <button
+                          onClick={() => handleViewTeams(t)}
+                          title="View Registered Teams & Verify Documents"
+                          className="p-1.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Generate Bracket */}
+                        <button
+                          onClick={() => handleGenerateBracket(t._id, t.name)}
+                          title="Generate Elimination Brackets"
+                          className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <GitBranch className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Edit */}
+                        <button
+                          onClick={() => handleOpenEdit(t)}
+                          title="Edit Tournament"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Delete */}
+                        <button
+                          onClick={() => handleDelete(t._id, t.name)}
+                          title="Delete Tournament"
+                          className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
+
 
       {/* Create / Edit Tournament Modal */}
       <Modal
@@ -549,7 +671,7 @@ const AdminTournaments = () => {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
               Tournament Name *
             </label>
             <input
@@ -557,20 +679,20 @@ const AdminTournaments = () => {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               placeholder="e.g. UEM Jaipur Tech Fest 2026 – BGMI"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Esports Game *
               </label>
               <select
                 value={formData.game}
                 onChange={(e) => setFormData({ ...formData, game: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               >
                 {games.map((g) => (
                   <option key={g._id} value={g.name}>
@@ -581,13 +703,13 @@ const AdminTournaments = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Format
               </label>
               <select
                 value={formData.format}
                 onChange={(e) => setFormData({ ...formData, format: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               >
                 <option value="Single Elimination">Single Elimination</option>
                 <option value="Double Elimination">Double Elimination</option>
@@ -598,13 +720,13 @@ const AdminTournaments = () => {
           </div>
 
           {/* Roster Configuration */}
-          <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-mono font-bold text-cyan-400 uppercase">
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <h4 className="text-xs font-mono font-bold text-sky-700 uppercase">
               Roster & Team Size Rules
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
                   Required Starters
                 </label>
                 <input
@@ -613,12 +735,12 @@ const AdminTournaments = () => {
                   max="10"
                   value={formData.minTeamSize}
                   onChange={(e) => setFormData({ ...formData, minTeamSize: Number(e.target.value) })}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white font-mono"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
                   Max Roster Size
                 </label>
                 <input
@@ -627,18 +749,18 @@ const AdminTournaments = () => {
                   max="12"
                   value={formData.maxTeamSize}
                   onChange={(e) => setFormData({ ...formData, maxTeamSize: Number(e.target.value) })}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white font-mono"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
                   Allow Substitute
                 </label>
                 <select
                   value={formData.allowSubstitutes ? 'yes' : 'no'}
                   onChange={(e) => setFormData({ ...formData, allowSubstitutes: e.target.value === 'yes' })}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900"
                 >
                   <option value="yes">Yes (1 sub)</option>
                   <option value="no">No</option>
@@ -646,7 +768,7 @@ const AdminTournaments = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
                   Max Substitutes
                 </label>
                 <input
@@ -655,7 +777,7 @@ const AdminTournaments = () => {
                   max="3"
                   value={formData.maxSubstitutes}
                   onChange={(e) => setFormData({ ...formData, maxSubstitutes: Number(e.target.value) })}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white font-mono"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 font-mono"
                 />
               </div>
             </div>
@@ -663,7 +785,7 @@ const AdminTournaments = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Prize Pool (₹)
               </label>
               <input
@@ -671,12 +793,12 @@ const AdminTournaments = () => {
                 min="0"
                 value={formData.prizeTotal}
                 onChange={(e) => setFormData({ ...formData, prizeTotal: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-sky-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Entry Fee (₹)
               </label>
               <input
@@ -684,12 +806,12 @@ const AdminTournaments = () => {
                 min="0"
                 value={formData.entryFee}
                 onChange={(e) => setFormData({ ...formData, entryFee: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-sky-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Max Teams
               </label>
               <input
@@ -698,14 +820,14 @@ const AdminTournaments = () => {
                 max="64"
                 value={formData.maxTeams}
                 onChange={(e) => setFormData({ ...formData, maxTeams: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-sky-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Registration Deadline *
               </label>
               <input
@@ -713,12 +835,12 @@ const AdminTournaments = () => {
                 required
                 value={formData.registrationDeadline}
                 onChange={(e) => setFormData({ ...formData, registrationDeadline: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Identity Proof Deadline *
               </label>
               <input
@@ -726,12 +848,12 @@ const AdminTournaments = () => {
                 required
                 value={formData.identityProofDeadline}
                 onChange={(e) => setFormData({ ...formData, identityProofDeadline: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Tournament Start Date *
               </label>
               <input
@@ -739,7 +861,7 @@ const AdminTournaments = () => {
                 required
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               />
             </div>
           </div>
@@ -747,10 +869,10 @@ const AdminTournaments = () => {
           {/* Cloudinary Banner Upload */}
           <div className="space-y-2">
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-slate-300 uppercase">
+              <label className="block text-xs font-bold text-slate-700 uppercase">
                 Tournament Banner Image *
               </label>
-              <span className="text-[10px] text-slate-400">Presets:</span>
+              <span className="text-[10px] text-slate-500">Presets:</span>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {bannerPresets.map((p) => (
@@ -758,7 +880,7 @@ const AdminTournaments = () => {
                   key={p.label}
                   type="button"
                   onClick={() => setFormData({ ...formData, banner: p.url, game: p.label })}
-                  className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono text-cyan-300 cursor-pointer"
+                  className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[10px] font-mono text-slate-700 cursor-pointer transition-colors"
                 >
                   {p.label}
                 </button>
@@ -774,29 +896,29 @@ const AdminTournaments = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
               Description
             </label>
             <textarea
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500"
+              className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-xs font-bold text-white shadow-md shadow-fuchsia-600/20 disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
             >
               {submitting ? 'Saving...' : editingTournament ? 'Update Tournament' : 'Create Tournament'}
             </button>
@@ -812,15 +934,15 @@ const AdminTournaments = () => {
       >
         <div className="space-y-4 max-w-3xl">
           {/* Top Info Bar with Quick Link to Form Builder */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono">
             <div>
-              <span className="text-slate-400">Total Teams:</span>{' '}
-              <span className="font-bold text-cyan-400">{adminRegistrations.length}</span> / {viewingTournament?.maxTeams || 16}
+              <span className="text-slate-500">Total Teams:</span>{' '}
+              <span className="font-bold text-cyan-600">{adminRegistrations.length}</span> / {viewingTournament?.maxTeams || 16}
             </div>
             {viewingTournament && (
               <Link
                 to={`/admin/tournaments/${viewingTournament._id}/form`}
-                className="text-amber-400 hover:underline flex items-center gap-1"
+                className="text-amber-600 hover:underline flex items-center gap-1 font-bold"
               >
                 <FileCode className="w-3.5 h-3.5" /> Edit Registration Form Schema
               </Link>
@@ -830,19 +952,19 @@ const AdminTournaments = () => {
           {/* Search & Filter bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-xs">
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search team name, code, or leader..."
                 value={teamSearchQuery}
                 onChange={(e) => setTeamSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
+                className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-cyan-500 font-mono"
               />
               {teamSearchQuery && (
                 <button
                   type="button"
                   onClick={() => setTeamSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -850,15 +972,15 @@ const AdminTournaments = () => {
             </div>
 
             {/* Filter tabs */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono font-bold overflow-x-auto">
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-[11px] font-mono font-bold overflow-x-auto">
               {['all', 'incomplete', 'complete', 'verified', 'rejected'].map((st) => (
                 <button
                   key={st}
                   onClick={() => setTeamStatusFilter(st)}
                   className={`px-3 py-1 rounded-lg uppercase transition-all cursor-pointer ${
                     teamStatusFilter === st
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {st}
@@ -870,7 +992,7 @@ const AdminTournaments = () => {
           {viewTeamsLoading ? (
             <Loading message="Loading registered teams and player documents..." />
           ) : filteredRegistrations.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-400 space-y-1">
+            <div className="p-8 text-center text-xs text-slate-500 space-y-1">
               <p>
                 No registered teams found {teamSearchQuery ? `matching "${teamSearchQuery}"` : ''}{' '}
                 with status filter "{teamStatusFilter}".
@@ -879,7 +1001,7 @@ const AdminTournaments = () => {
                 <button
                   type="button"
                   onClick={() => setTeamSearchQuery('')}
-                  className="text-cyan-400 hover:underline text-xs mt-1"
+                  className="text-cyan-600 hover:underline text-xs mt-1 font-semibold"
                 >
                   Clear search
                 </button>
@@ -905,26 +1027,26 @@ const AdminTournaments = () => {
                 return (
                   <div
                     key={reg._id || idx}
-                    className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden text-xs"
+                    className="rounded-xl bg-white border border-slate-200 shadow-xs overflow-hidden text-xs"
                   >
                     {/* Team summary header */}
-                    <div className="p-3.5 flex flex-wrap items-center justify-between gap-3 bg-slate-900/60">
+                    <div className="p-3.5 flex flex-wrap items-center justify-between gap-3 bg-slate-50/80 border-b border-slate-100">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 font-mono font-bold flex items-center justify-center text-[10px]">
+                        <div className="w-7 h-7 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-700 font-mono font-bold flex items-center justify-center text-[10px]">
                           {idx + 1}
                         </div>
                         <div>
-                          <div className="font-bold text-white font-mono flex items-center gap-2">
+                          <div className="font-bold text-slate-900 font-mono flex items-center gap-2">
                             <span>{reg.teamName}</span>
-                            {reg.teamTag && <span className="text-indigo-400 text-[11px]">[{reg.teamTag}]</span>}
-                            <span className="text-[10px] text-cyan-400 font-mono px-1.5 py-0.2 rounded bg-cyan-950">
+                            {reg.teamTag && <span className="text-indigo-600 text-[11px]">[{reg.teamTag}]</span>}
+                            <span className="text-[10px] text-cyan-700 font-mono px-1.5 py-0.2 rounded bg-cyan-50 border border-cyan-200">
                               {reg.teamCode}
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2 font-mono">
+                          <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2 font-mono">
                             <span>Leader: <strong>{(reg.leader || reg.captain)?.name}</strong></span>
                             <span>•</span>
-                            <span className={completedStarters.length >= minStarters ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                            <span className={completedStarters.length >= minStarters ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>
                               {completedStarters.length}/{minStarters} Required Players
                             </span>
                           </div>
@@ -936,12 +1058,12 @@ const AdminTournaments = () => {
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
                             reg.status === 'verified'
-                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-600'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : reg.status === 'complete'
-                              ? 'bg-cyan-950 text-cyan-300 border border-cyan-600'
+                              ? 'bg-cyan-50 text-cyan-700 border border-cyan-200'
                               : reg.status === 'rejected'
-                              ? 'bg-rose-950 text-rose-300 border border-rose-600'
-                              : 'bg-amber-950 text-amber-300 border border-amber-600'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}
                         >
                           {reg.status}
@@ -953,7 +1075,7 @@ const AdminTournaments = () => {
                             type="button"
                             disabled={verifyingId === reg._id}
                             onClick={() => handleApproveRegistration(reg)}
-                            className="p-1.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 cursor-pointer"
+                            className="p-1.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors"
                             title="Verify and Approve Team (Mark Active)"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -964,7 +1086,7 @@ const AdminTournaments = () => {
                             type="button"
                             disabled={verifyingId === reg._id}
                             onClick={() => handleOpenRejectModal(reg, false)}
-                            className="p-1.5 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 cursor-pointer"
+                            className="p-1.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer transition-colors"
                             title="Reject Registration with Cause"
                           >
                             <XCircle className="w-3.5 h-3.5" />
@@ -974,7 +1096,7 @@ const AdminTournaments = () => {
                         <button
                           type="button"
                           onClick={() => setExpandedTeamId(isExpanded ? null : reg._id)}
-                          className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                          className="p-1.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer transition-colors"
                           title="View Roster Details"
                         >
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -984,33 +1106,33 @@ const AdminTournaments = () => {
 
                     {/* Expanded Team & Player Breakdown */}
                     {isExpanded && (
-                      <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
+                      <div className="p-4 bg-white border-t border-slate-100 space-y-4">
                         {reg.verificationNotes && (
-                          <div className="p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/40 text-[11px] text-rose-300">
+                          <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-700">
                             <strong>Admin Note:</strong> {reg.verificationNotes}
                           </div>
                         )}
 
                         {/* ONE Team-Level Combined Identity Proof Section */}
-                        <div className="p-3.5 rounded-xl bg-slate-900/90 border border-amber-900/40 space-y-2">
-                          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+                        <div className="p-3.5 rounded-xl bg-slate-50/80 border border-amber-200 space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
                             <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-amber-400" />
-                              <span className="font-bold text-white font-mono uppercase text-xs">
+                              <FileText className="w-4 h-4 text-amber-600" />
+                              <span className="font-bold text-slate-900 font-mono uppercase text-xs">
                                 Team Identity Proof (Combined 1 PDF)
                               </span>
                             </div>
                             <div className="flex items-center gap-2 font-mono">
-                              <span className="text-[10px] text-slate-400">Status:</span>
+                              <span className="text-[10px] text-slate-500">Status:</span>
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                                   idProofStatus === 'verified'
-                                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-600'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                     : idProofStatus === 'rejected'
-                                    ? 'bg-rose-950 text-rose-300 border border-rose-600'
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
                                     : idProofStatus === 'submitted'
-                                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-600'
-                                    : 'bg-amber-950 text-amber-300 border border-amber-600'
+                                    ? 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
                                 }`}
                               >
                                 {idProofStatus}
@@ -1025,18 +1147,18 @@ const AdminTournaments = () => {
                                   href={idProofUrl}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 font-bold"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold"
                                 >
-                                  <FileText className="w-4 h-4 text-red-400" /> [ View Team PDF ]
+                                  <FileText className="w-4 h-4 text-rose-600" /> [ View Team PDF ]
                                 </a>
                                 {reg.identityProof?.submittedAt && (
-                                  <span className="text-[10px] text-slate-400 font-mono">
+                                  <span className="text-[10px] text-slate-500 font-mono">
                                     Uploaded: {new Date(reg.identityProof.submittedAt).toLocaleString()}
                                   </span>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-amber-400 font-mono text-[11px]">
+                              <span className="text-amber-600 font-mono text-[11px] font-semibold">
                                 ⏳ Pending: Squad has not yet submitted the combined identity proof PDF
                               </span>
                             )}
@@ -1048,7 +1170,7 @@ const AdminTournaments = () => {
                                     type="button"
                                     disabled={verifyingId === reg._id}
                                     onClick={() => handleApproveRegistration(reg)}
-                                    className="px-2.5 py-1 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 text-[11px] font-bold border border-emerald-800 flex items-center gap-1 cursor-pointer"
+                                    className="px-2.5 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold border border-emerald-200 flex items-center gap-1 cursor-pointer transition-colors"
                                   >
                                     <CheckCircle2 className="w-3 h-3" /> Approve PDF
                                   </button>
@@ -1058,7 +1180,7 @@ const AdminTournaments = () => {
                                     type="button"
                                     disabled={verifyingId === reg._id}
                                     onClick={() => handleOpenRejectModal(reg, true)}
-                                    className="px-2.5 py-1 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 text-[11px] font-bold border border-rose-800 flex items-center gap-1 cursor-pointer"
+                                    className="px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 flex items-center gap-1 cursor-pointer transition-colors"
                                   >
                                     <XCircle className="w-3 h-3" /> Reject PDF
                                   </button>
@@ -1070,9 +1192,9 @@ const AdminTournaments = () => {
 
                         {/* Roster Members Breakdown */}
                         <div>
-                          <h4 className="text-[11px] font-mono font-bold text-slate-400 uppercase mb-2 flex items-center justify-between">
+                          <h4 className="text-[11px] font-mono font-bold text-slate-500 uppercase mb-2 flex items-center justify-between">
                             <span>Roster Members ({reg.players?.length || 0}):</span>
-                            <span className="text-cyan-400 font-bold font-mono">
+                            <span className="text-cyan-600 font-bold font-mono">
                               {completedStarters.length}/{minStarters} Starters Completed
                             </span>
                           </h4>
@@ -1088,15 +1210,15 @@ const AdminTournaments = () => {
                               return (
                                 <div
                                   key={player._id || player.slotNumber}
-                                  className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2"
+                                  className="p-3 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2"
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-bold text-white font-mono">
+                                      <span className="font-bold text-slate-900 font-mono">
                                         Player {player.slotNumber} {isCompleted ? '✓' : '⏳'}: {responses.player_name || player.user?.name}
                                       </span>
                                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold ${
-                                        isSlotLeader ? 'bg-amber-950 text-amber-300' : 'bg-indigo-950 text-indigo-300'
+                                        isSlotLeader ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                                       }`}>
                                         {isSlotLeader ? 'Leader' : player.role}
                                       </span>
@@ -1104,8 +1226,8 @@ const AdminTournaments = () => {
                                     <span
                                       className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${
                                         isCompleted
-                                          ? 'text-emerald-400 bg-emerald-950 border border-emerald-800'
-                                          : 'text-amber-400 bg-amber-950 border border-amber-800'
+                                          ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                                          : 'text-amber-700 bg-amber-50 border border-amber-200'
                                       }`}
                                     >
                                       {isCompleted ? '✓ Profile Completed' : '⏳ Details Incomplete'}
@@ -1113,25 +1235,25 @@ const AdminTournaments = () => {
                                   </div>
 
                                   {/* Player responses key-values (No individual ID card proof) */}
-                                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[10px] text-slate-300 pt-1 border-t border-slate-800/60">
+                                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[10px] text-slate-700 pt-1 border-t border-slate-200">
                                     <div>
-                                      <span className="text-slate-500 block">IGN:</span>
-                                      <span className="font-mono font-bold text-cyan-300">{responses.game_ign || 'N/A'}</span>
+                                      <span className="text-slate-400 block font-semibold">IGN:</span>
+                                      <span className="font-mono font-bold text-cyan-700">{responses.game_ign || 'N/A'}</span>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500 block">UID:</span>
-                                      <span className="font-mono font-bold">{responses.game_uid || 'N/A'}</span>
+                                      <span className="text-slate-400 block font-semibold">UID:</span>
+                                      <span className="font-mono font-bold text-slate-800">{responses.game_uid || 'N/A'}</span>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500 block">College:</span>
-                                      <span className="truncate block">{responses.college_name || player.user?.college || 'N/A'}</span>
+                                      <span className="text-slate-400 block font-semibold">College:</span>
+                                      <span className="truncate block font-medium">{responses.college_name || player.user?.college || 'N/A'}</span>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500 block">College ID:</span>
+                                      <span className="text-slate-400 block font-semibold">College ID:</span>
                                       <span className="font-mono">{responses.college_id || 'N/A'}</span>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500 block">WhatsApp:</span>
+                                      <span className="text-slate-400 block font-semibold">WhatsApp:</span>
                                       <span className="font-mono">{responses.phone_number || 'N/A'}</span>
                                     </div>
                                   </div>
@@ -1148,11 +1270,11 @@ const AdminTournaments = () => {
             </div>
           )}
 
-          <div className="flex justify-end pt-3 border-t border-slate-800">
+          <div className="flex justify-end pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setViewTeamsModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 cursor-pointer transition-colors"
             >
               Close Console
             </button>
