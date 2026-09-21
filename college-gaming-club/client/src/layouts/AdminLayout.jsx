@@ -23,7 +23,6 @@ import {
   Flame,
   CheckCircle2,
   Sparkles,
-  Command,
   Activity,
   Plus,
 } from 'lucide-react';
@@ -185,16 +184,13 @@ const AdminLayout = () => {
           <button
             type="button"
             onClick={() => setPaletteOpen(true)}
-            className="w-full px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-sky-300 text-slate-500 hover:text-slate-800 transition-all flex items-center justify-between text-xs group cursor-pointer shadow-sm"
+            className="w-full px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-sky-300 text-slate-500 hover:text-slate-800 transition-all flex items-center text-xs group cursor-pointer shadow-sm"
           >
             <div className="flex items-center gap-2 truncate">
               <Search className="w-4 h-4 text-slate-400 group-hover:text-sky-500 transition-colors shrink-0" />
               <span className="truncate text-xs font-medium hidden sm:inline">Search commands, tournaments, rosters...</span>
               <span className="truncate text-xs font-medium sm:hidden">Quick Search...</span>
             </div>
-            <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono text-slate-500 shadow-xs shrink-0">
-              <Command className="w-3 h-3" /> K
-            </kbd>
           </button>
         </div>
 
