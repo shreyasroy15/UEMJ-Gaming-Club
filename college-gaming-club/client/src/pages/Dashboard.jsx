@@ -142,6 +142,9 @@ const Dashboard = () => {
                 <Camera className="w-5 h-5 text-cyan-300 drop-shadow" />
                 <span className="text-[9px] font-bold mt-0.5 text-cyan-200">Change</span>
               </div>
+              <span className="absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full bg-slate-900 border border-cyan-400 text-cyan-300 flex items-center justify-center shadow-md transition-transform group-hover:scale-110 active:scale-95">
+                <Camera className="w-3 h-3" />
+              </span>
               <div className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-[10px] font-black tracking-wider text-slate-950 uppercase shadow-md pointer-events-none">
                 LVL {level}
               </div>

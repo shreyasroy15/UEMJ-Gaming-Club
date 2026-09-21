@@ -72,24 +72,30 @@ const Profile = () => {
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
           <div className="flex flex-col min-[480px]:flex-row items-center min-[480px]:items-start gap-4 sm:gap-5 text-center min-[480px]:text-left w-full md:w-auto">
             <div className="relative shrink-0 group">
-              <Avatar
-                user={user}
-                size="2xl"
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 group-hover:border-cyan-300 transition-all"
-                imgClassName="rounded-2xl"
-                textSize="text-3xl sm:text-4xl"
-              />
               <button
+                type="button"
                 onClick={() => setAvatarModalOpen(true)}
+                className="relative block rounded-2xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400"
                 title="Change Character Avatar"
-                className="absolute inset-0 bg-black/60 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-bold font-mono cursor-pointer"
               >
-                <Camera className="w-5 h-5 text-cyan-400 mb-0.5" />
-                <span>Change</span>
+                <Avatar
+                  user={user}
+                  size="2xl"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 group-hover:border-cyan-300 transition-all"
+                  imgClassName="rounded-2xl"
+                  textSize="text-3xl sm:text-4xl"
+                />
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-bold font-mono">
+                  <Camera className="w-5 h-5 text-cyan-400 mb-0.5" />
+                  <span>Change</span>
+                </div>
+                <span className="absolute -top-1.5 -left-1.5 w-7 h-7 rounded-full bg-slate-900 border border-cyan-400 text-cyan-300 flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 active:scale-95">
+                  <Camera className="w-3.5 h-3.5" />
+                </span>
+                <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500 font-mono">
+                  {user?.role}
+                </span>
               </button>
-              <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500 font-mono">
-                {user?.role}
-              </span>
             </div>
 
             <div className="space-y-1 min-w-0">

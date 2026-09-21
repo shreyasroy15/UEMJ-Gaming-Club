@@ -53,13 +53,17 @@ export default function Avatar({
   imgClassName = '',
   textSize,
 }) {
+  const rawSrc = src || user?.avatar;
   const [imgError, setImgError] = useState(false);
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [rawSrc]);
 
   // Capitalized first letter of Name or Username
   const rawName = (user?.name || user?.username || 'Player').trim();
   const firstLetter = rawName.charAt(0).toUpperCase() || 'P';
 
-  const rawSrc = src || user?.avatar;
   const isOldPlaceholder = Boolean(rawSrc && rawSrc.includes('photo-1566492031773-4f4e44671857'));
   const hasValidImage = Boolean(rawSrc && !isOldPlaceholder && !imgError);
 
