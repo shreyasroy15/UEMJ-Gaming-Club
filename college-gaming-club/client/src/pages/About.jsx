@@ -77,31 +77,6 @@ const About = () => {
         </div>
       </div>
 
-      {/* Facilities */}
-      <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950/40 border border-slate-800 space-y-6">
-        <h2 className="text-2xl sm:text-3xl font-black text-white font-mono">
-          OUR ARENA & CAMPUS FACILITIES
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-slate-300 text-sm">
-          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-cyan-400 font-mono font-bold text-lg block mb-1">240Hz Displays</span>
-            <p className="text-xs text-slate-400">20 high-refresh esports monitors with 1ms response times in Room 204.</p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-cyan-400 font-mono font-bold text-lg block mb-1">Dedicated Gigabit LAN</span>
-            <p className="text-xs text-slate-400">Isolated 1000 Mbps fiber subnet providing under 5ms local ping.</p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-cyan-400 font-mono font-bold text-lg block mb-1">Broadcast Studio</span>
-            <p className="text-xs text-slate-400">OBS streaming rigs, caster headsets, dynamic lighting, and multi-cam setups.</p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
-            <span className="text-cyan-400 font-mono font-bold text-lg block mb-1">Console Lounge</span>
-            <p className="text-xs text-slate-400">PlayStation 5 and Xbox consoles for EA Sports FC and fighting game showdowns.</p>
-          </div>
-        </div>
-      </div>
-
       {/* Leadership Board */}
       <div className="space-y-8">
         <div className="text-center space-y-2">

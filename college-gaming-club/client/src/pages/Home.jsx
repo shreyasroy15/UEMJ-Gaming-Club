@@ -177,24 +177,24 @@ const Home = () => {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-64 bg-cyan-500/10 blur-3xl pointer-events-none rounded-full" />
             <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-36 bg-indigo-500/10 blur-2xl pointer-events-none rounded-full" />
 
-            <div className="relative z-10 max-w-3xl mx-auto space-y-4 sm:space-y-5">
+            <div className="relative z-10 max-w-3xl mx-auto space-y-3.5 sm:space-y-5">
               {/* College Sub-heading */}
-              <div className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-mono font-bold tracking-[0.25em] text-cyan-400 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              <div className="inline-flex items-center gap-2 text-[9px] min-[360px]:text-[10px] sm:text-xs font-mono font-bold tracking-[0.15em] sm:tracking-[0.25em] text-cyan-400 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] px-2">
                 <span>— UNIVERSITY OF ENGINEERING & MANAGEMENT, JAIPUR —</span>
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-3xl min-[480px]:text-4xl sm:text-6xl md:text-7xl font-black font-mono tracking-tight text-white leading-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+              <h1 className="text-2xl min-[360px]:text-3xl min-[480px]:text-4xl sm:text-6xl md:text-7xl font-black font-mono tracking-tight text-white leading-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
                 UEMJ <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 drop-shadow-[0_0_25px_rgba(6,182,212,0.4)]">GAMING CLUB</span>
               </h1>
 
               {/* Subtitle */}
-              <p className="text-sm sm:text-lg md:text-xl font-mono text-slate-200 font-medium tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] uppercase">
+              <p className="text-xs min-[360px]:text-sm sm:text-lg md:text-xl font-mono text-slate-200 font-medium tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] uppercase">
                 Online Gaming Tournaments
               </p>
 
               {/* Core Pillars */}
-              <div className="flex items-center justify-center gap-3 sm:gap-6 pt-1 text-[11px] sm:text-xs font-mono font-semibold text-slate-300 uppercase tracking-widest flex-wrap drop-shadow">
+              <div className="flex items-center justify-center gap-2.5 sm:gap-6 pt-1 text-[10px] sm:text-xs font-mono font-semibold text-slate-300 uppercase tracking-wider sm:tracking-widest flex-wrap drop-shadow px-2">
                 <span className="flex items-center gap-1.5 text-amber-400">
                   <Trophy className="w-3.5 h-3.5" /> COMPETE
                 </span>
@@ -209,10 +209,10 @@ const Home = () => {
               </div>
 
               {/* Primary Call to Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2 w-full max-w-md mx-auto">
                 <Link
                   to="/tournaments"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs uppercase tracking-wider font-mono shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.03] active:scale-[0.98] transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs uppercase tracking-wider font-mono shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.03] active:scale-[0.98] transition-all"
                 >
                   <Trophy className="w-4 h-4 text-slate-950" />
                   <span>View Tournaments</span>
@@ -221,7 +221,7 @@ const Home = () => {
 
                 <Link
                   to="/points-table"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-slate-950/70 hover:bg-slate-900/80 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 font-bold text-xs uppercase tracking-wider font-mono shadow-lg shadow-cyan-500/15 hover:shadow-cyan-500/30 hover:scale-[1.03] active:scale-[0.98] backdrop-blur-md transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-xl bg-slate-950/70 hover:bg-slate-900/80 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 font-bold text-xs uppercase tracking-wider font-mono shadow-lg shadow-cyan-500/15 hover:shadow-cyan-500/30 hover:scale-[1.03] active:scale-[0.98] backdrop-blur-md transition-all"
                 >
                   <BarChart3 className="w-4 h-4 text-cyan-400" />
                   <span>Points Table</span>
@@ -271,57 +271,57 @@ const Home = () => {
           {/* ========================================================= */}
           {/* 4. BASIC STATS OVERVIEW */}
           {/* ========================================================= */}
-          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-cyan-500/40 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-cyan-500/40 transition-all">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono truncate">
                   {isAuthenticated ? 'My Tournaments' : 'Total Arenas'}
                 </span>
-                <Trophy className="w-4 h-4 text-cyan-400" />
+                <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
               </div>
-              <div className="mt-2 text-2xl font-black text-white font-mono">
+              <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-black text-white font-mono">
                 {isAuthenticated ? myTournaments.length : allTournaments.length}
               </div>
-              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Collegiate registrations</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5 truncate">Collegiate registrations</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-indigo-500/40 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+            <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-indigo-500/40 transition-all">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono truncate">
                   Registered Teams
                 </span>
-                <Users className="w-4 h-4 text-indigo-400" />
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 shrink-0" />
               </div>
-              <div className="mt-2 text-2xl font-black text-white font-mono">
+              <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-black text-white font-mono">
                 {teams.length}
               </div>
-              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Campus squads formed</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5 truncate">Campus squads formed</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-emerald-500/40 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+            <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-emerald-500/40 transition-all">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono truncate">
                   Live & Ongoing
                 </span>
-                <Radio className="w-4 h-4 text-rose-400 animate-pulse" />
+                <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 animate-pulse shrink-0" />
               </div>
-              <div className="mt-2 text-2xl font-black text-rose-400 font-mono">
+              <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-black text-rose-400 font-mono">
                 {runningTournaments.length}
               </div>
-              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Active competitions</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5 truncate">Active competitions</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-amber-500/40 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
+            <div className="p-3 sm:p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md hover:border-amber-500/40 transition-all">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono truncate">
                   Varsity Titles
                 </span>
-                <Zap className="w-4 h-4 text-amber-400" />
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
               </div>
-              <div className="mt-2 text-2xl font-black text-white font-mono">
+              <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-black text-white font-mono">
                 {new Set(allTournaments.map((t) => t.game)).size || 2}
               </div>
-              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Supported esports</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5 truncate">Supported esports</p>
             </div>
           </section>
 
@@ -430,40 +430,40 @@ const Home = () => {
                       </div>
 
                       {/* Card Bottom Stats Bar (Matches Reference Image) */}
-                      <div className="p-3.5 sm:p-4 bg-slate-950/95 border-t border-slate-800/80 grid grid-cols-4 gap-2 text-center text-[10px] sm:text-xs font-mono">
-                        <div className="space-y-0.5">
+                      <div className="p-3 sm:p-4 bg-slate-950/95 border-t border-slate-800/80 grid grid-cols-4 gap-1 sm:gap-2 text-center text-[9px] min-[360px]:text-[10px] sm:text-xs font-mono">
+                        <div className="space-y-0.5 min-w-0">
                           <div className="flex items-center justify-center gap-1 text-slate-400">
                             <Shield className="w-3 h-3 text-cyan-400 shrink-0" />
-                            <span className="font-bold text-white text-xs sm:text-sm">
+                            <span className="font-bold text-white text-xs sm:text-sm truncate">
                               {t.registeredTeams?.length || 0}
                             </span>
                           </div>
-                          <div className="text-[9px] text-slate-500 uppercase">Teams</div>
+                          <div className="text-[8px] min-[360px]:text-[9px] text-slate-500 uppercase truncate">Teams</div>
                         </div>
 
-                        <div className="space-y-0.5 border-l border-slate-800/80">
+                        <div className="space-y-0.5 border-l border-slate-800/80 min-w-0">
                           <div className="flex items-center justify-center gap-1 text-slate-400">
                             <Users className="w-3 h-3 text-indigo-400 shrink-0" />
-                            <span className="font-bold text-white text-xs sm:text-sm">{t.maxTeams || 16}</span>
+                            <span className="font-bold text-white text-xs sm:text-sm truncate">{t.maxTeams || 16}</span>
                           </div>
-                          <div className="text-[9px] text-slate-500 uppercase">Max Cap</div>
+                          <div className="text-[8px] min-[360px]:text-[9px] text-slate-500 uppercase truncate">Max Cap</div>
                         </div>
 
-                        <div className="space-y-0.5 border-l border-slate-800/80">
+                        <div className="space-y-0.5 border-l border-slate-800/80 min-w-0">
                           <div className="flex items-center justify-center gap-1 text-slate-400">
                             <Calendar className="w-3 h-3 text-amber-400 shrink-0" />
                             <span className="font-bold text-white text-xs sm:text-sm truncate">
                               {new Date(t.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
-                          <div className="text-[9px] text-slate-500 uppercase">Date</div>
+                          <div className="text-[8px] min-[360px]:text-[9px] text-slate-500 uppercase truncate">Date</div>
                         </div>
 
-                        <div className="space-y-0.5 border-l border-slate-800/80 flex flex-col justify-center">
-                          <span className={`text-[10px] font-bold uppercase truncate ${titleColor}`}>
+                        <div className="space-y-0.5 border-l border-slate-800/80 flex flex-col justify-center min-w-0">
+                          <span className={`text-[9px] min-[360px]:text-[10px] font-bold uppercase truncate ${titleColor}`}>
                             {t.format || 'Standard'}
                           </span>
-                          <span className="text-[9px] text-slate-500">Format</span>
+                          <span className="text-[8px] min-[360px]:text-[9px] text-slate-500 truncate">Format</span>
                         </div>
                       </div>
                     </Link>
@@ -477,7 +477,7 @@ const Home = () => {
           {/* 6. CURRENT MATCHES / LIVE STATUS */}
           {/* ========================================================= */}
           <section className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
@@ -502,9 +502,9 @@ const Home = () => {
             </div>
 
             {activeMatches.length === 0 ? (
-              <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
+              <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-400 font-mono">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-slate-500" />
+                  <Clock className="w-4 h-4 text-slate-500 shrink-0" />
                   <span>No matches currently running.</span>
                 </div>
                 <span className="text-[11px] text-slate-500">
@@ -512,11 +512,11 @@ const Home = () => {
                 </span>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-2 sm:gap-2.5">
                 {activeMatches.map((m) => (
                   <div
                     key={m._id}
-                    className="px-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-3 text-xs font-mono backdrop-blur-sm"
+                    className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-2 sm:gap-3 text-xs font-mono backdrop-blur-sm flex-wrap"
                   >
                     <span className="px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 text-[10px] font-bold">
                       {m.tournament?.game || 'ESPORTS'}
@@ -552,7 +552,7 @@ const Home = () => {
               </div>
 
               {/* Game Selector & Full Table Link */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
                 <div className="p-1 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-1 font-mono text-xs">
                   <button
                     type="button"
@@ -582,7 +582,7 @@ const Home = () => {
                   to="/points-table"
                   className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-cyan-400 hover:text-cyan-300 font-mono flex items-center gap-1 transition-all"
                 >
-                  <span>View Full Table</span>
+                  <span>Full Table</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>

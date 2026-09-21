@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../services/api';
@@ -7,19 +7,15 @@ import Avatar from '../components/Avatar/Avatar';
 import AvatarSelectorModal from '../components/Avatar/AvatarSelectorModal';
 import {
   User,
-  Shield,
-  Trophy,
-  Award,
   Edit,
   Mail,
   Building,
-  Gamepad2,
-  CheckCircle2,
-  Flame,
   Sparkles,
   Camera,
+  MessageSquare,
+  Check,
+  Loader2,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -35,11 +31,38 @@ const Profile = () => {
   });
   const [saving, setSaving] = useState(false);
 
+  // Sync latest user profile from server on mount
+  useEffect(() => {
+    const fetchLatestProfile = async () => {
+      try {
+        const res = await API.get('/auth/me');
+        if (res.data?.success && res.data?.user) {
+          updateUser(res.data.user);
+        }
+      } catch (err) {
+        console.error('Failed to sync profile', err);
+      }
+    };
+    fetchLatestProfile();
+  }, []);
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.name?.trim()) {
+      addToast('Full name is required', 'error');
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      bio: formData.bio?.trim() || '',
+      avatar: formData.avatar || '',
+      college: formData.college?.trim() || '',
+    };
+
     try {
       setSaving(true);
-      const res = await API.put('/auth/profile', formData);
+      const res = await API.put('/auth/profile', payload);
       if (res.data.success) {
         updateUser(res.data.user);
         addToast('Profile updated successfully!', 'success');
@@ -47,76 +70,79 @@ const Profile = () => {
       }
     } catch (err) {
       try {
-        const fallback = await API.put(`/users/${user._id}`, formData);
+        const fallback = await API.put(`/users/${user._id}`, payload);
         if (fallback.data.success) {
-          updateUser(fallback.data.user || { ...user, ...formData });
+          updateUser(fallback.data.user || { ...user, ...payload });
           addToast('Profile updated successfully!', 'success');
           setEditModalOpen(false);
           return;
         }
       } catch (fallbackErr) {
-        addToast(err.response?.data?.message || 'Failed to update profile', 'error');
+        addToast(
+          err.response?.data?.message ||
+            fallbackErr.response?.data?.message ||
+            'Failed to update profile',
+          'error'
+        );
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const matches = user?.stats?.matchesPlayed || (user?.stats?.wins || 0) + (user?.stats?.losses || 0);
-  const winRate = matches > 0 ? Math.round(((user?.stats?.wins || 0) / matches) * 100) : 0;
-
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8">
+    <div className="py-6 sm:py-10 px-3 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full space-y-6 sm:space-y-8">
       {/* Profile Header Banner */}
-      <div className="p-4 sm:p-8 rounded-3xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md">
-        <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
-          <div className="flex flex-col min-[480px]:flex-row items-center min-[480px]:items-start gap-4 sm:gap-5 text-center min-[480px]:text-left w-full md:w-auto">
-            <div className="relative shrink-0 group">
-              <button
-                type="button"
-                onClick={() => setAvatarModalOpen(true)}
-                className="relative block rounded-2xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                title="Change Character Avatar"
-              >
-                <Avatar
-                  user={user}
-                  size="2xl"
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/20 group-hover:border-cyan-300 transition-all"
-                  imgClassName="rounded-2xl"
-                  textSize="text-3xl sm:text-4xl"
-                />
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-bold font-mono">
-                  <Camera className="w-5 h-5 text-cyan-400 mb-0.5" />
-                  <span>Change</span>
-                </div>
-                <span className="absolute -top-1.5 -left-1.5 w-7 h-7 rounded-full bg-slate-900 border border-cyan-400 text-cyan-300 flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 active:scale-95">
-                  <Camera className="w-3.5 h-3.5" />
-                </span>
-                <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500 font-mono">
-                  {user?.role}
-                </span>
-              </button>
+      <div className="p-4 sm:p-7 md:p-8 rounded-2xl sm:rounded-3xl bg-slate-900/75 border border-slate-800/90 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+        <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-5 sm:gap-6">
+          <div className="flex flex-col min-[480px]:flex-row items-center min-[480px]:items-start gap-4 sm:gap-6 text-center min-[480px]:text-left w-full md:w-auto">
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <Avatar
+                user={user}
+                size="2xl"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/25"
+                imgClassName="rounded-2xl"
+                textSize="text-3xl sm:text-4xl"
+              />
+              <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500 font-mono shadow-md">
+                {user?.role || 'student'}
+              </span>
             </div>
 
-            <div className="space-y-1 min-w-0">
+            {/* User Identity Details */}
+            <div className="space-y-2 min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-center min-[480px]:justify-start gap-2">
                 <h1 className="text-xl sm:text-3xl font-black text-white font-mono break-words">
                   {user?.name}
                 </h1>
-                <span className="text-xs text-slate-400 font-mono">@{user?.username}</span>
+                <span className="text-xs sm:text-sm text-slate-400 font-mono">@{user?.username}</span>
               </div>
-              <p className="text-xs text-slate-400 flex items-center justify-center min-[480px]:justify-start gap-1.5">
-                <Building className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span>{user?.college}</span>
-              </p>
-              <p className="text-xs text-slate-400 flex items-center justify-center min-[480px]:justify-start gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span className="truncate">{user?.email}</span>
-              </p>
+
+              {/* Active Status Badge */}
+              <div className="flex flex-wrap items-center justify-center min-[480px]:justify-start gap-2 pt-0.5">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shrink-0 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Active Player
+                </span>
+              </div>
+
+              {/* College & Contact Meta */}
+              <div className="space-y-1 pt-1 text-xs text-slate-400 font-mono">
+                <p className="flex items-center justify-center min-[480px]:justify-start gap-1.5">
+                  <Building className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="truncate">{user?.college || 'UEM Jaipur Esports'}</span>
+                </p>
+                <p className="flex items-center justify-center min-[480px]:justify-start gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="truncate">{user?.email}</span>
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
+          {/* Action Button */}
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
             <button
               onClick={() => {
                 setFormData({
@@ -127,215 +153,196 @@ const Profile = () => {
                 });
                 setEditModalOpen(true);
               }}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white border border-cyan-500/40 hover:border-cyan-400 font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.12)] hover:shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all cursor-pointer active:scale-95"
             >
-              <Edit className="w-3.5 h-3.5" /> Edit Profile
+              <Edit className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Edit Player Profile</span>
             </button>
           </div>
         </div>
 
         {/* Bio */}
         {user?.bio && (
-          <p className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-slate-800/80 text-xs sm:text-sm text-slate-300 leading-relaxed max-w-3xl text-center min-[480px]:text-left">
-            "{user.bio}"
-          </p>
-        )}
-
-        {/* Stats Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-slate-800 text-center">
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-slate-800/80">
-            <span className="block text-[10px] uppercase font-bold text-slate-400">Total Matches</span>
-            <span className="text-lg sm:text-xl font-bold text-white font-mono">{matches}</span>
-          </div>
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-slate-800/80">
-            <span className="block text-[10px] uppercase font-bold text-slate-400">Wins</span>
-            <span className="text-lg sm:text-xl font-bold text-emerald-400 font-mono">{user?.stats?.wins || 0}</span>
-          </div>
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-slate-800/80">
-            <span className="block text-[10px] uppercase font-bold text-slate-400">Win Rate</span>
-            <span className="text-lg sm:text-xl font-bold text-cyan-400 font-mono">{winRate}%</span>
-          </div>
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-slate-800/80">
-            <span className="block text-[10px] uppercase font-bold text-slate-400">Tournament MVPs</span>
-            <span className="text-lg sm:text-xl font-black text-amber-400 font-mono flex items-center justify-center gap-1">
-              <Trophy className="w-4 h-4 text-amber-400" /> {user?.stats?.mvpCount || 0}
+          <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-slate-800/80">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1.5">
+              Player Bio / Esports Motto
             </span>
+            <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-mono italic bg-slate-950/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/70 shadow-inner">
+              "{user.bio}"
+            </p>
           </div>
-        </div>
-      </div>
-
-      {/* Badges & Quick Navigation */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Achievements Column */}
-        <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
-            <Award className="w-5 h-5 text-amber-400" /> Achievement Badges ({user?.achievements?.length || 0})
-          </h3>
-
-          {!user?.achievements || user.achievements.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-400">
-              No tournament badges unlocked yet. Compete in campus tournaments to earn awards!
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {user.achievements.map((ach, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex items-center gap-3.5"
-                >
-                  <span className="text-3xl p-2 rounded-xl bg-slate-950 border border-slate-800">
-                    {ach.badge || '🏅'}
-                  </span>
-                  <div>
-                    <h4 className="text-sm font-bold text-white font-mono">{ach.title}</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">{ach.description}</p>
-                    <span className="text-[10px] text-slate-500 mt-1 block">
-                      Earned {new Date(ach.awardedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Links Column */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-bold text-white font-mono">Arena Portals</h3>
-          <div className="space-y-3">
-            <Link
-              to="/my-tournaments"
-              className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40 transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <Trophy className="w-5 h-5 text-cyan-400" />
-                <div>
-                  <span className="text-sm font-bold text-white font-mono block group-hover:text-cyan-400 transition-colors">
-                    My Tournaments
-                  </span>
-                  <span className="text-xs text-slate-400">Registered matches & fixtures</span>
-                </div>
-              </div>
-              <span className="text-xs font-bold text-slate-500 font-mono">→</span>
-            </Link>
-
-            <Link
-              to="/my-teams"
-              className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-indigo-500/40 transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-indigo-400" />
-                <div>
-                  <span className="text-sm font-bold text-white font-mono block group-hover:text-indigo-400 transition-colors">
-                    My Squads & Rosters
-                  </span>
-                  <span className="text-xs text-slate-400">Manage captains & teammates</span>
-                </div>
-              </div>
-              <span className="text-xs font-bold text-slate-500 font-mono">→</span>
-            </Link>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Edit Profile Modal */}
       <Modal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        title="Edit Player Profile"
-      >
-        <form onSubmit={handleEditSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Full Name
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
-            />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase">
-                Avatar Image
-              </label>
-              <button
-                type="button"
-                onClick={() => setAvatarModalOpen(true)}
-                className="text-xs text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" /> Choose from Game Characters
-              </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl overflow-hidden bg-slate-950 border border-slate-700 shrink-0 flex items-center justify-center">
-                {formData.avatar ? (
-                  <img
-                    src={formData.avatar}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/assets/free-fire-logo.jpg';
-                    }}
-                  />
-                ) : (
-                  <span className="text-[10px] font-bold text-slate-500 font-mono">None</span>
-                )}
-              </div>
-              <input
-                type="url"
-                value={formData.avatar}
-                onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                placeholder="https://... or select character"
-                className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              College Department
-            </label>
-            <input
-              type="text"
-              value={formData.college}
-              onChange={(e) => setFormData({ ...formData, college: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              Bio
-            </label>
-            <textarea
-              rows="3"
-              value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+        title="EDIT PLAYER PROFILE"
+        maxWidth="max-w-xl"
+        bodyClassName="p-3.5 sm:p-5 space-y-4"
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 w-full">
             <button
               type="button"
               onClick={() => setEditModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-xs font-mono font-semibold text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 transition-all cursor-pointer text-center active:scale-95"
             >
               Cancel
             </button>
             <button
               type="submit"
+              form="edit-player-profile-form"
               disabled={saving}
-              className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-xs font-bold text-black disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-black font-mono text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Save Changes</span>
+                </>
+              )}
             </button>
+          </div>
+        }
+      >
+        <form id="edit-player-profile-form" onSubmit={handleEditSubmit} className="space-y-4">
+          {/* Identity Quick Preview Card */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-slate-900/95 via-indigo-950/50 to-slate-900/95 border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.12)] flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div
+                className="relative group shrink-0 cursor-pointer"
+                onClick={() => setAvatarModalOpen(true)}
+                title="Click to choose character preset"
+              >
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl p-0.5 bg-gradient-to-tr from-cyan-400 via-indigo-500 to-fuchsia-500 shadow-lg shadow-cyan-500/25 overflow-hidden group-hover:scale-105 transition-transform">
+                  {formData.avatar ? (
+                    <img
+                      src={formData.avatar}
+                      alt="Current Avatar"
+                      className="w-full h-full object-cover rounded-[14px] bg-slate-950"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/assets/free-fire-logo.jpg';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-slate-800 rounded-[14px] flex items-center justify-center font-bold text-xl text-cyan-400 font-mono">
+                      {formData.name?.charAt(0)?.toUpperCase() || 'P'}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAvatarModalOpen(true);
+                  }}
+                  className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-cyan-500 text-slate-950 shadow-[0_0_10px_rgba(6,182,212,0.8)] hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                  title="Choose character preset"
+                >
+                  <Camera className="w-3 h-3 stroke-[2.5]" />
+                </button>
+              </div>
+
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm sm:text-base font-black text-white font-mono truncate">
+                    {formData.name || 'Player Identity'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold uppercase bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 shrink-0">
+                    {user?.role || 'student'}
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
+                  {formData.college || 'UEM Jaipur Esports'}
+                </p>
+                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Active Profile Identity
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAvatarModalOpen(true)}
+              className="w-full sm:w-auto px-3.5 py-2 sm:py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 hover:text-white text-xs font-bold font-mono transition-all shrink-0 flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Change Character</span>
+            </button>
+          </div>
+
+          {/* Full Name */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Full Name</span>
+              </label>
+              <span className="text-[10px] font-mono font-semibold text-cyan-400/80 bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-500/20">
+                Required
+              </span>
+            </div>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g. Alex Rivera"
+              className="w-full px-4 py-2.5 sm:py-3 rounded-xl bg-slate-950/90 border border-slate-700/70 hover:border-cyan-500/40 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 text-xs sm:text-sm text-white font-mono placeholder:text-slate-600 focus:outline-none transition-all shadow-inner"
+            />
+          </div>
+
+
+
+          {/* College Department */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Building className="w-3.5 h-3.5 text-cyan-400" />
+                <span>College Department / Campus</span>
+              </label>
+              <span className="text-[10px] font-mono text-slate-500">Optional</span>
+            </div>
+            <input
+              type="text"
+              value={formData.college}
+              onChange={(e) => setFormData({ ...formData, college: e.target.value })}
+              placeholder="e.g. Dept. of Computer Science & Engineering, UEM Jaipur"
+              className="w-full px-4 py-2.5 sm:py-3 rounded-xl bg-slate-950/90 border border-slate-700/70 hover:border-cyan-500/40 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 text-xs sm:text-sm text-white font-mono placeholder:text-slate-600 focus:outline-none transition-all shadow-inner"
+            />
+          </div>
+
+          {/* Bio */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Player Bio / Motto</span>
+              </label>
+              <span
+                className={`text-[10px] font-mono font-semibold ${
+                  (formData.bio?.length || 0) >= 240 ? 'text-amber-400' : 'text-slate-400'
+                }`}
+              >
+                {formData.bio?.length || 0} / 250
+              </span>
+            </div>
+            <textarea
+              rows="3"
+              maxLength={250}
+              value={formData.bio}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              placeholder="Write a brief gamer intro or esports motto..."
+              className="w-full px-4 py-2.5 sm:py-3 rounded-xl bg-slate-950/90 border border-slate-700/70 hover:border-cyan-500/40 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 text-xs sm:text-sm text-white font-mono placeholder:text-slate-600 focus:outline-none transition-all resize-none shadow-inner min-h-[75px] max-h-[120px]"
+            />
           </div>
         </form>
       </Modal>

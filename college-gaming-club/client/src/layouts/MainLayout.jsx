@@ -7,17 +7,20 @@ import { useAuth } from '../context/AuthContext';
 
 const MainLayout = () => {
   const location = useLocation();
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, isStaff } = useAuth();
 
   // Prefetch data in background on initial layout load so subsequent pages load instantly
   useEffect(() => {
     prefetchAppResources();
   }, []);
 
-  // Admin and staff must ONLY access the Admin Panel, not the player/student home & tournament pages
-  if (!loading && isAuthenticated && (user?.role === 'admin' || user?.role === 'staff')) {
+  // Admin and staff users ONLY have the Admin Panel, not the player/student website
+  if (!loading && isAuthenticated && isStaff) {
     return <Navigate to="/admin" replace />;
   }
+
+  const hideFooterRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+  const shouldHideFooter = hideFooterRoutes.includes(location.pathname);
 
   return (
     <div className="relative min-h-screen flex flex-col bg-[#07090e] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 overflow-x-hidden">
@@ -45,7 +48,7 @@ const MainLayout = () => {
       <main className="relative z-10 flex-grow pt-20 sm:pt-24">
         <Outlet />
       </main>
-      <Footer />
+      {!shouldHideFooter && <Footer />}
     </div>
   );
 };

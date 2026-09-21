@@ -567,7 +567,7 @@ const TournamentDetails = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-800 space-x-2 overflow-x-auto scrollbar-none pb-0.5">
+      <div className="flex border-b border-slate-800 space-x-1.5 sm:space-x-2 overflow-x-auto scrollbar-none touch-pan-x pb-0.5 -mx-3.5 sm:mx-0 px-3.5 sm:px-0">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -1259,8 +1259,8 @@ const TournamentDetails = () => {
                 description="Squad points will update automatically when match results are recorded."
               />
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/70">
-                <table className="w-full text-left text-xs sm:text-sm text-slate-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/70 -mx-3.5 sm:mx-0 touch-pan-x">
+                <table className="w-full min-w-[620px] text-left text-xs sm:text-sm text-slate-200">
                   <thead className="bg-slate-900/90 text-[11px] uppercase font-mono text-slate-400 border-b border-slate-800">
                     <tr>
                       <th className="p-3 w-16 text-center">Rank</th>

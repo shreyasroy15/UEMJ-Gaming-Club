@@ -563,6 +563,20 @@ exports.updateUser = async (req, res, next) => {
     if (gameId !== undefined) userToEdit.gameId = gameId.trim();
     if (teamName !== undefined) userToEdit.teamName = teamName.trim();
     if (status) userToEdit.status = status.toLowerCase();
+    if (req.body.stats) {
+      if (!userToEdit.stats) userToEdit.stats = {};
+      const { matchesPlayed, wins, losses, matches } = req.body.stats;
+      const m = matchesPlayed !== undefined ? Number(matchesPlayed) : (matches !== undefined ? Number(matches) : userToEdit.stats.matchesPlayed);
+      const w = wins !== undefined ? Number(wins) : userToEdit.stats.wins;
+      const l = losses !== undefined ? Number(losses) : userToEdit.stats.losses;
+
+      if (!isNaN(m)) userToEdit.stats.matchesPlayed = Math.max(0, m);
+      if (!isNaN(w)) userToEdit.stats.wins = Math.max(0, w);
+      if (!isNaN(l)) userToEdit.stats.losses = Math.max(0, l);
+      if (req.body.stats.mvpCount !== undefined) {
+        userToEdit.stats.mvpCount = Number(req.body.stats.mvpCount) || 0;
+      }
+    }
 
     // Check role elevation permissions
     if (role && role !== userToEdit.role) {

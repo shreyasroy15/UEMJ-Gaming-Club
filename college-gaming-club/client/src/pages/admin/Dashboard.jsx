@@ -24,6 +24,10 @@ import {
   RefreshCw,
   Sparkles,
   Terminal,
+  BarChart3,
+  RotateCcw,
+  Vote,
+  TrendingUp,
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -37,22 +41,90 @@ const Dashboard = () => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Poll Intelligence State
+  const [pollData, setPollData] = useState({
+    title: 'WHAT SHOULD WE PLAY NEXT?',
+    activeRound: 1,
+    totalVotes: 0,
+    leadingGame: null,
+    options: [
+      { game: 'BGMI', count: 0, percentage: 0 },
+      { game: 'Valorant', count: 0, percentage: 0 },
+      { game: 'Free Fire Max', count: 0, percentage: 0 },
+    ],
+    recentVoters: [],
+    lastResetAt: null,
+  });
+  const [pollLoading, setPollLoading] = useState(false);
+  const [resettingPoll, setResettingPoll] = useState(false);
+  const [pollActionMsg, setPollActionMsg] = useState(null);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+
   // Filters for Live Matches & Points Table
   const [matchGameFilter, setMatchGameFilter] = useState('all');
   const [pointsGameFilter, setPointsGameFilter] = useState('all');
 
+  const fetchPollData = async () => {
+    try {
+      setPollLoading(true);
+      const res = await API.get('/polls');
+      if (res.data?.success && res.data?.data) {
+        setPollData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load poll stats:', err);
+    } finally {
+      setPollLoading(false);
+    }
+  };
+
+  const handleResetPoll = async () => {
+    try {
+      setResettingPoll(true);
+      const res = await API.post('/polls/reset');
+      if (res.data?.success) {
+        setPollData((prev) => ({
+          ...prev,
+          activeRound: res.data.data.activeRound,
+          totalVotes: 0,
+          leadingGame: null,
+          options: res.data.data.options,
+          recentVoters: [],
+          lastResetAt: new Date().toISOString(),
+        }));
+        setPollActionMsg(`Poll successfully reset! Commenced Round #${res.data.data.activeRound}.`);
+        setConfirmResetOpen(false);
+        setTimeout(() => setPollActionMsg(null), 4000);
+      }
+    } catch (err) {
+      console.error('Failed to reset poll:', err);
+      setPollActionMsg('Failed to reset poll. Verify admin permissions.');
+      setTimeout(() => setPollActionMsg(null), 3000);
+    } finally {
+      setResettingPoll(false);
+    }
+  };
+
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const res = await API.get('/dashboard/stats');
-      if (res.data.success) {
-        setStats(res.data.stats || {});
-        setRecentUsers(res.data.recentUsers || []);
-        setRecentTournaments(res.data.recentTournaments || []);
-        setTeamsLeaderboard(res.data.teamsLeaderboard || []);
-        setLiveMatchesList(res.data.liveMatchesList || []);
-        setRecentMatchesList(res.data.recentMatchesList || []);
-        setGames(res.data.games || []);
+      const [dashRes, pollRes] = await Promise.allSettled([
+        API.get('/dashboard/stats'),
+        API.get('/polls'),
+      ]);
+
+      if (dashRes.status === 'fulfilled' && dashRes.value.data?.success) {
+        setStats(dashRes.value.data.stats || {});
+        setRecentUsers(dashRes.value.data.recentUsers || []);
+        setRecentTournaments(dashRes.value.data.recentTournaments || []);
+        setTeamsLeaderboard(dashRes.value.data.teamsLeaderboard || []);
+        setLiveMatchesList(dashRes.value.data.liveMatchesList || []);
+        setRecentMatchesList(dashRes.value.data.recentMatchesList || []);
+        setGames(dashRes.value.data.games || []);
+      }
+
+      if (pollRes.status === 'fulfilled' && pollRes.value.data?.success) {
+        setPollData(pollRes.value.data.data);
       }
     } catch (err) {
       console.error('Failed to load dashboard telemetry:', err);
@@ -628,6 +700,175 @@ const Dashboard = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 5. COMMUNITY TOURNAMENT POLL INTELLIGENCE */}
+        {/* ========================================================================= */}
+        <div className="bg-white rounded-2xl p-6 admin-shadow-card border border-slate-200/80 space-y-6 mt-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 via-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                <BarChart3 className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-800 tracking-tight">
+                    COMMUNITY TOURNAMENT POLL INTELLIGENCE
+                  </h3>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={fetchPollData}
+                disabled={pollLoading}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                title="Refresh Poll Telemetry"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${pollLoading ? 'animate-spin text-sky-600' : ''}`} />
+                <span>Refresh</span>
+              </button>
+
+              {confirmResetOpen ? (
+                <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-200 p-1 rounded-xl">
+                  <span className="text-[11px] font-bold text-rose-700 px-2">Reset round votes?</span>
+                  <button
+                    type="button"
+                    onClick={handleResetPoll}
+                    disabled={resettingPoll}
+                    className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    {resettingPoll ? 'Resetting...' : 'Yes, Reset'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmResetOpen(false)}
+                    className="px-2 py-1 text-slate-500 hover:text-slate-800 text-xs font-bold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmResetOpen(true)}
+                  className="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/80 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  title="Archive current votes and start a new poll round"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Reset Poll</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Action notification banner */}
+          {pollActionMsg && (
+            <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl text-xs font-bold text-sky-800 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-sky-600 shrink-0" />
+              <span>{pollActionMsg}</span>
+            </div>
+          )}
+
+          {/* Metrics summary row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Total Votes</span>
+              <span className="text-xl font-black text-slate-800 font-mono mt-0.5 block">{pollData?.totalVotes || 0}</span>
+            </div>
+            <div className="p-3.5 rounded-xl border border-amber-200/80 bg-amber-50/40">
+              <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider block flex items-center gap-1">
+                <Trophy className="w-3.5 h-3.5 text-amber-600" /> Leading Game
+              </span>
+              <span className="text-xl font-black text-amber-900 font-mono mt-0.5 block truncate">
+                {pollData?.leadingGame || 'No votes yet'}
+              </span>
+            </div>
+          </div>
+
+          {/* 3 Game Poll Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                game: 'BGMI',
+                tag: 'Battle Royale',
+                accentColor: 'amber',
+                gradient: 'from-amber-500 to-orange-500',
+                cardBorder: 'border-amber-200/80',
+                cardBg: 'bg-amber-50/30',
+                badgeBg: 'bg-amber-100 text-amber-800 border-amber-300/60',
+              },
+              {
+                game: 'Valorant',
+                tag: 'Tactical 5v5',
+                accentColor: 'rose',
+                gradient: 'from-rose-500 to-red-500',
+                cardBorder: 'border-rose-200/80',
+                cardBg: 'bg-rose-50/30',
+                badgeBg: 'bg-rose-100 text-rose-800 border-rose-300/60',
+              },
+              {
+                game: 'Free Fire Max',
+                tag: 'Survival Royale',
+                accentColor: 'purple',
+                gradient: 'from-purple-500 to-indigo-500',
+                cardBorder: 'border-purple-200/80',
+                cardBg: 'bg-purple-50/30',
+                badgeBg: 'bg-purple-100 text-purple-800 border-purple-300/60',
+              },
+            ].map((item) => {
+              const opt = pollData?.options?.find((o) => o.game === item.game) || {
+                game: item.game,
+                count: 0,
+                percentage: 0,
+              };
+              const isLeading = pollData?.leadingGame === item.game && (pollData?.totalVotes || 0) > 0;
+
+              return (
+                <div
+                  key={item.game}
+                  className={`p-4 rounded-xl border ${item.cardBorder} ${item.cardBg} space-y-3 relative overflow-hidden transition-all shadow-xs`}
+                >
+                  {isLeading && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-amber-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full font-mono shadow-xs">
+                      <Trophy className="w-2.5 h-2.5" /> LEADER
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-sm text-slate-800">
+                      {item.game}
+                    </span>
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold ${item.badgeBg}`}>
+                      {item.tag}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between pt-1">
+                    <span className="text-3xl font-black font-mono text-slate-900 tracking-tight">
+                      {opt.percentage}%
+                    </span>
+                    <span className="text-xs font-mono font-bold text-slate-500">
+                      {opt.count} {opt.count === 1 ? 'vote' : 'votes'}
+                    </span>
+                  </div>
+
+                  {/* Visual Progress Bar */}
+                  <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full bg-gradient-to-r ${item.gradient} rounded-full transition-all duration-700`}
+                      style={{ width: `${opt.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

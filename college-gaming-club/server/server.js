@@ -18,6 +18,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const pollRoutes = require('./routes/pollRoutes');
 
 // Import error middleware
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
@@ -127,6 +128,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/polls', pollRoutes);
 
 // Error Handling
 app.use(notFound);

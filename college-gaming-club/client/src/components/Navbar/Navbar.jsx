@@ -12,6 +12,7 @@ import {
   Shield,
   LogOut,
   ChevronDown,
+  ChevronRight,
   LayoutDashboard,
   Flame,
   ArrowRight,
@@ -232,23 +233,33 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Full-Width Sideways Transparent Header (Reference Esports Style) */}
-      <header className="fixed top-2 sm:top-4 left-0 right-0 z-50 px-4 sm:px-8 lg:px-12 pointer-events-none transition-all duration-300">
+      {/* Full-Width Sideways Header - Transparent at top, non-transparent when scrolled */}
+      <header
+        className={`fixed left-0 right-0 z-50 pointer-events-none transition-all duration-300 ${
+          scrolled
+            ? 'top-0 sm:top-1.5 px-2 sm:px-4 lg:px-8'
+            : 'top-2 sm:top-4 px-3 sm:px-6 lg:px-12'
+        }`}
+      >
         <div className="w-full flex flex-col items-center">
-          {/* Main Navbar Container - Fully Transparent */}
+          {/* Main Navbar Container */}
           <nav
             aria-label="Main Navigation"
-            className="pointer-events-auto w-full transition-all duration-300 relative bg-transparent border-none shadow-none"
+            className={`pointer-events-auto w-full transition-all duration-300 relative ${
+              scrolled
+                ? 'bg-[#060913]/95 backdrop-blur-2xl border border-cyan-500/25 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(6,182,212,0.12)] rounded-2xl px-3 sm:px-5 py-1 sm:py-1.5'
+                : 'bg-transparent border-transparent shadow-none px-0 py-0'
+            }`}
           >
-            <div className="h-14 sm:h-16 flex items-center justify-between gap-4 w-full">
+            <div className="h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4 w-full">
               {/* Brand Logo - Official College & Gaming Geeks Badges (Far Left) */}
               <Link
                 to="/"
-                className="flex items-center gap-2.5 sm:gap-3 group shrink-0 select-none cursor-pointer"
+                className="flex items-center gap-2 sm:gap-3 group shrink-0 select-none cursor-pointer"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   {/* UEM College Crest Badge */}
-                  <div className="h-9 sm:h-10 px-2 py-0.5 rounded-xl bg-white/95 border border-white/40 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.15)] group-hover:scale-105 transition-all">
+                  <div className="h-8 sm:h-10 px-1.5 sm:px-2 py-0.5 rounded-xl bg-white/95 border border-white/40 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.15)] group-hover:scale-105 transition-all">
                     <img
                       src="/assets/uem-logo.png"
                       alt="UEM Jaipur Crest"
@@ -257,7 +268,7 @@ const Navbar = () => {
                   </div>
 
                   {/* Gaming Geeks Club Crest */}
-                  <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-xl bg-black/85 border border-lime-400/40 p-1 flex items-center justify-center shadow-[0_0_15px_rgba(163,230,53,0.25)] group-hover:shadow-[0_0_20px_rgba(163,230,53,0.5)] group-hover:scale-105 transition-all">
+                  <div className="h-8 sm:h-10 w-8 sm:w-10 rounded-xl bg-black/85 border border-lime-400/40 p-1 flex items-center justify-center shadow-[0_0_15px_rgba(163,230,53,0.25)] group-hover:shadow-[0_0_20px_rgba(163,230,53,0.5)] group-hover:scale-105 transition-all">
                     <img
                       src="/assets/gaming-geeks-logo.png"
                       alt="Gaming Geeks Club"
@@ -312,7 +323,11 @@ const Navbar = () => {
                                 else if (invitations.length > 0) setActiveNotifTab('invites');
                               }
                             }}
-                            className="relative p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 text-slate-300 hover:text-white transition-all cursor-pointer"
+                            className={`relative p-2 rounded-full backdrop-blur-xl transition-all cursor-pointer border ${
+                              invitationsOpen
+                                ? 'bg-slate-900/70 border-cyan-400/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                                : 'bg-slate-950/40 hover:bg-slate-900/60 border-white/15 hover:border-cyan-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)]'
+                            } text-slate-300 hover:text-white`}
                             title="Match Updates & Invitations"
                           >
                             <Bell className="w-4 h-4 text-cyan-400" />
@@ -327,7 +342,7 @@ const Navbar = () => {
 
                       {/* Notifications Dropdown */}
                       {invitationsOpen && (
-                        <div className="fixed left-3 right-3 top-auto sm:absolute sm:left-auto sm:right-0 sm:w-96 max-w-sm mt-3 rounded-3xl bg-[#090e1f]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.1)] p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3 max-h-[70vh] overflow-y-auto sm:max-h-none sm:overflow-visible">
+                        <div className="fixed left-3 right-3 top-auto sm:absolute sm:left-auto sm:right-0 sm:w-96 max-w-sm mt-3 rounded-3xl bg-slate-950/65 backdrop-blur-2xl border border-cyan-500/25 shadow-[0_20px_50px_rgba(0,0,0,0.7),0_0_30px_rgba(6,182,212,0.12),inset_0_1px_1px_rgba(255,255,255,0.12)] p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-3 max-h-[70vh] overflow-y-auto sm:max-h-none sm:overflow-visible">
                           {/* Tabs Header */}
                           <div className="flex items-center justify-between pb-2 border-b border-white/10 gap-2">
                             <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-xl border border-white/10">
@@ -573,61 +588,143 @@ const Navbar = () => {
                     <div className="relative" ref={profileMenuRef}>
                       <button
                         onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                        className="flex items-center gap-2 p-1 pr-2.5 sm:pr-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-cyan-400/40 backdrop-blur-md transition-all cursor-pointer select-none group"
+                        className={`flex items-center gap-2 p-1 pr-2.5 sm:pr-3 rounded-full backdrop-blur-xl transition-all duration-200 cursor-pointer select-none group border ${
+                          profileDropdownOpen
+                            ? 'bg-slate-900/70 border-cyan-400/70 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+                            : 'bg-slate-950/40 hover:bg-slate-900/60 border-white/15 hover:border-cyan-400/50 shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)]'
+                        }`}
                         aria-expanded={profileDropdownOpen}
                       >
                         <Avatar
                           user={user}
                           size="sm"
-                          className="border border-cyan-400/60 group-hover:border-cyan-300"
+                          className="border border-cyan-400/60 group-hover:border-cyan-300 transition-colors"
                         />
                         <span className="hidden sm:inline-block text-xs font-bold text-slate-200 max-w-[90px] truncate">
                           {user.username || user.name}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded-full text-[9px] uppercase font-mono font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] uppercase font-mono font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
                           {user.role}
                         </span>
                         <ChevronDown
                           className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                            profileDropdownOpen ? 'rotate-180 text-cyan-400' : ''
+                            profileDropdownOpen ? 'rotate-180 text-cyan-400' : 'group-hover:text-slate-200'
                           }`}
                         />
                       </button>
 
                       {/* Transparent Glass Profile Dropdown */}
                       {profileDropdownOpen && (
-                        <div className="absolute right-0 mt-3 w-64 rounded-3xl bg-[#090e1f]/90 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.1)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                          <div className="px-3.5 py-2.5 border-b border-white/10">
-                            <p className="text-[11px] text-slate-400">Signed in as</p>
-                            <p className="text-xs font-bold text-white truncate">{user.email}</p>
+                        <div className="absolute right-0 mt-3 w-72 max-w-[calc(100vw-2rem)] rounded-3xl bg-slate-950/65 backdrop-blur-2xl border border-cyan-500/25 shadow-[0_20px_50px_rgba(0,0,0,0.7),0_0_30px_rgba(6,182,212,0.12),inset_0_1px_1px_rgba(255,255,255,0.12)] p-2.5 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150 space-y-2">
+                          {/* User identity card */}
+                          <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-24 h-24 bg-cyan-500/15 rounded-full blur-xl pointer-events-none" />
+                            
+                            <div className="flex items-center gap-2.5 relative z-10">
+                              <div className="relative shrink-0">
+                                <Avatar
+                                  user={user}
+                                  size="md"
+                                  className="border-2 border-cyan-400/70 shadow-[0_0_14px_rgba(6,182,212,0.35)]"
+                                />
+                                <span
+                                  className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-950 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+                                  title="Online"
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs font-bold text-white truncate">
+                                    {user.name || user.username}
+                                  </p>
+                                  <span className="px-1.5 py-0.5 rounded-full text-[9px] uppercase font-mono font-black tracking-wider bg-cyan-950/90 text-cyan-300 border border-cyan-400/40 shrink-0">
+                                    {user.role}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-cyan-400/90 font-mono truncate">
+                                  @{user.username || 'gamer'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="mt-2.5 pt-2 border-t border-white/10 flex flex-col gap-0.5">
+                              <span className="text-[9px] uppercase font-mono tracking-wider text-slate-400">
+                                Signed in as
+                              </span>
+                              <span className="text-[11px] font-mono font-semibold text-slate-200 truncate" title={user.email}>
+                                {user.email}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="py-1.5 space-y-1">
-                            {user.role === 'admin' || user.role === 'staff' ? (
+                          {/* Navigation actions */}
+                          <div className="py-0.5 space-y-1">
+                            {user.role === 'admin' || user.role === 'staff' || user.role === 'super_admin' ? (
                               <Link
                                 to="/admin"
                                 onClick={() => setProfileDropdownOpen(false)}
-                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-fuchsia-300 bg-fuchsia-950/40 hover:bg-fuchsia-900/50 border border-fuchsia-500/30 rounded-xl transition-colors"
+                                className="group flex items-center justify-between p-2 rounded-2xl bg-fuchsia-950/25 hover:bg-fuchsia-900/40 border border-fuchsia-500/20 hover:border-fuchsia-400/50 transition-all duration-200 cursor-pointer"
                               >
-                                <Shield className="w-4 h-4 text-fuchsia-400 shrink-0" /> Admin Panel
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="p-2 rounded-xl bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30 group-hover:scale-105 group-hover:shadow-[0_0_12px_rgba(217,70,239,0.35)] transition-all shrink-0">
+                                    <Shield className="w-4 h-4" />
+                                  </div>
+                                  <div className="text-left min-w-0">
+                                    <p className="text-xs font-bold text-fuchsia-200 group-hover:text-fuchsia-100 truncate">
+                                      Admin Console
+                                    </p>
+                                    <p className="text-[10px] text-fuchsia-400/70 font-mono truncate">
+                                      Manage club & tournaments
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-fuchsia-400/70 group-hover:text-fuchsia-300 group-hover:translate-x-0.5 transition-all shrink-0" />
                               </Link>
                             ) : (
                               <Link
                                 to="/profile"
                                 onClick={() => setProfileDropdownOpen(false)}
-                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-cyan-300 hover:bg-cyan-950/50 rounded-xl transition-colors"
+                                className="group flex items-center justify-between p-2 rounded-2xl bg-cyan-950/20 hover:bg-cyan-900/35 border border-cyan-500/15 hover:border-cyan-400/40 transition-all duration-200 cursor-pointer"
                               >
-                                <User className="w-4 h-4 text-cyan-400 shrink-0" /> Player Profile
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="p-2 rounded-xl bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 group-hover:scale-105 group-hover:shadow-[0_0_12px_rgba(6,182,212,0.35)] transition-all shrink-0">
+                                    <User className="w-4 h-4" />
+                                  </div>
+                                  <div className="text-left min-w-0">
+                                    <p className="text-xs font-bold text-cyan-200 group-hover:text-cyan-100 truncate">
+                                      Player Profile
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 font-mono truncate">
+                                      Stats, game IDs & team
+                                    </p>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-cyan-400/70 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all shrink-0" />
                               </Link>
                             )}
                           </div>
 
+                          {/* Sign out */}
                           <div className="pt-1 border-t border-white/10">
                             <button
+                              type="button"
                               onClick={handleLogout}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 rounded-xl transition-colors text-left cursor-pointer"
+                              className="w-full group flex items-center justify-between p-2 rounded-2xl bg-rose-950/15 hover:bg-rose-900/30 border border-rose-500/15 hover:border-rose-500/40 transition-all duration-200 text-left cursor-pointer"
                             >
-                              <LogOut className="w-4 h-4 shrink-0" /> Sign Out
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="p-2 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 group-hover:scale-105 group-hover:shadow-[0_0_12px_rgba(244,63,94,0.35)] transition-all shrink-0">
+                                  <LogOut className="w-4 h-4" />
+                                </div>
+                                <div className="text-left min-w-0">
+                                  <p className="text-xs font-semibold text-rose-300 group-hover:text-rose-200">
+                                    Sign Out
+                                  </p>
+                                  <p className="text-[10px] text-rose-400/70 font-mono">
+                                    End active session
+                                  </p>
+                                </div>
+                              </div>
+                              <ArrowRight className="w-4 h-4 text-rose-400/60 group-hover:text-rose-300 group-hover:translate-x-0.5 transition-all shrink-0" />
                             </button>
                           </div>
                         </div>
@@ -638,10 +735,10 @@ const Navbar = () => {
                   <div className="flex items-center gap-2 sm:gap-3">
                     <Link
                       to="/login"
-                      className="rounded-full px-4 sm:px-5 py-2 text-xs sm:text-[13px] font-mono font-bold tracking-wider uppercase text-slate-100 bg-slate-900/85 hover:bg-slate-800 border border-cyan-500/40 hover:border-cyan-300 shadow-[0_0_18px_rgba(6,182,212,0.2)] hover:shadow-[0_0_24px_rgba(6,182,212,0.4)] active:scale-95 transition-all duration-300 flex items-center gap-2 select-none cursor-pointer"
+                      className="rounded-full px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-[13px] font-mono font-bold tracking-wider uppercase text-slate-100 bg-slate-900/85 hover:bg-slate-800 border border-cyan-500/40 hover:border-cyan-300 shadow-[0_0_18px_rgba(6,182,212,0.2)] hover:shadow-[0_0_24px_rgba(6,182,212,0.4)] active:scale-95 transition-all duration-300 flex items-center gap-1.5 sm:gap-2 select-none cursor-pointer"
                     >
                       <User className="w-3.5 h-3.5 text-cyan-400 stroke-[2.5]" />
-                      <span>Login / Register</span>
+                      <span>Login<span className="hidden min-[480px]:inline"> / Register</span></span>
                     </Link>
                   </div>
                 )}
@@ -661,7 +758,7 @@ const Navbar = () => {
 
           {/* Mobile Frosted Glass Menu Capsule */}
           {mobileMenuOpen && (
-            <div className="pointer-events-auto min-[1100px]:hidden w-full mt-2.5 rounded-3xl bg-[#080d1a]/85 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.1)] p-4 space-y-4 animate-in fade-in slide-in-from-top-3 duration-200">
+            <div className="pointer-events-auto min-[1100px]:hidden w-full mt-2.5 rounded-3xl bg-slate-950/70 backdrop-blur-2xl border border-cyan-500/25 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(0,240,255,0.12),inset_0_1px_1px_rgba(255,255,255,0.12)] p-4 space-y-4 animate-in fade-in slide-in-from-top-3 duration-200">
               {/* Navigation Grid */}
               <div className="grid grid-cols-2 gap-2">
                 {navLinks.map((item) => (
@@ -686,7 +783,7 @@ const Navbar = () => {
               <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
                 {isAuthenticated ? (
                   <>
-                    <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
+                    <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Avatar
                           user={user}

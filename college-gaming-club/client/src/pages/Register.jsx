@@ -53,8 +53,11 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-5 sm:space-y-6 p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl shadow-2xl shadow-cyan-950/20">
+    <div className="relative min-h-[85vh] flex items-center justify-center py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8">
+      {/* Reusable Authentication Background Layer */}
+      <div className="auth-background" aria-hidden="true" />
+
+      <div className="relative z-10 max-w-md w-full space-y-5 sm:space-y-6 p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl shadow-2xl shadow-cyan-950/20">
         <div className="text-center space-y-2">
           <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-0.5 mx-auto flex items-center justify-center shadow-lg shadow-cyan-500/20">
             <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">

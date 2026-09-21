@@ -206,7 +206,7 @@ const Leaderboard = () => {
               <span className="block text-xs font-mono uppercase font-bold text-slate-400">
                 SELECT TOURNAMENT:
               </span>
-              <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none touch-pan-x -mx-3.5 sm:mx-0 px-3.5 sm:px-0">
                 {tournaments.map((t) => (
                   <button
                     key={t._id}
@@ -269,7 +269,7 @@ const Leaderboard = () => {
 
               {/* Lobby Filter Pills */}
               {lobbies.length > 0 && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none touch-pan-x -mx-3.5 sm:mx-0 px-3.5 sm:px-0">
                   <span className="text-xs font-mono font-bold text-slate-400 shrink-0">
                     LOBBY FILTER:
                   </span>
@@ -350,8 +350,8 @@ const Leaderboard = () => {
               )}
 
               {/* Search Bar */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="relative flex-1 max-w-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative flex-1 max-w-sm w-full">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -374,8 +374,8 @@ const Leaderboard = () => {
                   description="Squad points will update automatically when match results are recorded."
                 />
               ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-2xl">
-                  <table className="w-full text-left text-xs sm:text-sm text-slate-200">
+                <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-2xl -mx-3.5 sm:mx-0 touch-pan-x">
+                  <table className="w-full min-w-[620px] text-left text-xs sm:text-sm text-slate-200">
                     <thead className="bg-slate-950/90 text-[11px] uppercase font-mono text-slate-400 border-b border-slate-800">
                       <tr>
                         <th className="p-3.5 w-16 text-center">Rank</th>

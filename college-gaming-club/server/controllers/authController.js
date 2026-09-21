@@ -303,7 +303,7 @@ exports.updateProfile = async (req, res, next) => {
       });
     }
 
-    const { name, bio, college, phone, game, gameId, avatar } = req.body;
+    const { name, bio, college, phone, game, gameId, avatar, stats } = req.body;
 
     if (name) user.name = name.trim();
     if (bio !== undefined) user.bio = bio;
@@ -317,6 +317,19 @@ exports.updateProfile = async (req, res, next) => {
     if (gameId !== undefined) user.gameId = gameId.trim();
     if (avatar !== undefined) {
       user.avatar = avatar ? avatar.trim() : '';
+    }
+    if (stats) {
+      if (!user.stats) user.stats = {};
+      const matchesPlayed = stats.matchesPlayed !== undefined ? Number(stats.matchesPlayed) : (stats.matches !== undefined ? Number(stats.matches) : user.stats.matchesPlayed);
+      const wins = stats.wins !== undefined ? Number(stats.wins) : user.stats.wins;
+      const losses = stats.losses !== undefined ? Number(stats.losses) : user.stats.losses;
+
+      if (!isNaN(matchesPlayed)) user.stats.matchesPlayed = Math.max(0, matchesPlayed);
+      if (!isNaN(wins)) user.stats.wins = Math.max(0, wins);
+      if (!isNaN(losses)) user.stats.losses = Math.max(0, losses);
+      if (stats.mvpCount !== undefined) {
+        user.stats.mvpCount = Number(stats.mvpCount) || 0;
+      }
     }
 
     await user.save();

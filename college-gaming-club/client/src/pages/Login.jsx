@@ -30,8 +30,9 @@ const Login = () => {
       if (res.success) {
         addToast(`Welcome back, ${res.user.name}!`, 'success');
         // Navigate to intended destination or default based on role
-        const defaultRoute = res.user.role === 'admin' || res.user.role === 'super_admin' ? '/admin/users' : '/dashboard';
-        navigate(from && from !== '/login' ? from : defaultRoute, { replace: true });
+        const isAdminOrStaff = ['admin', 'super_admin', 'staff', 'moderator', 'coordinator'].includes(res.user.role) || res.user.email === 'admin@gmail.com';
+        const defaultRoute = isAdminOrStaff ? '/admin' : '/dashboard';
+        navigate(from && from !== '/login' && (!isAdminOrStaff || from.startsWith('/admin')) ? from : defaultRoute, { replace: true });
       } else {
         addToast(res.message || 'Invalid credentials', 'error');
       }
@@ -43,8 +44,11 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-6 sm:space-y-8 p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl shadow-2xl shadow-cyan-950/20">
+    <div className="relative min-h-[80vh] flex items-center justify-center py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8">
+      {/* Reusable Authentication Background Layer */}
+      <div className="auth-background" aria-hidden="true" />
+
+      <div className="relative z-10 max-w-md w-full space-y-6 sm:space-y-8 p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl shadow-2xl shadow-cyan-950/20">
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-0.5 mx-auto flex items-center justify-center shadow-lg shadow-cyan-500/20">

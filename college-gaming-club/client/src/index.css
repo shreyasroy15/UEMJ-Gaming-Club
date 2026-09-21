@@ -73,13 +73,21 @@
     background: #00f0ff;
   }
 
-  /* Hide scrollbar utility for touch drag carousels */
-  .no-scrollbar::-webkit-scrollbar {
+  /* Hide scrollbar utility for touch drag carousels and tabs */
+  .no-scrollbar::-webkit-scrollbar,
+  .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
-  .no-scrollbar {
+  .no-scrollbar,
+  .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Smooth momentum touch scrolling for mobile horizontal containers */
+  .touch-pan-x {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
   }
 }
 
@@ -205,3 +213,47 @@
 .admin-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ========================================================================= */
+/* SLEEK ESPORTS / GAMING SCROLLBAR (NEON CYAN & GLOW ACCENTS) */
+/* ========================================================================= */
+.gaming-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(6, 182, 212, 0.45) rgba(10, 14, 26, 0.6);
+}
+.gaming-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.gaming-scrollbar::-webkit-scrollbar-track {
+  background: rgba(8, 11, 20, 0.6);
+  border-radius: 9999px;
+}
+.gaming-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(6, 182, 212, 0.5) 0%, rgba(99, 102, 241, 0.5) 100%);
+  border-radius: 9999px;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  transition: all 0.2s ease;
+}
+.gaming-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(6, 182, 212, 0.8) 0%, rgba(99, 102, 241, 0.8) 100%);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+}
+
+/* ========================================================================= */
+/* REUSABLE AUTHENTICATION BACKGROUND LAYER */
+/* ========================================================================= */
+.auth-background {
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse at center, rgba(7, 10, 18, 0.72) 0%, rgba(5, 7, 12, 0.45) 55%, rgba(2, 3, 6, 0.8) 100%),
+    linear-gradient(180deg, rgba(6, 9, 19, 0.4) 0%, rgba(3, 5, 10, 0.2) 50%, rgba(2, 3, 6, 0.6) 100%),
+    url('/assets/auth-gaming-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 1;
+}
+
