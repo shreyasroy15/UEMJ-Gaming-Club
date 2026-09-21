@@ -166,10 +166,6 @@ const AdminLayout = () => {
                 <h1 className="font-black text-xs sm:text-base tracking-tight text-slate-800 group-hover:text-sky-600 transition-colors">
                   GAMING GEEKS CLUB
                 </h1>
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-300 hidden sm:block"></div>
-                <span className="bg-sky-50 text-sky-600 border border-sky-100 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider hidden sm:inline-block">
-                  Admin Core
-                </span>
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-500 font-mono tracking-wider mt-0.5 truncate max-w-[200px] sm:max-w-none">
                 UEM Jaipur Esports Console
@@ -264,7 +260,7 @@ const AdminLayout = () => {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <span className="font-bold text-xs text-slate-800">ADMIN CORE</span>
+                <span className="font-bold text-xs text-slate-800">GAMING GEEKS</span>
               </div>
               <button
                 onClick={() => setSidebarOpen(false)}
