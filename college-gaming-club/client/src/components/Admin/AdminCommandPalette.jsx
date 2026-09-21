@@ -131,7 +131,7 @@ const AdminCommandPalette = ({ isOpen, onClose }) => {
     { name: 'Media Gallery', path: '/admin/gallery', icon: Image, category: 'Navigation' },
     { name: 'BGMI Command Hub', path: '/admin/games/bgmi', icon: Gamepad2, image: 'https://wallpapercave.com/wp/wp9837300.jpg', fallbackImage: '/assets/bgmi-logo.jpg', category: 'Games' },
     { name: 'Free Fire Command Hub', path: '/admin/games/free-fire', icon: Gamepad2, image: 'https://wallpapers.com/images/hd/free-fire-logo-in-black-neggg4nr4exfv0yh.jpg', fallbackImage: '/assets/free-fire-logo.jpg', category: 'Games' },
-    { name: 'Valorant Command Hub', path: '/admin/games/valorant', icon: Gamepad2, category: 'Games' },
+    { name: 'Valorant Command Hub', path: '/admin/games/valorant', icon: Gamepad2, image: 'https://i.pinimg.com/originals/6f/20/7c/6f207c513f95b2a14e164c9c0b772874.jpg', fallbackImage: '/assets/valorant-logo.jpg', category: 'Games' },
   ];
 
   const handleSelect = (path) => {

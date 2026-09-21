@@ -75,7 +75,9 @@ const GAME_CONFIG = {
       badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
       glow: 'shadow-[0_0_20px_rgba(239,68,68,0.15)]',
     },
-    defaultLogo: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=400&q=80',
+    defaultLogo: 'https://i.pinimg.com/originals/6f/20/7c/6f207c513f95b2a14e164c9c0b772874.jpg',
+    logo: 'https://i.pinimg.com/originals/6f/20/7c/6f207c513f95b2a14e164c9c0b772874.jpg',
+    fallbackLogo: '/assets/valorant-logo.jpg',
     description: 'Precision tactical 5v5 FPS tournament seeding, lobbies, and match arbitration.',
   },
 };
@@ -177,7 +179,7 @@ const AdminGameView = () => {
                   className="w-full h-full object-cover rounded-xl"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = game.fallbackLogo || (game.key === 'free-fire' ? '/assets/free-fire-logo.jpg' : '/assets/bgmi-logo.jpg');
+                    e.target.src = game.fallbackLogo || (game.key === 'free-fire' ? '/assets/free-fire-logo.jpg' : game.key === 'valorant' ? '/assets/valorant-logo.jpg' : '/assets/bgmi-logo.jpg');
                   }}
                 />
               ) : (
