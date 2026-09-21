@@ -129,8 +129,8 @@ const AdminCommandPalette = ({ isOpen, onClose }) => {
     { name: 'Users & Roles', path: '/admin/users', icon: Users, category: 'Navigation' },
     { name: 'Announcements Broadcast', path: '/admin/announcements', icon: Megaphone, category: 'Navigation' },
     { name: 'Media Gallery', path: '/admin/gallery', icon: Image, category: 'Navigation' },
-    { name: 'BGMI Command Hub', path: '/admin/games/bgmi', icon: Gamepad2, category: 'Games' },
-    { name: 'Free Fire Command Hub', path: '/admin/games/free-fire', icon: Gamepad2, image: 'https://wallpapers.com/images/hd/free-fire-logo-in-black-neggg4nr4exfv0yh.jpg', category: 'Games' },
+    { name: 'BGMI Command Hub', path: '/admin/games/bgmi', icon: Gamepad2, image: 'https://wallpapercave.com/wp/wp9837300.jpg', fallbackImage: '/assets/bgmi-logo.jpg', category: 'Games' },
+    { name: 'Free Fire Command Hub', path: '/admin/games/free-fire', icon: Gamepad2, image: 'https://wallpapers.com/images/hd/free-fire-logo-in-black-neggg4nr4exfv0yh.jpg', fallbackImage: '/assets/free-fire-logo.jpg', category: 'Games' },
     { name: 'Valorant Command Hub', path: '/admin/games/valorant', icon: Gamepad2, category: 'Games' },
   ];
 
@@ -301,7 +301,9 @@ const AdminCommandPalette = ({ isOpen, onClose }) => {
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = '/assets/free-fire-logo.jpg';
+                            if (act.fallbackImage) {
+                              e.target.src = act.fallbackImage;
+                            }
                           }}
                         />
                       </div>

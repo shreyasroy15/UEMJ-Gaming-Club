@@ -36,7 +36,9 @@ const GAME_CONFIG = {
       badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
       glow: 'shadow-[0_0_20px_rgba(56,189,248,0.15)]',
     },
-    defaultLogo: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80',
+    defaultLogo: 'https://wallpapercave.com/wp/wp9837300.jpg',
+    logo: 'https://wallpapercave.com/wp/wp9837300.jpg',
+    fallbackLogo: '/assets/bgmi-logo.jpg',
     description: 'Premier tactical battle royale tournament operations for university squads.',
   },
   'free-fire': {
@@ -175,7 +177,7 @@ const AdminGameView = () => {
                   className="w-full h-full object-cover rounded-xl"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = '/assets/free-fire-logo.jpg';
+                    e.target.src = game.fallbackLogo || (game.key === 'free-fire' ? '/assets/free-fire-logo.jpg' : '/assets/bgmi-logo.jpg');
                   }}
                 />
               ) : (

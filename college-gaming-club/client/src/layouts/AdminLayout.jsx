@@ -105,6 +105,9 @@ const AdminLayout = () => {
           name: 'BGMI',
           path: '/admin/games/bgmi',
           icon: Gamepad2,
+          image: 'https://wallpapercave.com/wp/wp9837300.jpg',
+          fallbackImage: '/assets/bgmi-logo.jpg',
+          borderColor: 'border-cyan-400/50',
           tag: 'BR',
           color: 'text-cyan-400',
           indicatorColor: 'bg-cyan-400',
@@ -114,6 +117,8 @@ const AdminLayout = () => {
           path: '/admin/games/free-fire',
           icon: Gamepad2,
           image: 'https://wallpapers.com/images/hd/free-fire-logo-in-black-neggg4nr4exfv0yh.jpg',
+          fallbackImage: '/assets/free-fire-logo.jpg',
+          borderColor: 'border-orange-400/50',
           tag: 'SURV',
           color: 'text-orange-400',
           indicatorColor: 'bg-orange-400',
@@ -305,14 +310,16 @@ const AdminLayout = () => {
                         <>
                           <div className="flex items-center gap-2.5 truncate">
                             {item.image ? (
-                              <div className="w-5 h-5 rounded-md overflow-hidden shrink-0 border border-orange-400/40 bg-black flex items-center justify-center shadow-xs">
+                              <div className={`w-5 h-5 rounded-md overflow-hidden shrink-0 border ${item.borderColor || 'border-slate-200'} bg-black flex items-center justify-center shadow-xs`}>
                                 <img
                                   src={item.image}
                                   alt={item.name}
                                   className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                                   onError={(e) => {
                                     e.target.onerror = null;
-                                    e.target.src = '/assets/free-fire-logo.jpg';
+                                    if (item.fallbackImage) {
+                                      e.target.src = item.fallbackImage;
+                                    }
                                   }}
                                 />
                               </div>
