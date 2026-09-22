@@ -116,16 +116,10 @@ const Profile = () => {
                 <h1 className="text-xl sm:text-3xl font-black text-white font-mono break-words">
                   {user?.name}
                 </h1>
-                <span className="text-xs sm:text-sm text-slate-400 font-mono">@{user?.username}</span>
+
               </div>
 
-              {/* Active Status Badge */}
-              <div className="flex flex-wrap items-center justify-center min-[480px]:justify-start gap-2 pt-0.5">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shrink-0 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Active Player
-                </span>
-              </div>
+
 
               {/* College & Contact Meta */}
               <div className="space-y-1 pt-1 text-xs text-slate-400 font-mono">
@@ -164,9 +158,7 @@ const Profile = () => {
         {/* Bio */}
         {user?.bio && (
           <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-slate-800/80">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1.5">
-              Player Bio / Esports Motto
-            </span>
+
             <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-mono italic bg-slate-950/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/70 shadow-inner">
               "{user.bio}"
             </p>
@@ -262,10 +254,7 @@ const Profile = () => {
                 <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
                   {formData.college || 'UEM Jaipur Esports'}
                 </p>
-                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Active Profile Identity
-                </span>
+
               </div>
             </div>
 

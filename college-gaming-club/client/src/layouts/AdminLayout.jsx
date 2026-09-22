@@ -447,13 +447,6 @@ const AdminLayout = () => {
           <span className="text-[9px] tracking-tight">Users</span>
         </NavLink>
 
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
-        >
-          <Menu className="w-4 h-4" />
-          <span className="text-[9px] tracking-tight">More</span>
-        </button>
       </nav>
 
 

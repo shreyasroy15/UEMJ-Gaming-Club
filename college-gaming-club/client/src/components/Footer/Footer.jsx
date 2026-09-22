@@ -105,7 +105,7 @@ const Footer = ({ isCompact = false }) => {
   };
 
   return (
-    <footer className="relative z-20 overflow-hidden bg-[#030610]/45 backdrop-blur-xl border-t border-cyan-500/30 text-slate-200 shadow-[0_-15px_50px_rgba(0,0,0,0.6)] mt-auto">
+    <footer className="relative z-20 overflow-hidden bg-[#030610]/20 backdrop-blur-sm border-t border-cyan-500/40 text-slate-200 shadow-[0_-15px_50px_rgba(0,0,0,0.4)] mt-auto">
       {/* Ambient background glow effects */}
       <div className="absolute top-0 left-1/4 w-96 h-48 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/2 right-1/4 w-96 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -117,13 +117,13 @@ const Footer = ({ isCompact = false }) => {
           <img
             src={skullAnimation}
             alt="Cyber Skull Laughed Animation"
-            className="w-full max-h-[380px] object-contain opacity-40 sm:opacity-55 mix-blend-screen scale-110 sm:scale-125 filter drop-shadow-[0_0_35px_rgba(6,182,212,0.45)] transition-all duration-700"
+            className="w-full max-h-[380px] object-contain opacity-60 sm:opacity-75 mix-blend-screen scale-110 sm:scale-125 filter drop-shadow-[0_0_50px_rgba(6,182,212,0.6)] transition-all duration-700"
             loading="eager"
           />
         </div>
 
         {/* Soft Vignette Depth Mask so foreground text and poll remain crisp */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#020306]/75 via-transparent to-[#040714]/45 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#020306]/30 via-transparent to-[#040714]/20 pointer-events-none" />
       </div>
 
       {/* Cyber Grid Accent Line on Top Border */}
@@ -157,10 +157,10 @@ const Footer = ({ isCompact = false }) => {
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-cyan-400 shrink-0" />
                 <a
-                  href="mailto:esports@uemjgaming.club"
+                  href="mailto:gaminggeeks@uem.edu.in"
                   className="hover:text-cyan-300 transition-colors text-slate-300 truncate"
                 >
-                  esports@uemjgaming.club
+                  gaminggeeks@uem.edu.in
                 </a>
               </div>
             </div>
@@ -211,15 +211,15 @@ const Footer = ({ isCompact = false }) => {
                     type="button"
                     onClick={() => handleVote(gameName)}
                     disabled={votingFor !== null}
-                    className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition-all group cursor-pointer ${
+                    className={`w-full text-left relative overflow-hidden rounded-xl border p-3 transition-all duration-300 group cursor-pointer backdrop-blur-md ${
                       isSelected
-                        ? `border-cyan-400/70 bg-cyan-950/40 ${meta.glow}`
-                        : 'border-white/10 bg-white/[0.03] hover:border-cyan-500/30 hover:bg-white/[0.06]'
+                        ? `border-cyan-400/60 bg-cyan-950/20 ${meta.glow} shadow-lg shadow-cyan-500/10`
+                        : 'border-white/8 bg-white/[0.04] hover:border-cyan-500/40 hover:bg-white/[0.08] hover:shadow-md hover:shadow-cyan-500/5'
                     }`}
                   >
                     {/* Background Progress Bar Fill */}
                     <div
-                      className={`absolute left-0 top-0 bottom-0 bg-gradient-to-r ${meta.barColor} opacity-20 transition-all duration-700 pointer-events-none`}
+                      className={`absolute left-0 top-0 bottom-0 bg-gradient-to-r ${meta.barColor} opacity-10 transition-all duration-700 pointer-events-none`}
                       style={{ width: `${option.percentage}%` }}
                     />
 
@@ -269,7 +269,7 @@ const Footer = ({ isCompact = false }) => {
                     </div>
 
                     {/* Thin dynamic progress track underneath */}
-                    <div className="relative z-10 w-full h-1 bg-slate-800/80 rounded-full overflow-hidden mt-2">
+                    <div className="relative z-10 w-full h-1 bg-white/10 rounded-full overflow-hidden mt-2.5">
                       <div
                         className={`h-full bg-gradient-to-r ${meta.barColor} transition-all duration-700 rounded-full`}
                         style={{ width: `${option.percentage}%` }}

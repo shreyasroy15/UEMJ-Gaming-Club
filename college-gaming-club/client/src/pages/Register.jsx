@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Lock, Mail, User, Sparkles, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -53,15 +53,19 @@ const Register = () => {
   };
 
   return (
-    <div className="relative min-h-[85vh] flex items-center justify-center py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8">
+    <div className="relative h-[calc(100vh-5rem)] sm:h-[calc(100vh-6rem)] overflow-hidden flex items-center justify-center px-3.5 sm:px-6 lg:px-8">
       {/* Reusable Authentication Background Layer */}
       <div className="auth-background" aria-hidden="true" />
 
       <div className="relative z-10 max-w-md w-full space-y-5 sm:space-y-6 p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl shadow-2xl shadow-cyan-950/20">
         <div className="text-center space-y-2">
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-0.5 mx-auto flex items-center justify-center shadow-lg shadow-cyan-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-0.5 mx-auto flex items-center justify-center shadow-lg shadow-cyan-500/30">
+            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden">
+              <img
+                src="/assets/gaming-geeks-logo.png"
+                alt="Gaming Geeks Logo"
+                className="w-full h-full object-contain p-1"
+              />
             </div>
           </div>
           <h2 className="text-xl min-[400px]:text-2xl sm:text-3xl font-black text-white font-mono uppercase tracking-tight">
@@ -106,7 +110,7 @@ const Register = () => {
 
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-              University Email *
+              Email *
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />

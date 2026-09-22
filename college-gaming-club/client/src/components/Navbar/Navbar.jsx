@@ -642,19 +642,12 @@ const Navbar = () => {
                                   </span>
                                 </div>
                                 <p className="text-[11px] text-cyan-400/90 font-mono truncate">
-                                  @{user.username || 'gamer'}
+                                  {user.email}
                                 </p>
                               </div>
                             </div>
 
-                            <div className="mt-2.5 pt-2 border-t border-white/10 flex flex-col gap-0.5">
-                              <span className="text-[9px] uppercase font-mono tracking-wider text-slate-400">
-                                Signed in as
-                              </span>
-                              <span className="text-[11px] font-mono font-semibold text-slate-200 truncate" title={user.email}>
-                                {user.email}
-                              </span>
-                            </div>
+
                           </div>
 
                           {/* Navigation actions */}
@@ -694,9 +687,7 @@ const Navbar = () => {
                                     <p className="text-xs font-bold text-cyan-200 group-hover:text-cyan-100 truncate">
                                       Player Profile
                                     </p>
-                                    <p className="text-[10px] text-slate-400 font-mono truncate">
-                                      Stats, game IDs & team
-                                    </p>
+
                                   </div>
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-cyan-400/70 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all shrink-0" />
@@ -719,9 +710,7 @@ const Navbar = () => {
                                   <p className="text-xs font-semibold text-rose-300 group-hover:text-rose-200">
                                     Sign Out
                                   </p>
-                                  <p className="text-[10px] text-rose-400/70 font-mono">
-                                    End active session
-                                  </p>
+
                                 </div>
                               </div>
                               <ArrowRight className="w-4 h-4 text-rose-400/60 group-hover:text-rose-300 group-hover:translate-x-0.5 transition-all shrink-0" />

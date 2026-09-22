@@ -228,43 +228,6 @@ const Home = () => {
                 </Link>
               </div>
 
-              {/* Authenticated Student Athlete Pill Strip */}
-              {isAuthenticated && user && (
-                <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-left bg-slate-950/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-800/60 shadow-xl max-w-xl mx-auto">
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      user={user}
-                      size="md"
-                      className="w-10 h-10 rounded-xl border border-cyan-400/60"
-                      imgClassName="rounded-xl"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white font-mono">{user?.name}</span>
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500 text-slate-950">
-                          LVL {level}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-mono">
-                        {myTournaments.length} Arenas Registered • {xp} XP
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="w-full sm:w-48 space-y-1">
-                    <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                      <span>XP Progress</span>
-                      <span className="text-cyan-400">{xpPercentage}%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
-                        style={{ width: `${Math.max(10, xpPercentage)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </section>
 

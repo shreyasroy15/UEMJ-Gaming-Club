@@ -80,7 +80,7 @@ const Contact = () => {
 
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
-                University Email *
+                Email *
               </label>
               <input
                 type="email"
@@ -141,7 +141,7 @@ const Contact = () => {
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-cyan-400 shrink-0" />
-                <span>esports@uemjgaming.club</span>
+                <span>gaminggeeks@uem.edu.in</span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-cyan-400 shrink-0" />
