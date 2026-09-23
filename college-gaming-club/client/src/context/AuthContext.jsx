@@ -37,6 +37,25 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
+  // Listen for concurrent session termination (login on another device)
+  useEffect(() => {
+    const handleConcurrentSession = (e) => {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('gaming_club_token');
+      localStorage.removeItem('gaming_club_user');
+      const msg =
+        e.detail?.message ||
+        'Your account was logged in from another device. You have been logged out.';
+      alert(msg);
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('auth:concurrent_session', handleConcurrentSession);
+    return () =>
+      window.removeEventListener('auth:concurrent_session', handleConcurrentSession);
+  }, []);
+
   const login = async (email, password) => {
     try {
       const res = await API.post('/auth/login', { email, password });

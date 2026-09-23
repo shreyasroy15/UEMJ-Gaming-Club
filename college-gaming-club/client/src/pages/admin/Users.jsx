@@ -60,6 +60,7 @@ const AdminUsers = () => {
   // Users Data State
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -82,9 +83,9 @@ const AdminUsers = () => {
   // Profile Drawer State
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [drawerTab, setDrawerTab] = useState('overview'); // 'overview' | 'stats' | 'activity'
+  const [drawerTab, setDrawerTab] = useState('overview'); // 'overview' | 'activity'
   const [drawerLoading, setDrawerLoading] = useState(false);
-  const [userStats, setUserStats] = useState(null);
+
   const [userActivity, setUserActivity] = useState([]);
 
   // Edit User Modal State
@@ -159,9 +160,11 @@ const AdminUsers = () => {
   };
 
   // Fetch paginated & filtered users (supports parameter overrides for instant reset/refresh)
-  const fetchUsers = async (overrides = {}) => {
+  const fetchUsers = async (overrides = {}, soft = false) => {
     try {
-      setLoading(true);
+      if (!soft && users.length === 0) {
+        setLoading(true);
+      }
       setError(null);
 
       const params = {
@@ -201,24 +204,6 @@ const AdminUsers = () => {
     fetchUsers();
   }, [currentPage, limit, activeTab, debouncedSearch, selectedGame, selectedRole, selectedStatus, selectedTeam]);
 
-  // Automatically refresh users and stats when window gains focus or every 15 seconds
-  // so that any newly logged-in or registered user is immediately visible in the admin panel
-  useEffect(() => {
-    const handleFocus = () => {
-      fetchUsers();
-      fetchStatsOverview();
-    };
-    window.addEventListener('focus', handleFocus);
-    const interval = setInterval(() => {
-      fetchUsers();
-      fetchStatsOverview();
-    }, 15000);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
-    };
-  }, [currentPage, limit, activeTab, debouncedSearch, selectedGame, selectedRole, selectedStatus, selectedTeam]);
-
   // Close row action dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -239,6 +224,7 @@ const AdminUsers = () => {
 
   // Unified Refresh & Reset: Resets all filters/search and fetches latest data
   const handleRefreshAll = async () => {
+    setRefreshing(true);
     setSearchTerm('');
     setDebouncedSearch('');
     setSelectedGame('all');
@@ -252,20 +238,25 @@ const AdminUsers = () => {
 
     try {
       await Promise.all([
-        fetchUsers({
-          page: 1,
-          tab: 'all',
-          search: '',
-          game: 'all',
-          role: 'all',
-          status: 'all',
-          team: 'all',
-        }),
+        fetchUsers(
+          {
+            page: 1,
+            tab: 'all',
+            search: '',
+            game: 'all',
+            role: 'all',
+            status: 'all',
+            team: 'all',
+          },
+          true
+        ),
         fetchStatsOverview(),
       ]);
       addToast('✓ Users roster refreshed and filters reset', 'success');
     } catch {
       addToast('Failed to refresh roster', 'error');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -311,17 +302,13 @@ const AdminUsers = () => {
     setDrawerLoading(true);
 
     try {
-      // Fetch fresh user profile details (including live teamInfo), stats, and activity
-      const [userRes, statsRes, actRes] = await Promise.all([
+      // Fetch fresh user profile details (including live teamInfo) and activity
+      const [userRes, actRes] = await Promise.all([
         API.get(`/users/${userObj._id}`),
-        API.get(`/users/${userObj._id}/stats`),
-        API.get(`/users/${userObj._id}/activity`),
+        API.get(`/users/${userObj._id}/activity`).catch(() => ({ data: { success: true, activity: [] } })),
       ]);
       if (userRes.data.success && userRes.data.user) {
         setSelectedUser(userRes.data.user);
-      }
-      if (statsRes.data.success) {
-        setUserStats(statsRes.data.stats);
       }
       if (actRes.data.success) {
         setUserActivity(actRes.data.activity || []);
@@ -886,11 +873,12 @@ const AdminUsers = () => {
 
             <button
               onClick={handleRefreshAll}
+              disabled={refreshing}
               title="Refresh users roster and reset filters"
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs font-bold text-white shadow-md shadow-cyan-600/20 flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-xs font-bold text-white shadow-md shadow-cyan-600/20 flex items-center gap-1.5 transition-all disabled:opacity-70 cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>REFRESH</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              <span>{refreshing ? 'REFRESHING...' : 'REFRESH'}</span>
             </button>
           </div>
         </div>
@@ -1353,7 +1341,6 @@ const AdminUsers = () => {
             <div className="flex items-center border-b border-slate-100 px-6 bg-slate-50/70">
               {[
                 { id: 'overview', label: 'Overview', icon: Layers },
-                { id: 'stats', label: 'Stats', icon: BarChart3 },
                 { id: 'activity', label: 'Activity', icon: Activity },
               ].map((tab) => (
                 <button
@@ -1532,67 +1519,7 @@ const AdminUsers = () => {
                     )}
                   </div>
 
-                  {/* QUICK PLAYER STATS SNAPSHOT */}
-                  <div className="space-y-3">
-                    <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-slate-500">
-                      PLAYER STATISTICS
-                    </h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
-                        <span className="text-[10px] text-slate-500 font-mono uppercase block">Matches</span>
-                        <span className="text-xl font-black text-slate-900 font-mono">{userStats?.matches ?? 24}</span>
-                      </div>
-                      <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
-                        <span className="text-[10px] text-slate-500 font-mono uppercase block">Wins</span>
-                        <span className="text-xl font-black text-emerald-600 font-mono">{userStats?.wins ?? 7}</span>
-                      </div>
-                      <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
-                        <span className="text-[10px] text-slate-500 font-mono uppercase block">Kills</span>
-                        <span className="text-xl font-black text-sky-600 font-mono">{userStats?.kills ?? 86}</span>
-                      </div>
-                      <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-center shadow-xs">
-                        <span className="text-[10px] text-slate-500 font-mono uppercase block">Points</span>
-                        <span className="text-xl font-black text-purple-600 font-mono">{userStats?.points ?? 412}</span>
-                      </div>
-                    </div>
-                  </div>
                 </>
-              ) : drawerTab === 'stats' ? (
-                /* DETAILED STATS TAB */
-                <div className="space-y-4">
-                  <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3 shadow-xs">
-                    <span className="text-[11px] font-mono font-bold text-slate-600 uppercase">
-                      COMPETITIVE PERFORMANCE
-                    </span>
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                        <span className="text-[10px] text-slate-500 font-mono block">WIN RATE</span>
-                        <span className="text-lg font-black text-slate-900 font-mono">{userStats?.winRate || '29%'}</span>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                        <span className="text-[10px] text-slate-500 font-mono block">TOURNAMENTS</span>
-                        <span className="text-lg font-black text-purple-600 font-mono">{userStats?.tournamentParticipation || 1} Registered</span>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                        <span className="text-[10px] text-slate-500 font-mono block">MATCHES PLAYED</span>
-                        <span className="text-lg font-black text-sky-600 font-mono">{userStats?.matches || 24}</span>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                        <span className="text-[10px] text-slate-500 font-mono block">TOTAL ELIMINATIONS</span>
-                        <span className="text-lg font-black text-emerald-600 font-mono">{userStats?.kills || 86}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200 text-xs text-purple-900">
-                    <p className="font-bold flex items-center gap-1.5 text-purple-950">
-                      <Trophy className="w-4 h-4 text-purple-600" /> Database Live Analytics
-                    </p>
-                    <p className="text-[11px] text-slate-600 mt-1">
-                      Computed directly from tournament registrations and official room results.
-                    </p>
-                  </div>
-                </div>
               ) : (
                 /* RECENT ACTIVITY TIMELINE */
                 <div className="space-y-4">

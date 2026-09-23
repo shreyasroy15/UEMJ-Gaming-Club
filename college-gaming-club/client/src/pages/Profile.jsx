@@ -31,6 +31,18 @@ const Profile = () => {
   });
   const [saving, setSaving] = useState(false);
 
+  // Keep form data synced with current user profile
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        bio: user.bio || '',
+        avatar: user.avatar || '',
+        college: user.college || '',
+      });
+    }
+  }, [user]);
+
   // Sync latest user profile from server on mount
   useEffect(() => {
     const fetchLatestProfile = async () => {
@@ -56,7 +68,7 @@ const Profile = () => {
     const payload = {
       name: formData.name.trim(),
       bio: formData.bio?.trim() || '',
-      avatar: formData.avatar || '',
+      avatar: formData.avatar || user?.avatar || '',
       college: formData.college?.trim() || '',
     };
 
@@ -97,14 +109,25 @@ const Profile = () => {
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-5 sm:gap-6">
           <div className="flex flex-col min-[480px]:flex-row items-center min-[480px]:items-start gap-4 sm:gap-6 text-center min-[480px]:text-left w-full md:w-auto">
             {/* Avatar */}
-            <div className="relative shrink-0">
+            <div
+              className="relative shrink-0 cursor-pointer group"
+              onClick={() => setAvatarModalOpen(true)}
+              title="Click to choose character avatar"
+            >
               <Avatar
                 user={user}
                 size="2xl"
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/25"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/25 group-hover:scale-105 transition-all"
                 imgClassName="rounded-2xl"
                 textSize="text-3xl sm:text-4xl"
               />
+              <div className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity backdrop-blur-[2px]">
+                <Camera className="w-5 h-5 text-cyan-300 drop-shadow" />
+                <span className="text-[9px] font-bold mt-0.5 text-cyan-200">Change</span>
+              </div>
+              <span className="absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full bg-slate-900 border border-cyan-400 text-cyan-300 flex items-center justify-center shadow-md transition-transform group-hover:scale-110">
+                <Camera className="w-3 h-3" />
+              </span>
               <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500 font-mono shadow-md">
                 {user?.role || 'student'}
               </span>

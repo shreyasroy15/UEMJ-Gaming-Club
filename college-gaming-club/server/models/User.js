@@ -94,12 +94,6 @@ const userSchema = new mongoose.Schema(
         ref: 'Team',
       },
     ],
-    stats: {
-      matchesPlayed: { type: Number, default: 0 },
-      wins: { type: Number, default: 0 },
-      losses: { type: Number, default: 0 },
-      mvpCount: { type: Number, default: 0 },
-    },
     clubXP: {
       type: Number,
       default: 100,
@@ -120,6 +114,15 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpire: Date,
     lastLogin: {
       type: Date,
+    },
+    currentSessionId: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    lastLoginDevice: {
+      type: String,
+      default: '',
     },
   },
   {

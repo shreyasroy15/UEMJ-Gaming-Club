@@ -13,7 +13,7 @@ const normalizeRole = (role) => {
   return role || 'player';
 };
 
-// Helper to resolve detailed team info and verification status
+// Helper to resolve detailed team info and verification status (CURRENT TEAM ONLY)
 const resolveTeamInfo = async (u, captainIds = []) => {
   const rawTeam = (u.teamName || '').trim();
   const isFreeAgent =
@@ -22,76 +22,15 @@ const resolveTeamInfo = async (u, captainIds = []) => {
     rawTeam.toLowerCase() === 'none' ||
     rawTeam.toLowerCase() === 'solo';
 
-  if (isFreeAgent) {
-    return {
-      name: 'Free Agent',
-      isFreeAgent: true,
-      isVerified: null,
-      teamId: null,
-      teamType: null,
-      roleInTeam: 'Solo Player',
-      game: u.game || (u.games && u.games[0]) || 'BGMI',
-      memberCount: 0,
-      tag: '',
-    };
-  }
-
-  const teamRegex = new RegExp(`^${rawTeam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-
-  // 1. Check TournamentRegistration matching the user's specific team name
-  let reg = await TournamentRegistration.findOne({ teamName: teamRegex })
-    .sort({ createdAt: -1 })
-    .select('teamName isVerified status players game teamTag captain leader')
-    .lean();
-
-  if (!reg) {
-    reg = await TournamentRegistration.findOne({
-      $or: [
-        { captain: u._id },
-        { leader: u._id },
-        { 'players.user': u._id },
-      ],
-    })
-      .sort({ createdAt: -1 })
-      .select('teamName isVerified status players game teamTag captain leader')
-      .lean();
-  }
-
-  if (reg) {
-    const isCaptain = Boolean(
-      (reg.captain && reg.captain.toString() === u._id.toString()) ||
-      (reg.leader && reg.leader.toString() === u._id.toString()) ||
-      u.role === 'captain' ||
-      captainIds.includes(u._id.toString())
-    );
-    return {
-      name: reg.teamName,
-      tag: reg.teamTag || '',
-      isFreeAgent: false,
-      isVerified: Boolean(reg.isVerified || reg.status === 'verified'),
-      teamId: reg._id,
-      teamType: 'registration',
-      roleInTeam: isCaptain ? 'Captain' : 'Player',
-      game: reg.game || u.game || (u.games && u.games[0]) || 'BGMI',
-      memberCount: Array.isArray(reg.players) ? reg.players.length : 4,
-    };
-  }
-
-  // 2. Check Team model matching the user's specific team name
-  let teamDoc = await Team.findOne({ name: teamRegex })
+  // 1. Check if user is an active member or captain in an existing Team
+  let teamDoc = await Team.findOne({
+    $or: [
+      { captain: u._id },
+      { 'members.user': u._id },
+    ],
+  })
     .select('name isVerified game members tag captain')
     .lean();
-
-  if (!teamDoc) {
-    teamDoc = await Team.findOne({
-      $or: [
-        { captain: u._id },
-        { 'members.user': u._id },
-      ],
-    })
-      .select('name isVerified game members tag captain')
-      .lean();
-  }
 
   if (teamDoc) {
     const isCaptain = Boolean(
@@ -108,26 +47,65 @@ const resolveTeamInfo = async (u, captainIds = []) => {
       teamType: 'team',
       roleInTeam: isCaptain ? 'Captain' : 'Player',
       game: teamDoc.game || u.game || (u.games && u.games[0]) || 'BGMI',
-      memberCount: Array.isArray(teamDoc.members) ? teamDoc.members.length : 4,
+      memberCount: Array.isArray(teamDoc.members) ? teamDoc.members.length : 1,
     };
   }
 
-  // 3. Fallback: custom team name assigned in User collection
-  const sameTeamUsers = await User.countDocuments({
-    teamName: teamRegex,
-    isDeleted: false,
-  });
+  // 2. If user has a current team name assigned to their profile (and not free agent)
+  if (!isFreeAgent) {
+    const teamRegex = new RegExp(`^${rawTeam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const namedTeam = await Team.findOne({ name: teamRegex })
+      .select('name isVerified game members tag captain')
+      .lean();
 
+    if (namedTeam) {
+      const isCaptain = Boolean(
+        (namedTeam.captain && namedTeam.captain.toString() === u._id.toString()) ||
+        u.role === 'captain' ||
+        captainIds.includes(u._id.toString())
+      );
+      return {
+        name: namedTeam.name,
+        tag: namedTeam.tag || '',
+        isFreeAgent: false,
+        isVerified: Boolean(namedTeam.isVerified),
+        teamId: namedTeam._id,
+        teamType: 'team',
+        roleInTeam: isCaptain ? 'Captain' : 'Player',
+        game: namedTeam.game || u.game || (u.games && u.games[0]) || 'BGMI',
+        memberCount: Array.isArray(namedTeam.members) ? namedTeam.members.length : 1,
+      };
+    }
+
+    const sameTeamUsers = await User.countDocuments({
+      teamName: teamRegex,
+      isDeleted: false,
+    });
+
+    return {
+      name: rawTeam,
+      tag: '',
+      isFreeAgent: false,
+      isVerified: false,
+      teamId: null,
+      teamType: 'custom',
+      roleInTeam: u.role === 'captain' ? 'Captain' : 'Player',
+      game: u.game || (u.games && u.games[0]) || 'BGMI',
+      memberCount: sameTeamUsers || 1,
+    };
+  }
+
+  // 3. User has no active team: ALWAYS Free Agent
   return {
-    name: rawTeam,
-    tag: '',
-    isFreeAgent: false,
-    isVerified: false,
+    name: 'Free Agent',
+    isFreeAgent: true,
+    isVerified: null,
     teamId: null,
-    teamType: 'custom',
-    roleInTeam: u.role === 'captain' ? 'Captain' : 'Player',
+    teamType: null,
+    roleInTeam: 'Solo Player',
     game: u.game || (u.games && u.games[0]) || 'BGMI',
-    memberCount: sameTeamUsers || 1,
+    memberCount: 0,
+    tag: '',
   };
 };
 
@@ -157,12 +135,9 @@ exports.getUsers = async (req, res, next) => {
       status: { $ne: 'deleted' },
     };
 
-    // Retrieve captain IDs across registrations & teams
-    const [regCaptains, teamCaptains] = await Promise.all([
-      TournamentRegistration.distinct('captain'),
-      Team.distinct('captain'),
-    ]);
-    const captainIds = [...new Set([...regCaptains, ...teamCaptains].map((id) => id && id.toString()))].filter(Boolean);
+    // Retrieve captain IDs from active teams
+    const teamCaptains = await Team.distinct('captain');
+    const captainIds = [...new Set(teamCaptains.map((id) => id && id.toString()))].filter(Boolean);
 
     // Tab-based pre-filtering
     if (tab === 'players') {
@@ -263,12 +238,11 @@ exports.getUsers = async (req, res, next) => {
     );
 
     // Get list of distinct team names for filter dropdown and team assignment
-    const [userTeams, clubTeams, regTeams] = await Promise.all([
+    const [userTeams, clubTeams] = await Promise.all([
       User.distinct('teamName', { teamName: { $nin: ['', null, 'Free Agent', 'free agent', 'Solo'] }, isDeleted: false }),
       Team.distinct('name'),
-      TournamentRegistration.distinct('teamName'),
     ]);
-    const distinctTeams = [...new Set([...userTeams, ...clubTeams, ...regTeams].filter(Boolean))].sort();
+    const distinctTeams = [...new Set([...userTeams, ...clubTeams].filter(Boolean))].sort();
 
     res.status(200).json({
       success: true,
@@ -295,12 +269,9 @@ exports.getUserStatsOverview = async (req, res, next) => {
       status: { $ne: 'deleted' },
     };
 
-    // Retrieve captain IDs across registrations & teams
-    const [regCaptains, teamCaptains] = await Promise.all([
-      TournamentRegistration.distinct('captain'),
-      Team.distinct('captain'),
-    ]);
-    const captainIds = [...new Set([...regCaptains, ...teamCaptains].map((id) => id && id.toString()))].filter(Boolean);
+    // Retrieve captain IDs from active teams
+    const teamCaptains = await Team.distinct('captain');
+    const captainIds = [...new Set(teamCaptains.map((id) => id && id.toString()))].filter(Boolean);
 
     const [
       totalUsers,
@@ -364,13 +335,6 @@ exports.getUserById = async (req, res, next) => {
     // Resolve team info with verification
     const teamInfo = await resolveTeamInfo(user);
 
-    // Calculate actual player stats from matches & user stats
-    const matchesCount = user.stats?.matchesPlayed || 0;
-    const winsCount = user.stats?.wins || 0;
-    const calculatedKills = (user.stats?.matchesPlayed || 0) * 3 + (user.stats?.wins || 0) * 5 + 14;
-    const calculatedPoints = winsCount * 25 + (user.stats?.matchesPlayed || 0) * 10;
-    const winRate = matchesCount > 0 ? Math.round((winsCount / matchesCount) * 100) : 0;
-
     res.status(200).json({
       success: true,
       user: {
@@ -381,14 +345,6 @@ exports.getUserById = async (req, res, next) => {
         game: user.game || (user.games && user.games[0]) || 'BGMI',
         gameId: user.gameId || `@${user.username}`,
         teamInfo,
-        stats: {
-          matches: matchesCount,
-          wins: winsCount,
-          kills: calculatedKills,
-          points: calculatedPoints,
-          winRate: `${winRate}%`,
-          tournamentParticipation: 1,
-        },
       },
     });
   } catch (error) {
@@ -563,20 +519,7 @@ exports.updateUser = async (req, res, next) => {
     if (gameId !== undefined) userToEdit.gameId = gameId.trim();
     if (teamName !== undefined) userToEdit.teamName = teamName.trim();
     if (status) userToEdit.status = status.toLowerCase();
-    if (req.body.stats) {
-      if (!userToEdit.stats) userToEdit.stats = {};
-      const { matchesPlayed, wins, losses, matches } = req.body.stats;
-      const m = matchesPlayed !== undefined ? Number(matchesPlayed) : (matches !== undefined ? Number(matches) : userToEdit.stats.matchesPlayed);
-      const w = wins !== undefined ? Number(wins) : userToEdit.stats.wins;
-      const l = losses !== undefined ? Number(losses) : userToEdit.stats.losses;
 
-      if (!isNaN(m)) userToEdit.stats.matchesPlayed = Math.max(0, m);
-      if (!isNaN(w)) userToEdit.stats.wins = Math.max(0, w);
-      if (!isNaN(l)) userToEdit.stats.losses = Math.max(0, l);
-      if (req.body.stats.mvpCount !== undefined) {
-        userToEdit.stats.mvpCount = Number(req.body.stats.mvpCount) || 0;
-      }
-    }
 
     // Check role elevation permissions
     if (role && role !== userToEdit.role) {
@@ -738,59 +681,10 @@ exports.getUserStats = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Query registrations where user participated
-    const registrations = await TournamentRegistration.find({
-      $or: [
-        { captain: user._id },
-        { leader: user._id },
-        { 'players.user': user._id },
-      ],
-    }).select('tournament status isVerified teamName');
-
-    const regIds = registrations.map((r) => r._id);
-
-    // Query matches involving this user's teams
-    const matches = await Match.find({
-      $or: [
-        { teams: { $in: regIds } },
-        { 'results.team': { $in: regIds } },
-      ],
-    }).lean();
-
-    let totalKills = 0;
-    let totalPoints = 0;
-    let winsCount = 0;
-
-    matches.forEach((m) => {
-      if (m.winner && regIds.some((id) => id.toString() === m.winner.toString())) {
-        winsCount += 1;
-      }
-      if (Array.isArray(m.results)) {
-        m.results.forEach((resItem) => {
-          if (resItem.team && regIds.some((id) => id.toString() === resItem.team.toString())) {
-            totalKills += resItem.kills || 0;
-            totalPoints += resItem.totalPoints || 0;
-          }
-        });
-      }
-    });
-
-    const matchesPlayed = Math.max(matches.length, user.stats?.matchesPlayed || 0);
-    const wins = Math.max(winsCount, user.stats?.wins || 0);
-    const kills = totalKills || (matchesPlayed * 3 + wins * 4);
-    const points = totalPoints || (wins * 25 + matchesPlayed * 10);
-    const winRate = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
-
+    // Stats tracking has been removed - return empty response for backward compatibility
     res.status(200).json({
       success: true,
-      stats: {
-        matches: matchesPlayed,
-        wins,
-        kills,
-        points,
-        winRate: `${winRate}%`,
-        tournamentParticipation: registrations.length || 1,
-      },
+      stats: {},
     });
   } catch (error) {
     next(error);

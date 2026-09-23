@@ -66,9 +66,21 @@ API.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
+      const isConcurrent = error.response.data?.code === 'CONCURRENT_LOGIN_DETECTED';
       if (localStorage.getItem('gaming_club_token')) {
         localStorage.removeItem('gaming_club_token');
         localStorage.removeItem('gaming_club_user');
+      }
+      if (isConcurrent && typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('auth:concurrent_session', {
+            detail: {
+              message:
+                error.response.data?.message ||
+                'Your account was logged in from another device. You have been logged out.',
+            },
+          })
+        );
       }
     }
     return Promise.reject(error);

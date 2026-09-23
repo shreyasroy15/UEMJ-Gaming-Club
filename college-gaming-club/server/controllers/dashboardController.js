@@ -45,7 +45,16 @@ exports.getDashboardStats = async (req, res, next) => {
         .populate('tournament', 'name game banner')
         .populate('captain', 'name username')
         .sort({ updatedAt: -1 })
-        .limit(8),
+        .limit(20)
+        .then((regs) => {
+          const seen = new Set();
+          return regs.filter((reg) => {
+            const captainId = reg.captain?._id?.toString() || reg.captain?.toString();
+            if (!captainId || seen.has(captainId)) return false;
+            seen.add(captainId);
+            return true;
+          }).slice(0, 8);
+        }),
       Match.find({ status: 'live' })
         .populate('tournament', 'name game banner')
         .populate('teams', 'teamName teamTag')

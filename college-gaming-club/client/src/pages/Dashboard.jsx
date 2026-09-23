@@ -111,11 +111,6 @@ const Dashboard = () => {
   const nextLevelXp = level * 500;
   const xpPercentage = Math.min(100, Math.round((xp % 500) / 5));
 
-  const stats = user?.stats || {};
-  const matchesPlayed = stats.matchesPlayed || myTournaments.length * 2 || 0;
-  const wins = stats.wins || (matchesPlayed > 0 ? Math.floor(matchesPlayed * 0.65) : 0);
-  const winRate = matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
-
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8 animate-in fade-in duration-300">
       {/* Top Welcome Banner */}
@@ -201,8 +196,8 @@ const Dashboard = () => {
         </div>
       </section>
 
-      {/* 4 Stat Cards */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+      {/* 2 Stat Cards */}
+      <section className="grid grid-cols-2 gap-3 sm:gap-6">
         {/* Stat 1: Tournaments */}
         <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden group hover:border-cyan-500/40 transition-all">
           <div className="flex items-center justify-between">
@@ -217,52 +212,12 @@ const Dashboard = () => {
             <span className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-mono">
               {myTournaments.length}
             </span>
-            <span className="text-[10px] sm:text-[11px] text-cyan-400 font-semibold font-mono">Active</span>
+            <span className="text-[10px] sm:text-[11px] text-cyan-400 font-semibold font-mono">Registered</span>
           </div>
           <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Collegiate brackets</p>
         </div>
 
-        {/* Stat 2: Matches */}
-        <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden group hover:border-indigo-500/40 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-              Matches
-            </span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform shrink-0">
-              <Swords className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-          </div>
-          <div className="mt-2 sm:mt-3 flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-mono">
-              {matchesPlayed}
-            </span>
-            <span className="text-[10px] sm:text-[11px] text-indigo-400 font-semibold font-mono">Rounds</span>
-          </div>
-          <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Across scrims & cups</p>
-        </div>
-
-        {/* Stat 3: Wins */}
-        <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
-              Victories
-            </span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform shrink-0">
-              <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
-          </div>
-          <div className="mt-2 sm:mt-3 flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-mono">
-              {wins}
-            </span>
-            <span className="text-[10px] sm:text-[11px] text-emerald-400 font-semibold font-mono">
-              {winRate}% WR
-            </span>
-          </div>
-          <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Collegiate win ratio</p>
-        </div>
-
-        {/* Stat 4: Club XP */}
+        {/* Stat 2: Club XP */}
         <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider truncate">
@@ -276,9 +231,9 @@ const Dashboard = () => {
             <span className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-mono">
               {xp}
             </span>
-            <span className="text-[10px] sm:text-[11px] text-amber-400 font-semibold font-mono">Tier II</span>
+            <span className="text-[10px] sm:text-[11px] text-amber-400 font-semibold font-mono">LVL {level}</span>
           </div>
-          <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Rank: Gold Challenger</p>
+          <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 truncate">Club Member XP</p>
         </div>
       </section>
 

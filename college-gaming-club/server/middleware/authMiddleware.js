@@ -31,6 +31,19 @@ const protect = async (req, res, next) => {
       });
     }
 
+    // Invalidate session if another device has logged in with a newer session
+    if (
+      decoded.sessionId &&
+      user.currentSessionId &&
+      decoded.sessionId !== user.currentSessionId
+    ) {
+      return res.status(401).json({
+        success: false,
+        code: 'CONCURRENT_LOGIN_DETECTED',
+        message: 'Your account was logged in from another device. You have been logged out.',
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {

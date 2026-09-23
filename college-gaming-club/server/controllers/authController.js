@@ -3,16 +3,37 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const { getCapitalLetterAvatarUrl } = require('../utils/avatar');
 
-// Helper to generate JWT token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'supersecretjwtkey_change_in_production', {
-    expiresIn: '30d',
-  });
+// Helper to generate JWT token with unique session identifier
+const generateToken = (id, sessionId) => {
+  return jwt.sign(
+    { id, sessionId },
+    process.env.JWT_SECRET || 'supersecretjwtkey_change_in_production',
+    {
+      expiresIn: '30d',
+    }
+  );
 };
 
-// Set token cookie & return user object
-const sendTokenResponse = (user, statusCode, res) => {
-  const token = generateToken(user._id);
+// Set token cookie & return user object with unique active session tracking
+const sendTokenResponse = async (user, statusCode, res, req = null) => {
+  const sessionId = crypto.randomUUID();
+  const userAgent = req?.headers ? req.headers['user-agent'] || '' : '';
+
+  // Invalidate any previous device session by assigning new unique session ID
+  const updatedDoc = await User.findByIdAndUpdate(
+    user._id,
+    {
+      currentSessionId: sessionId,
+      lastLogin: new Date(),
+      lastLoginDevice: userAgent,
+      status: user.status === 'suspended' ? 'suspended' : 'active',
+      isDeleted: false,
+      avatar: user.avatar,
+    },
+    { new: true }
+  ).select('-password');
+
+  const token = generateToken(user._id, sessionId);
 
   const options = {
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -23,6 +44,8 @@ const sendTokenResponse = (user, statusCode, res) => {
     options.secure = true;
   }
 
+  const currentUser = updatedDoc || user;
+
   res
     .status(statusCode)
     .cookie('token', token, options)
@@ -30,19 +53,19 @@ const sendTokenResponse = (user, statusCode, res) => {
       success: true,
       token,
       user: {
-        _id: user._id,
-        name: user.name,
-        username: user.username,
-        email: user.email,
-        college: user.college,
-        avatar: user.avatar,
-        role: user.role,
-        bio: user.bio,
-        games: user.games,
-        stats: user.stats,
-        clubXP: user.clubXP || 100,
-        level: user.level || 1,
-        achievements: user.achievements,
+        _id: currentUser._id,
+        name: currentUser.name,
+        username: currentUser.username,
+        email: currentUser.email,
+        college: currentUser.college,
+        avatar: currentUser.avatar,
+        role: currentUser.role,
+        bio: currentUser.bio,
+        games: currentUser.games,
+        stats: currentUser.stats,
+        clubXP: currentUser.clubXP || 100,
+        level: currentUser.level || 1,
+        achievements: currentUser.achievements,
       },
     });
 };
@@ -89,7 +112,7 @@ exports.register = async (req, res, next) => {
       avatar: getCapitalLetterAvatarUrl(name, username),
     });
 
-    sendTokenResponse(user, 201, res);
+    await sendTokenResponse(user, 201, res, req);
   } catch (error) {
     next(error);
   }
@@ -162,15 +185,7 @@ exports.login = async (req, res, next) => {
       user.avatar = getCapitalLetterAvatarUrl(user.name, user.username);
     }
 
-    // Automatically ensure active status, record last login, and persist updated avatar
-    await User.findByIdAndUpdate(user._id, {
-      lastLogin: new Date(),
-      status: user.status === 'suspended' ? 'suspended' : 'active',
-      isDeleted: false,
-      avatar: user.avatar,
-    });
-
-    sendTokenResponse(user, 200, res);
+    await sendTokenResponse(user, 200, res, req);
   } catch (error) {
     next(error);
   }
@@ -198,7 +213,26 @@ exports.getMe = async (req, res, next) => {
 // @desc    Logout user / clear cookie
 // @route   POST /api/auth/logout
 // @access  Public
-exports.logout = (req, res) => {
+exports.logout = async (req, res) => {
+  try {
+    // If auth token was passed, clear session ID from database
+    let token = req.cookies?.token;
+    if (!token && req.headers?.authorization?.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    if (token) {
+      try {
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET || 'supersecretjwtkey_change_in_production'
+        );
+        if (decoded?.id) {
+          await User.findByIdAndUpdate(decoded.id, { currentSessionId: null });
+        }
+      } catch (err) {}
+    }
+  } catch (e) {}
+
   res.cookie('token', 'none', {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
@@ -303,44 +337,32 @@ exports.updateProfile = async (req, res, next) => {
       });
     }
 
-    const { name, bio, college, phone, game, gameId, avatar, stats } = req.body;
+    const { name, bio, college, phone, game, gameId, avatar } = req.body;
 
-    if (name) user.name = name.trim();
-    if (bio !== undefined) user.bio = bio;
-    if (college !== undefined) user.college = college.trim();
-    if (phone !== undefined) user.phone = phone.trim();
-    if (game) {
-      user.game = game;
-      if (!user.games) user.games = [];
-      if (!user.games.includes(game)) user.games.push(game);
-    }
-    if (gameId !== undefined) user.gameId = gameId.trim();
+    const updateFields = {};
+    if (name) updateFields.name = name.trim();
+    if (bio !== undefined) updateFields.bio = bio;
+    if (college !== undefined) updateFields.college = college.trim();
+    if (phone !== undefined) updateFields.phone = phone.trim();
+    if (gameId !== undefined) updateFields.gameId = gameId.trim();
     if (avatar !== undefined) {
-      user.avatar = avatar ? avatar.trim() : '';
+      updateFields.avatar = avatar ? avatar.trim() : '';
     }
-    if (stats) {
-      if (!user.stats) user.stats = {};
-      const matchesPlayed = stats.matchesPlayed !== undefined ? Number(stats.matchesPlayed) : (stats.matches !== undefined ? Number(stats.matches) : user.stats.matchesPlayed);
-      const wins = stats.wins !== undefined ? Number(stats.wins) : user.stats.wins;
-      const losses = stats.losses !== undefined ? Number(stats.losses) : user.stats.losses;
-
-      if (!isNaN(matchesPlayed)) user.stats.matchesPlayed = Math.max(0, matchesPlayed);
-      if (!isNaN(wins)) user.stats.wins = Math.max(0, wins);
-      if (!isNaN(losses)) user.stats.losses = Math.max(0, losses);
-      if (stats.mvpCount !== undefined) {
-        user.stats.mvpCount = Number(stats.mvpCount) || 0;
-      }
+    if (game) {
+      updateFields.game = game;
+      await User.findByIdAndUpdate(req.user.id, { $addToSet: { games: game } });
     }
 
-    await user.save();
-
-    const result = user.toObject();
-    delete result.password;
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateFields },
+      { new: true }
+    ).select('-password');
 
     res.status(200).json({
       success: true,
       message: 'Profile and avatar updated successfully',
-      user: result,
+      user: updatedUser,
     });
   } catch (error) {
     next(error);

@@ -25,6 +25,7 @@ import {
   Clock,
   AlertTriangle,
   ShieldCheck,
+  Megaphone,
 } from 'lucide-react';
 import API from '../../services/api';
 
@@ -52,6 +53,7 @@ const Navbar = () => {
     { label: 'Tournaments', href: '/tournaments' },
     { label: 'Points Table', href: '/points-table' },
     { label: 'Gallery', href: '/gallery' },
+    { label: 'Announcements', href: '/news' },
     { label: 'About', href: '/about' },
   ];
 
@@ -319,8 +321,12 @@ const Navbar = () => {
                               const nextOpen = !invitationsOpen;
                               setInvitationsOpen(nextOpen);
                               if (nextOpen) {
-                                if (unreadNotifCount > 0) setActiveNotifTab('updates');
-                                else if (invitations.length > 0) setActiveNotifTab('invites');
+                                if (unreadNotifCount > 0) {
+                                  setActiveNotifTab('updates');
+                                  handleMarkAllRead();
+                                } else if (invitations.length > 0) {
+                                  setActiveNotifTab('invites');
+                                }
                               }
                             }}
                             className={`relative p-2 rounded-full backdrop-blur-xl transition-all cursor-pointer border ${
@@ -348,7 +354,10 @@ const Navbar = () => {
                             <div className="flex items-center gap-1 bg-slate-900/90 p-0.5 rounded-xl border border-white/10">
                               <button
                                 type="button"
-                                onClick={() => setActiveNotifTab('updates')}
+                                onClick={() => {
+                                  setActiveNotifTab('updates');
+                                  if (unreadNotifCount > 0) handleMarkAllRead();
+                                }}
                                 className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                                   activeNotifTab === 'updates'
                                     ? 'bg-cyan-500 text-slate-950 shadow-sm'
@@ -418,6 +427,10 @@ const Navbar = () => {
                                     const isResults = notif.type === 'match_results' || notif.type === 'tournament_results';
                                     const isRejected = notif.type === 'verification_rejected';
                                     const isApproved = notif.type === 'verification_approved';
+                                    const isAnnouncement =
+                                      notif.type === 'tournament_announcement' ||
+                                      notif.type === 'system' ||
+                                      (notif.title && notif.title.toLowerCase().includes('announcement'));
 
                                     return (
                                       <div
@@ -429,6 +442,8 @@ const Navbar = () => {
                                               ? 'bg-rose-950/30 hover:bg-rose-950/50 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.15)]'
                                               : isApproved
                                               ? 'bg-emerald-950/30 hover:bg-emerald-950/50 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                                              : isAnnouncement
+                                              ? 'bg-indigo-950/35 hover:bg-indigo-950/55 border-indigo-500/40 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
                                               : 'bg-cyan-950/30 hover:bg-cyan-950/50 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]'
                                             : 'bg-slate-900/60 hover:bg-slate-900/90 border-slate-800'
                                         }`}
@@ -440,6 +455,8 @@ const Navbar = () => {
                                                 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
                                                 : isApproved
                                                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                                : isAnnouncement
+                                                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/35 shadow-[0_0_10px_rgba(99,102,241,0.2)]'
                                                 : isMatchCreds
                                                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                                                 : isLive
@@ -453,6 +470,8 @@ const Navbar = () => {
                                               <AlertTriangle className="w-3.5 h-3.5" />
                                             ) : isApproved ? (
                                               <ShieldCheck className="w-3.5 h-3.5" />
+                                            ) : isAnnouncement ? (
+                                              <Megaphone className="w-3.5 h-3.5 text-indigo-300" />
                                             ) : isMatchCreds ? (
                                               <Key className="w-3.5 h-3.5" />
                                             ) : isLive ? (
@@ -473,6 +492,8 @@ const Navbar = () => {
                                                       ? 'text-rose-200'
                                                       : isApproved
                                                       ? 'text-emerald-200'
+                                                      : isAnnouncement
+                                                      ? 'text-indigo-200'
                                                       : 'text-white'
                                                     : 'text-slate-300'
                                                 }`}
@@ -493,6 +514,14 @@ const Navbar = () => {
                                                     ? 'text-rose-400'
                                                     : isApproved
                                                     ? 'text-emerald-400'
+                                                    : isAnnouncement
+                                                    ? 'text-indigo-300'
+                                                    : isMatchCreds
+                                                    ? 'text-amber-400'
+                                                    : isLive
+                                                    ? 'text-rose-400'
+                                                    : isResults
+                                                    ? 'text-emerald-400'
                                                     : 'text-cyan-400'
                                                 }`}
                                               >
@@ -501,7 +530,15 @@ const Navbar = () => {
                                                     ? 'Upload single merged PDF'
                                                     : isApproved
                                                     ? 'View verified team'
-                                                    : 'View match & credentials'}
+                                                    : isAnnouncement
+                                                    ? 'Read announcement'
+                                                    : isMatchCreds
+                                                    ? 'View match & credentials'
+                                                    : isLive
+                                                    ? 'Watch live stream'
+                                                    : isResults
+                                                    ? 'View match results'
+                                                    : 'View details'}
                                                 </span>
                                                 <ArrowRight className="w-2.5 h-2.5" />
                                               </span>
@@ -512,6 +549,8 @@ const Navbar = () => {
                                                       ? 'bg-rose-400'
                                                       : isApproved
                                                       ? 'bg-emerald-400'
+                                                      : isAnnouncement
+                                                      ? 'bg-indigo-400'
                                                       : 'bg-cyan-400'
                                                   }`}
                                                 ></span>
