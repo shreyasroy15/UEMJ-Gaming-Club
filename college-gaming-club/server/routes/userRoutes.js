@@ -5,6 +5,7 @@ const {
   getUserStatsOverview,
   getUserById,
   createUser,
+  createAdminUser,
   updateUser,
   suspendUser,
   activateUser,
@@ -26,6 +27,9 @@ router.get('/export', protect, adminOnly, exportUsersCsv);
 
 // Search user by username (existing registration feature preserved)
 router.get('/search/:username', protect, searchUserByUsername);
+
+// Create dedicated Admin account
+router.post('/create-admin', protect, adminOnly, createAdminUser);
 
 // User CRUD collection
 router

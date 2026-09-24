@@ -37,6 +37,10 @@ import {
   Check,
   Copy,
   Layers,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
 } from 'lucide-react';
 
 const AdminUsers = () => {
@@ -123,6 +127,17 @@ const AdminUsers = () => {
     confirmButtonClass: 'bg-purple-600 hover:bg-purple-500',
   });
 
+  // Create Admin Modal State
+  const [createAdminModalOpen, setCreateAdminModalOpen] = useState(false);
+  const [createAdminData, setCreateAdminData] = useState({
+    email: '',
+    password: '',
+    name: '',
+    username: '',
+  });
+  const [createAdminLoading, setCreateAdminLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   // Action Dropdown Menu per row
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [copiedToken, setCopiedToken] = useState(null);
@@ -139,8 +154,12 @@ const AdminUsers = () => {
   useEffect(() => {
     const roleParam = searchParams.get('role');
     const gameParam = searchParams.get('game');
+    const createParam = searchParams.get('create');
     if (roleParam) setSelectedRole(roleParam);
     if (gameParam) setSelectedGame(gameParam);
+    if (createParam === 'true' || createParam === 'admin') {
+      setCreateAdminModalOpen(true);
+    }
   }, [searchParams]);
 
   // Fetch overview statistics
@@ -259,6 +278,9 @@ const AdminUsers = () => {
       setRefreshing(false);
     }
   };
+
+  // Reset all filters shortcut
+  const handleResetFilters = handleRefreshAll;
 
   // Export to CSV
   const handleExport = async () => {
@@ -404,6 +426,47 @@ const AdminUsers = () => {
       addToast(err.response?.data?.message || '❌ Failed to update user', 'error');
     } finally {
       setSubmittingEdit(false);
+    }
+  };
+
+  // Open Create Admin Modal
+  const handleOpenCreateAdmin = () => {
+    setCreateAdminData({
+      email: '',
+      password: '',
+      name: '',
+      username: '',
+    });
+    setShowPassword(false);
+    setCreateAdminModalOpen(true);
+  };
+
+  // Submit Create Admin Account
+  const handleCreateAdminSubmit = async (e) => {
+    e.preventDefault();
+    if (!createAdminData.email.trim() || !createAdminData.password.trim()) {
+      addToast('Email and Password are required', 'error');
+      return;
+    }
+    if (createAdminData.password.trim().length < 6) {
+      addToast('Password must be at least 6 characters long', 'error');
+      return;
+    }
+
+    try {
+      setCreateAdminLoading(true);
+      const res = await API.post('/users/create-admin', createAdminData);
+      addToast(res.data.message || 'Admin created successfully!', 'success');
+      setCreateAdminModalOpen(false);
+      setCreateAdminData({ email: '', password: '', name: '', username: '' });
+      setSelectedRole('admin');
+      fetchUsers({ role: 'admin', page: 1 });
+      fetchStatsOverview();
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to create admin user', 'error');
+    } finally {
+      setCreateAdminLoading(false);
     }
   };
 
@@ -706,6 +769,15 @@ const AdminUsers = () => {
             <p className="text-sm text-slate-600 leading-relaxed font-medium">
               Manage players, captains and administrators. Control account access and manage the UEM Gaming Club community.
             </p>
+            <div className="pt-1 flex items-center gap-3">
+              <button
+                onClick={handleOpenCreateAdmin}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold tracking-wide shadow-md shadow-purple-600/30 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>+ Create New Admin</span>
+              </button>
+            </div>
           </div>
 
           {/* Right-side esports badge/visual */}
@@ -843,7 +915,22 @@ const AdminUsers = () => {
           </div>
 
           {/* Filter Dropdowns */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            {/* Role Filter */}
+            <select
+              value={selectedRole}
+              onChange={(e) => {
+                setSelectedRole(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-purple-500 font-mono min-w-[120px]"
+            >
+              <option value="all">All Roles</option>
+              <option value="admin">Admins</option>
+              <option value="captain">Captains</option>
+              <option value="player">Players</option>
+            </select>
+
             {/* Game Filter */}
             <select
               value={selectedGame}
@@ -851,7 +938,7 @@ const AdminUsers = () => {
                 setSelectedGame(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-purple-500 font-mono min-w-[130px]"
+              className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-purple-500 font-mono min-w-[120px]"
             >
               <option value="all">All Games</option>
               <option value="BGMI">BGMI</option>
@@ -860,12 +947,21 @@ const AdminUsers = () => {
             </select>
           </div>
 
-          {/* Action Buttons: Export, Refresh */}
+          {/* Action Buttons: Create Admin, Export, Refresh */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleOpenCreateAdmin}
+              title="Create a new Administrator account"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-purple-600/25 flex items-center gap-1.5 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Create Admin</span>
+            </button>
+
             <button
               onClick={handleExport}
               title="Export filtered dataset to CSV"
-              className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 border border-slate-200 shadow-sm flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 border border-slate-200 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-cyan-600" />
               <span>Export</span>
@@ -1954,6 +2050,151 @@ const AdminUsers = () => {
                 {confirmModal.confirmButtonText}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================
+          CREATE ADMIN MODAL
+          ================================================== */}
+      {createAdminModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => !createAdminLoading && setCreateAdminModalOpen(false)}
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150"
+          />
+          <div className="relative z-10 w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 shadow-sm">
+                  <Shield className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 font-mono">CREATE ADMIN</h3>
+                  <p className="text-xs text-slate-500">Provision a normal administrator account</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreateAdminModalOpen(false)}
+                disabled={createAdminLoading}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Info notice about permissions */}
+            <div className="p-3 bg-purple-50/70 border border-purple-200/80 rounded-2xl flex items-start gap-2.5">
+              <Shield className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-purple-900 leading-relaxed">
+                This account will be created with <strong>Standard Administrator</strong> permissions — capable of managing tournaments, matches, teams, registrations, and club content.
+              </p>
+            </div>
+
+            <form onSubmit={handleCreateAdminSubmit} className="space-y-4">
+              {/* Email Address */}
+              <div>
+                <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
+                  Email Address *
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. newadmin@uemj.ac.in"
+                    value={createAdminData.email}
+                    onChange={(e) => setCreateAdminData({ ...createAdminData, email: e.target.value })}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
+                  Password *
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="Minimum 6 characters"
+                    value={createAdminData.password}
+                    onChange={(e) => setCreateAdminData({ ...createAdminData, password: e.target.value })}
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">Must be at least 6 characters</p>
+              </div>
+
+              {/* Optional Name & Username */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
+                    Display Name <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sarah Jenkins"
+                    value={createAdminData.name}
+                    onChange={(e) => setCreateAdminData({ ...createAdminData, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-slate-700 font-bold mb-1">
+                    Username <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Auto-generated if empty"
+                    value={createAdminData.username}
+                    onChange={(e) => setCreateAdminData({ ...createAdminData, username: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setCreateAdminModalOpen(false)}
+                  disabled={createAdminLoading}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createAdminLoading}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-xs font-bold text-white shadow-md shadow-purple-500/20 flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {createAdminLoading ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Create Admin Account</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

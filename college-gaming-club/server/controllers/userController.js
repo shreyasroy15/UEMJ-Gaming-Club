@@ -401,10 +401,10 @@ exports.createUser = async (req, res, next) => {
 
     // Role privilege escalation check
     const targetRole = role.toLowerCase();
-    if (['admin', 'super_admin'].includes(targetRole) && !isSuperAdmin(req.user)) {
+    if (targetRole === 'super_admin' && !isSuperAdmin(req.user)) {
       return res.status(403).json({
         success: false,
-        message: 'Only Super Administrators can create Admin accounts.',
+        message: 'Only Super Administrators can create Super Admin accounts.',
       });
     }
 
@@ -435,6 +435,112 @@ exports.createUser = async (req, res, next) => {
       user: {
         ...userObj,
         role: normalizeRole(userObj.role),
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0] || 'Field';
+      return res.status(400).json({
+        success: false,
+        message: `Duplicate value detected: ${field} is already in use.`,
+      });
+    }
+    next(error);
+  }
+};
+
+// @desc    Create new Admin user (Admin permission)
+// @route   POST /api/users/create-admin
+// @access  Private (Admin)
+exports.createAdminUser = async (req, res, next) => {
+  try {
+    const { email, password, name, username } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required to create an admin account',
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long',
+      });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address',
+      });
+    }
+
+    // Check duplicate email
+    const existingEmail = await User.findOne({ email: cleanEmail });
+    if (existingEmail) {
+      return res.status(400).json({
+        success: false,
+        message: `An account with email '${cleanEmail}' already exists.`,
+      });
+    }
+
+    // Determine or generate unique username
+    let cleanUsername = (username || '').toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
+    if (!cleanUsername) {
+      const emailPrefix = cleanEmail.split('@')[0].replace(/[^a-z0-9_]/g, '_');
+      cleanUsername = emailPrefix || 'admin';
+      
+      let candidate = cleanUsername;
+      let counter = 1;
+      while (await User.findOne({ username: candidate })) {
+        candidate = `${cleanUsername}_${counter++}`;
+      }
+      cleanUsername = candidate;
+    } else {
+      const existingUser = await User.findOne({ username: cleanUsername });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: `Username '${cleanUsername}' is already taken. Please choose another.`,
+        });
+      }
+    }
+
+    // Determine name
+    let cleanName = (name || '').trim();
+    if (!cleanName) {
+      const emailPrefix = cleanEmail.split('@')[0];
+      cleanName = emailPrefix
+        .split(/[._-]/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ') || 'Admin';
+    }
+
+    const newAdmin = await User.create({
+      name: cleanName,
+      username: cleanUsername,
+      email: cleanEmail,
+      password: password,
+      role: 'admin',
+      status: 'active',
+      college: 'University of Engineering & Management (UEM)',
+      avatar: getCapitalLetterAvatarUrl(cleanName, cleanUsername),
+    });
+
+    const adminObj = newAdmin.toObject();
+    delete adminObj.password;
+
+    res.status(201).json({
+      success: true,
+      message: `Admin account '${cleanName}' created successfully with normal administrator permissions!`,
+      user: {
+        ...adminObj,
+        role: 'admin',
       },
     });
   } catch (error) {
