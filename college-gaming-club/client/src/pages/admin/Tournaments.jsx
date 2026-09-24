@@ -65,6 +65,9 @@ const AdminTournaments = () => {
     description: '',
     format: 'Single Elimination',
     prizeTotal: 10000,
+    prizeFirst: 6000,
+    prizeSecond: 3000,
+    prizeThird: 1000,
     entryFee: 0,
     maxTeams: 16,
     minTeamSize: 4,
@@ -126,6 +129,9 @@ const AdminTournaments = () => {
       description: 'Official university esports championship tournament.',
       format: 'Single Elimination',
       prizeTotal: 15000,
+      prizeFirst: 9000,
+      prizeSecond: 4000,
+      prizeThird: 2000,
       entryFee: 0,
       maxTeams: 16,
       minTeamSize: 4,
@@ -142,13 +148,17 @@ const AdminTournaments = () => {
 
   const handleOpenEdit = (tournament) => {
     setEditingTournament(tournament);
+    const totalPrize = tournament.prizePool?.total || 10000;
     setFormData({
       name: tournament.name,
       game: tournament.game,
       banner: tournament.banner,
       description: tournament.description,
       format: tournament.format || 'Single Elimination',
-      prizeTotal: tournament.prizePool?.total || 10000,
+      prizeTotal: totalPrize,
+      prizeFirst: tournament.prizePool?.first !== undefined ? tournament.prizePool.first : Math.round(totalPrize * 0.6),
+      prizeSecond: tournament.prizePool?.second !== undefined ? tournament.prizePool.second : Math.round(totalPrize * 0.25),
+      prizeThird: tournament.prizePool?.third !== undefined ? tournament.prizePool.third : Math.round(totalPrize * 0.15),
       entryFee: tournament.entryFee || 0,
       maxTeams: tournament.maxTeams || 16,
       minTeamSize: tournament.minTeamSize || 4,
@@ -172,8 +182,11 @@ const AdminTournaments = () => {
       const payload = {
         ...formData,
         prizePool: {
-          total: Number(formData.prizeTotal),
+          total: Number(formData.prizeTotal) || 0,
           currency: 'INR (₹)',
+          first: Number(formData.prizeFirst) || 0,
+          second: Number(formData.prizeSecond) || 0,
+          third: Number(formData.prizeThird) || 0,
         },
         minTeamSize: Number(formData.minTeamSize) || 4,
         maxTeamSize: Number(formData.maxTeamSize) || 5,
@@ -871,6 +884,73 @@ const AdminTournaments = () => {
                 onChange={(e) => setFormData({ ...formData, maxTeams: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 font-mono focus:bg-white focus:outline-none focus:border-sky-500"
               />
+            </div>
+          </div>
+
+          {/* Prize Breakdown (1st, 2nd, 3rd) */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                🏆 Prize Distribution (₹)
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const total = Number(formData.prizeTotal) || 0;
+                  setFormData((prev) => ({
+                    ...prev,
+                    prizeFirst: Math.round(total * 0.6),
+                    prizeSecond: Math.round(total * 0.25),
+                    prizeThird: Math.round(total * 0.15),
+                  }));
+                }}
+                className="text-xs font-semibold text-amber-600 hover:text-amber-700 hover:underline cursor-pointer"
+              >
+                Auto-fill (60% / 25% / 15%)
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  🥇 1st Prize (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.prizeFirst}
+                  onChange={(e) => setFormData({ ...formData, prizeFirst: e.target.value })}
+                  placeholder="e.g. 6000"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  🥈 2nd Prize (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.prizeSecond}
+                  onChange={(e) => setFormData({ ...formData, prizeSecond: e.target.value })}
+                  placeholder="e.g. 3000"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  🥉 3rd Prize (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.prizeThird}
+                  onChange={(e) => setFormData({ ...formData, prizeThird: e.target.value })}
+                  placeholder="e.g. 1000"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm text-slate-900 font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
             </div>
           </div>
 
