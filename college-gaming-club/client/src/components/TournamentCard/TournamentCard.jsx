@@ -1,16 +1,25 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Calendar, Users, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
+import { Trophy, Calendar, Users, ArrowRight, ShieldCheck, Clock, Lock } from 'lucide-react';
+import { formatShortDateTime } from '../../utils/dateUtils';
 
 const TournamentCard = ({ tournament, onRegisterClick, isRegistered = false }) => {
+  const isRegistrationClosed =
+    Boolean(tournament.isRegistrationClosed) ||
+    tournament.status === 'registration-closed' ||
+    tournament.status === 'completed' ||
+    tournament.status === 'cancelled' ||
+    new Date() >= new Date(tournament.registrationDeadline) ||
+    (tournament.registeredTeams?.length || 0) >= tournament.maxTeams;
+
   const isRegistrationOpen =
-    (tournament.status === 'upcoming' || tournament.status === 'registration-open') &&
-    new Date() < new Date(tournament.registrationDeadline) &&
-    (tournament.registeredTeams?.length || 0) < tournament.maxTeams;
+    !isRegistrationClosed &&
+    (tournament.status === 'upcoming' || tournament.status === 'registration-open');
 
   const statusColors = {
     upcoming: 'bg-cyan-950/80 text-cyan-400 border-cyan-500/40',
     'registration-open': 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40',
+    'registration-closed': 'bg-rose-950/80 text-rose-300 border-rose-500/40',
     ongoing: 'bg-emerald-950/90 text-emerald-300 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse',
     live: 'bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse',
     'on-hold': 'bg-amber-950/90 text-amber-300 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]',
@@ -19,6 +28,7 @@ const TournamentCard = ({ tournament, onRegisterClick, isRegistered = false }) =
   };
 
   const getStatusLabel = (status) => {
+    if (tournament.isRegistrationClosed || status === 'registration-closed') return 'Registration Closed';
     if (status === 'live') return '● LIVE NOW';
     if (status === 'ongoing') return '● RUNNING';
     if (status === 'on-hold') return '⏸️ ON HOLD';
@@ -85,7 +95,9 @@ const TournamentCard = ({ tournament, onRegisterClick, isRegistered = false }) =
         <div className="grid grid-cols-2 gap-3 my-4 py-3 border-y border-slate-800/80 text-xs text-slate-300">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span>{new Date(tournament.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+            <span className="truncate" title={`Starts: ${formatShortDateTime(tournament.startDate)}`}>
+              <strong className="text-white font-mono">Starts:</strong> {formatShortDateTime(tournament.startDate)}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -94,8 +106,15 @@ const TournamentCard = ({ tournament, onRegisterClick, isRegistered = false }) =
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span>{tournament.format}</span>
+            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="truncate" title={`Deadline: ${formatShortDateTime(tournament.registrationDeadline)}`}>
+              <strong className="text-slate-400 font-mono">Reg:</strong>{' '}
+              {isRegistrationClosed ? (
+                <span className="text-rose-400 font-bold">Closed</span>
+              ) : (
+                formatShortDateTime(tournament.registrationDeadline)
+              )}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -123,6 +142,10 @@ const TournamentCard = ({ tournament, onRegisterClick, isRegistered = false }) =
             >
               Register
             </button>
+          ) : isRegistrationClosed ? (
+            <span className="py-2.5 px-3 rounded-xl bg-slate-950/90 border border-slate-800 text-[11px] font-bold text-slate-400 text-center font-mono flex items-center gap-1">
+              <Lock className="w-3 h-3 text-slate-500" /> Closed
+            </span>
           ) : null}
         </div>
       </div>

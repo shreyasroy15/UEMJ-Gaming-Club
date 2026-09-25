@@ -1462,6 +1462,14 @@ const TournamentRegister = () => {
     );
   }
 
+  const isRegistrationClosed =
+    Boolean(tournament?.isRegistrationClosed) ||
+    tournament?.status === 'registration-closed' ||
+    tournament?.status === 'completed' ||
+    tournament?.status === 'cancelled' ||
+    new Date() >= new Date(tournament?.registrationDeadline) ||
+    ((tournament?.registeredTeams?.length || 0) >= tournament?.maxTeams);
+
   // Registration Hub (Create Squad vs Join with Code)
   return (
     <div className="py-8 sm:py-12 px-3.5 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full space-y-8">
@@ -1490,34 +1498,64 @@ const TournamentRegister = () => {
         </Link>
       </div>
 
-      {/* Mode Switcher Tabs */}
-      <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-mono font-bold">
-        <button
-          type="button"
-          onClick={() => setMode('create')}
-          className={`py-2.5 rounded-xl transition-all ${
-            mode === 'create'
-              ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          👑 Create New Squad (Captain)
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('join')}
-          className={`py-2.5 rounded-xl transition-all ${
-            mode === 'join'
-              ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          🎯 Join with Team Code
-        </button>
-      </div>
+      {isRegistrationClosed ? (
+        <div className="p-8 sm:p-12 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-5 shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-rose-950/80 border border-rose-600/40 text-rose-400 flex items-center justify-center mx-auto shadow-lg shadow-rose-950/50">
+            <Lock className="w-8 h-8" />
+          </div>
+          <div className="space-y-2 max-w-md mx-auto">
+            <h2 className="text-xl sm:text-2xl font-black text-white font-mono uppercase tracking-wide">
+              Registrations Are Closed
+            </h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Registrations for <strong>{tournament.name}</strong> are currently closed. No new squads can be created or joined at this time.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to={`/tournaments/${tournament.slug || tournament._id}`}
+              className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider font-mono transition-all shadow-md shadow-cyan-500/20"
+            >
+              View Tournament Overview
+            </Link>
+            <Link
+              to="/tournaments"
+              className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider font-mono transition-all border border-slate-700"
+            >
+              Explore Other Tournaments
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Mode Switcher Tabs */}
+          <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-mono font-bold">
+            <button
+              type="button"
+              onClick={() => setMode('create')}
+              className={`py-2.5 rounded-xl transition-all ${
+                mode === 'create'
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              👑 Create New Squad (Captain)
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('join')}
+              className={`py-2.5 rounded-xl transition-all ${
+                mode === 'join'
+                  ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-lg shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🎯 Join with Team Code
+            </button>
+          </div>
 
-      {/* 1. CREATE SQUAD FORM (Contains ONLY Team Name + Team Type) */}
-      {mode === 'create' ? (
+          {/* 1. CREATE SQUAD FORM (Contains ONLY Team Name + Team Type) */}
+          {mode === 'create' ? (
         <form onSubmit={handleCreateTeam} className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
           <div>
             <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
@@ -1610,6 +1648,8 @@ const TournamentRegister = () => {
             {joining ? 'Verifying Code & Joining...' : 'Join Squad Roster'}
           </button>
         </form>
+      )}
+        </>
       )}
     </div>
   );

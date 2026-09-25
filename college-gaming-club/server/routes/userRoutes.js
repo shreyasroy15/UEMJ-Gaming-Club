@@ -47,7 +47,7 @@ router.get('/:id/activity', protect, staffOnly, getUserActivity);
 // User single resource
 router
   .route('/:id')
-  .get(protect, staffOnly, getUserById)
+  .get(protect, getUserById)
   .put(protect, (req, res, next) => {
     if (req.user && (req.user._id.toString() === req.params.id || ['admin', 'super_admin'].includes(req.user.role))) {
       return next();

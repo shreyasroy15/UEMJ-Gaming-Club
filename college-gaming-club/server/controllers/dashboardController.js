@@ -70,6 +70,60 @@ exports.getDashboardStats = async (req, res, next) => {
       Game.find(),
     ]);
 
+    const enrichedRecentUsers = await Promise.all(
+      recentUsers.map(async (userDoc) => {
+        const u = userDoc.toObject ? userDoc.toObject() : userDoc;
+        const rawTeam = (u.teamName || '').trim();
+        const isFreeAgent =
+          !rawTeam ||
+          rawTeam.toLowerCase() === 'free agent' ||
+          rawTeam.toLowerCase() === 'none' ||
+          rawTeam.toLowerCase() === 'solo';
+
+        const teamDoc = await Team.findOne({
+          $or: [{ captain: u._id }, { 'members.user': u._id }],
+        }).select('name isVerified game tag').lean();
+
+        if (teamDoc) {
+          return {
+            ...u,
+            teamInfo: {
+              name: teamDoc.name,
+              isFreeAgent: false,
+              isVerified: Boolean(teamDoc.isVerified),
+              tag: teamDoc.tag || '',
+            },
+          };
+        }
+
+        if (!isFreeAgent) {
+          const namedTeam = await Team.findOne({
+            name: new RegExp(`^${rawTeam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+          }).select('name isVerified tag').lean();
+
+          return {
+            ...u,
+            teamInfo: {
+              name: namedTeam ? namedTeam.name : rawTeam,
+              isFreeAgent: false,
+              isVerified: Boolean(namedTeam?.isVerified),
+              tag: namedTeam?.tag || '',
+            },
+          };
+        }
+
+        return {
+          ...u,
+          teamInfo: {
+            name: 'Free Agent',
+            isFreeAgent: true,
+            isVerified: null,
+            tag: '',
+          },
+        };
+      })
+    );
+
     res.status(200).json({
       success: true,
       stats: {
@@ -84,7 +138,7 @@ exports.getDashboardStats = async (req, res, next) => {
         upcomingMatches,
         upcomingEvents,
       },
-      recentUsers,
+      recentUsers: enrichedRecentUsers,
       recentTournaments,
       teamsLeaderboard,
       liveMatchesList,

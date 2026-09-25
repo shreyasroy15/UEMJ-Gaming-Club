@@ -579,9 +579,19 @@ const Dashboard = () => {
                         </p>
                       </div>
                     </div>
-                    <span className="bg-slate-100 text-slate-600 text-[9px] font-bold px-2 py-1 rounded border border-slate-200 shadow-xs uppercase tracking-wider shrink-0 font-mono">
-                      {player.role === 'admin' ? 'Admin' : 'Student'}
-                    </span>
+                    {player.teamInfo?.name && !player.teamInfo?.isFreeAgent ? (
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-1 rounded shadow-xs uppercase tracking-wider shrink-0 font-mono">
+                        🛡️ {player.teamInfo.name}
+                      </span>
+                    ) : player.teamName && !['free agent', 'none', 'solo'].includes(player.teamName.toLowerCase()) ? (
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-1 rounded shadow-xs uppercase tracking-wider shrink-0 font-mono">
+                        🛡️ {player.teamName}
+                      </span>
+                    ) : (
+                      <span className="bg-cyan-50 text-cyan-700 border border-cyan-200 text-[9px] font-bold px-2 py-1 rounded shadow-xs uppercase tracking-wider shrink-0 font-mono">
+                        ⚡ Free Agent
+                      </span>
+                    )}
                   </div>
                 );
               })

@@ -135,11 +135,16 @@ exports.createTeamRegistration = async (req, res, next) => {
       });
     }
 
-    // Check status
-    if (tournament.status === 'completed' || tournament.status === 'cancelled') {
+    // Check status & close flag
+    if (
+      tournament.isRegistrationClosed ||
+      tournament.status === 'registration-closed' ||
+      tournament.status === 'completed' ||
+      tournament.status === 'cancelled'
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Registrations are closed for this tournament',
+        message: 'Registrations are currently closed for this tournament',
       });
     }
 
@@ -301,8 +306,13 @@ exports.joinTeamByCode = async (req, res, next) => {
 
     const tournament = registration.tournament;
 
-    // Check tournament status & deadline
-    if (tournament.status === 'completed' || tournament.status === 'cancelled') {
+    // Check tournament status & close flag
+    if (
+      tournament.isRegistrationClosed ||
+      tournament.status === 'registration-closed' ||
+      tournament.status === 'completed' ||
+      tournament.status === 'cancelled'
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Tournament registration is closed',

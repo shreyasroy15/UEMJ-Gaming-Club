@@ -2,6 +2,8 @@ const Tournament = require('../models/Tournament');
 const Team = require('../models/Team');
 const Match = require('../models/Match');
 const TournamentRegistration = require('../models/TournamentRegistration');
+const TournamentForm = require('../models/TournamentForm');
+const { getBgmiDefaultQuestions, getFreeFireDefaultQuestions } = require('../utils/defaultForms');
 
 // Helper to slugify tournament name
 const slugify = (text) => {
@@ -241,10 +243,31 @@ exports.createTournament = async (req, res, next) => {
       startDate,
       endDate,
       status: status || 'upcoming',
+      isRegistrationClosed: Boolean(req.body.isRegistrationClosed),
       organizer: organizer || 'UEM Gaming Club',
       streamUrl: streamUrl || 'https://twitch.tv',
       createdBy: req.user.id,
     });
+
+    // Auto-create and connect dynamic registration form schema immediately
+    try {
+      const isBgmi = game.toLowerCase().includes('bgmi') || name.toLowerCase().includes('bgmi');
+      const isFreeFire = game.toLowerCase().includes('free fire') || name.toLowerCase().includes('free fire');
+      const defaultQuestions = isFreeFire ? getFreeFireDefaultQuestions() : getBgmiDefaultQuestions();
+
+      const form = await TournamentForm.create({
+        tournament: tournament._id,
+        title: `${tournament.name} - Registration Form`,
+        description: `Official squad registration questionnaire for ${tournament.name}. Please complete all team and player fields accurately.`,
+        isPublished: !req.body.isRegistrationClosed,
+        questions: defaultQuestions,
+      });
+
+      tournament.registrationForm = form._id;
+      await tournament.save();
+    } catch (formErr) {
+      console.error('Error auto-creating connected tournament form:', formErr);
+    }
 
     res.status(201).json({
       success: true,
@@ -269,13 +292,74 @@ exports.updateTournament = async (req, res, next) => {
       });
     }
 
+    // Sync isRegistrationClosed if status is explicitly set to registration-closed or registration-open
+    if (req.body.status === 'registration-closed') {
+      req.body.isRegistrationClosed = true;
+    } else if (req.body.status === 'registration-open') {
+      req.body.isRegistrationClosed = false;
+    }
+
     tournament = await Tournament.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
 
+    // Sync connected form publication state if isRegistrationClosed is supplied
+    if (req.body.isRegistrationClosed !== undefined) {
+      await TournamentForm.findOneAndUpdate(
+        { tournament: tournament._id },
+        { isPublished: !req.body.isRegistrationClosed }
+      );
+    }
+
     res.status(200).json({
       success: true,
+      tournament,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle tournament registration (Close Registration / Open Registration)
+// @route   PATCH /api/tournaments/:id/toggle-registration
+// @access  Private (Admin / Staff)
+exports.toggleRegistration = async (req, res, next) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    const nextClosed = !tournament.isRegistrationClosed;
+    tournament.isRegistrationClosed = nextClosed;
+
+    if (nextClosed) {
+      if (tournament.status === 'registration-open') {
+        tournament.status = 'registration-closed';
+      }
+    } else {
+      if (tournament.status === 'registration-closed') {
+        tournament.status = 'registration-open';
+      }
+    }
+
+    await tournament.save();
+
+    // Sync connected registration form published flag
+    await TournamentForm.findOneAndUpdate(
+      { tournament: tournament._id },
+      { isPublished: !nextClosed }
+    );
+
+    res.status(200).json({
+      success: true,
+      isRegistrationClosed: tournament.isRegistrationClosed,
+      status: tournament.status,
+      message: nextClosed ? 'Registration is now CLOSED' : 'Registration is now OPEN',
       tournament,
     });
   } catch (error) {

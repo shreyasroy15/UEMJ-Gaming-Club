@@ -7,6 +7,7 @@ const {
   updateTournament,
   updateTournamentStatus,
   deleteTournament,
+  toggleRegistration,
   registerTeam,
   generateBracket,
   verifyLobbyAccess,
@@ -93,6 +94,7 @@ router
   .delete(protect, adminOnly, deleteTournament);
 
 router.patch('/:id/status', protect, staffOnly, updateTournamentStatus);
+router.patch('/:id/toggle-registration', protect, staffOnly, toggleRegistration);
 
 router.post('/:id/register', protect, registerTeam);
 router.post('/:id/generate-bracket', protect, staffOnly, generateBracket);

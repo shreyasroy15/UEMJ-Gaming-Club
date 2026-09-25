@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import API from '../services/api';
 import Modal from '../components/Modal/Modal';
 import Avatar from '../components/Avatar/Avatar';
 import AvatarSelectorModal from '../components/Avatar/AvatarSelectorModal';
+import Loading from '../components/Loading/Loading';
 import {
   User,
   Edit,
@@ -15,11 +17,21 @@ import {
   MessageSquare,
   Check,
   Loader2,
+  Shield,
+  Trophy,
+  CheckCircle2,
+  ArrowLeft,
 } from 'lucide-react';
 
 const Profile = () => {
+  const { id } = useParams();
   const { user, updateUser } = useAuth();
   const { addToast } = useToast();
+
+  const isOwnProfile = !id || id === user?._id || id === user?.id || id === user?.username;
+
+  const [otherUser, setOtherUser] = useState(null);
+  const [loadingOther, setLoadingOther] = useState(!isOwnProfile);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -31,9 +43,30 @@ const Profile = () => {
   });
   const [saving, setSaving] = useState(false);
 
+  // Load other user's profile if visiting /profile/:id
+  useEffect(() => {
+    if (!isOwnProfile && id) {
+      const fetchOtherProfile = async () => {
+        try {
+          setLoadingOther(true);
+          const res = await API.get(`/users/${id}`);
+          if (res.data?.success && res.data?.user) {
+            setOtherUser(res.data.user);
+          }
+        } catch (err) {
+          console.error('Failed to load player profile', err);
+          addToast(err.response?.data?.message || 'Player profile not found', 'error');
+        } finally {
+          setLoadingOther(false);
+        }
+      };
+      fetchOtherProfile();
+    }
+  }, [id, isOwnProfile]);
+
   // Keep form data synced with current user profile
   useEffect(() => {
-    if (user) {
+    if (user && isOwnProfile) {
       setFormData({
         name: user.name || '',
         bio: user.bio || '',
@@ -41,22 +74,26 @@ const Profile = () => {
         college: user.college || '',
       });
     }
-  }, [user]);
+  }, [user, isOwnProfile]);
 
   // Sync latest user profile from server on mount
   useEffect(() => {
-    const fetchLatestProfile = async () => {
-      try {
-        const res = await API.get('/auth/me');
-        if (res.data?.success && res.data?.user) {
-          updateUser(res.data.user);
+    if (isOwnProfile) {
+      const fetchLatestProfile = async () => {
+        try {
+          const res = await API.get('/auth/me');
+          if (res.data?.success && res.data?.user) {
+            updateUser(res.data.user);
+          }
+        } catch (err) {
+          console.error('Failed to sync profile', err);
         }
-      } catch (err) {
-        console.error('Failed to sync profile', err);
-      }
-    };
-    fetchLatestProfile();
-  }, []);
+      };
+      fetchLatestProfile();
+    }
+  }, [isOwnProfile]);
+
+  const displayUser = isOwnProfile ? user : (otherUser || {});
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
@@ -102,34 +139,58 @@ const Profile = () => {
     }
   };
 
+  if (loadingOther) {
+    return (
+      <div className="py-20 flex flex-col items-center justify-center space-y-3">
+        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+        <span className="text-xs font-mono text-slate-400">Loading player profile...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="py-6 sm:py-10 px-3 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full space-y-6 sm:space-y-8">
+      {!isOwnProfile && (
+        <div className="pb-1">
+          <Link
+            to="/admin/users"
+            className="text-xs font-mono text-slate-400 hover:text-cyan-400 flex items-center gap-1.5 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Users Directory
+          </Link>
+        </div>
+      )}
+
       {/* Profile Header Banner */}
       <div className="p-4 sm:p-7 md:p-8 rounded-2xl sm:rounded-3xl bg-slate-900/75 border border-slate-800/90 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.5)]">
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-5 sm:gap-6">
           <div className="flex flex-col min-[480px]:flex-row items-center min-[480px]:items-start gap-4 sm:gap-6 text-center min-[480px]:text-left w-full md:w-auto">
             {/* Avatar */}
             <div
-              className="relative shrink-0 cursor-pointer group"
-              onClick={() => setAvatarModalOpen(true)}
-              title="Click to choose character avatar"
+              className={`relative shrink-0 ${isOwnProfile ? 'cursor-pointer group' : ''}`}
+              onClick={() => isOwnProfile && setAvatarModalOpen(true)}
+              title={isOwnProfile ? 'Click to choose character avatar' : displayUser.name}
             >
               <Avatar
-                user={user}
+                user={displayUser}
                 size="2xl"
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/25 group-hover:scale-105 transition-all"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-cyan-400 shadow-xl shadow-cyan-500/25 transition-all"
                 imgClassName="rounded-2xl"
                 textSize="text-3xl sm:text-4xl"
               />
-              <div className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity backdrop-blur-[2px]">
-                <Camera className="w-5 h-5 text-cyan-300 drop-shadow" />
-                <span className="text-[9px] font-bold mt-0.5 text-cyan-200">Change</span>
-              </div>
-              <span className="absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full bg-slate-900 border border-cyan-400 text-cyan-300 flex items-center justify-center shadow-md transition-transform group-hover:scale-110">
-                <Camera className="w-3 h-3" />
-              </span>
+              {isOwnProfile && (
+                <>
+                  <div className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity backdrop-blur-[2px]">
+                    <Camera className="w-5 h-5 text-cyan-300 drop-shadow" />
+                    <span className="text-[9px] font-bold mt-0.5 text-cyan-200">Change</span>
+                  </div>
+                  <span className="absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full bg-slate-900 border border-cyan-400 text-cyan-300 flex items-center justify-center shadow-md transition-transform group-hover:scale-110">
+                    <Camera className="w-3 h-3" />
+                  </span>
+                </>
+              )}
               <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cyan-950 text-cyan-400 border border-cyan-500 font-mono shadow-md">
-                {user?.role || 'student'}
+                {displayUser?.role || 'student'}
               </span>
             </div>
 
@@ -137,54 +198,136 @@ const Profile = () => {
             <div className="space-y-2 min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-center min-[480px]:justify-start gap-2">
                 <h1 className="text-xl sm:text-3xl font-black text-white font-mono break-words">
-                  {user?.name}
+                  {displayUser?.name}
                 </h1>
-
+                <span className="text-xs font-mono text-cyan-400 font-semibold">
+                  @{displayUser?.username}
+                </span>
               </div>
-
-
 
               {/* College & Contact Meta */}
               <div className="space-y-1 pt-1 text-xs text-slate-400 font-mono">
                 <p className="flex items-center justify-center min-[480px]:justify-start gap-1.5">
                   <Building className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span className="truncate">{user?.college || 'UEM Jaipur Esports'}</span>
+                  <span className="truncate">{displayUser?.college || 'UEM Jaipur Esports'}</span>
                 </p>
-                <p className="flex items-center justify-center min-[480px]:justify-start gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span className="truncate">{user?.email}</span>
-                </p>
+                {displayUser?.email && (
+                  <p className="flex items-center justify-center min-[480px]:justify-start gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <span className="truncate">{displayUser?.email}</span>
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Action Button */}
-          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
-            <button
-              onClick={() => {
-                setFormData({
-                  name: user?.name || '',
-                  bio: user?.bio || '',
-                  avatar: user?.avatar || '',
-                  college: user?.college || '',
-                });
-                setEditModalOpen(true);
-              }}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white border border-cyan-500/40 hover:border-cyan-400 font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.12)] hover:shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all cursor-pointer active:scale-95"
-            >
-              <Edit className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Edit Player Profile</span>
-            </button>
-          </div>
+          {/* Action Button (Only for own profile) */}
+          {isOwnProfile ? (
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
+              <button
+                onClick={() => {
+                  setFormData({
+                    name: user?.name || '',
+                    bio: user?.bio || '',
+                    avatar: user?.avatar || '',
+                    college: user?.college || '',
+                  });
+                  setEditModalOpen(true);
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white border border-cyan-500/40 hover:border-cyan-400 font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.12)] hover:shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all cursor-pointer active:scale-95"
+              >
+                <Edit className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Edit Player Profile</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300">
+                Registered Competitor
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Bio */}
-        {user?.bio && (
+        {displayUser?.bio && (
           <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-slate-800/80">
-
             <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-mono italic bg-slate-950/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/70 shadow-inner">
-              "{user.bio}"
+              "{displayUser.bio}"
             </p>
+          </div>
+        )}
+      </div>
+
+      {/* Current Esports Team Status Card */}
+      <div className="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-slate-900/60 border border-slate-800/90 backdrop-blur-xl shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+          <h3 className="text-xs sm:text-sm font-bold text-white font-mono uppercase tracking-wider flex items-center gap-2">
+            <Shield className="w-4 h-4 text-cyan-400" />
+            Current Esports Team Status
+          </h3>
+          {displayUser.teamInfo?.isFreeAgent || (!displayUser.teamName || displayUser.teamName.toLowerCase() === 'free agent') ? (
+            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40">
+              ⚡ FREE AGENT
+            </span>
+          ) : (
+            <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> ACTIVE SQUAD
+            </span>
+          )}
+        </div>
+
+        {displayUser.teamInfo?.isFreeAgent || (!displayUser.teamName || displayUser.teamName.toLowerCase() === 'free agent') ? (
+          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                Free Agent
+                <span className="text-[10px] text-slate-400 font-normal px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                  Unassigned
+                </span>
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {isOwnProfile
+                  ? 'You are currently not assigned to any collegiate team. You can create a new squad or join with a team code when registering for tournaments.'
+                  : 'This player is currently not assigned to any collegiate esports squad and is available for team recruitment.'}
+              </p>
+            </div>
+            {isOwnProfile && (
+              <Link
+                to="/tournaments"
+                className="px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold shrink-0 text-center transition-colors"
+              >
+                Browse Tournaments
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-300 font-mono font-bold text-xl shrink-0">
+                🛡️
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="text-base font-bold text-white font-mono flex items-center gap-2">
+                  {displayUser.teamInfo?.name || displayUser.teamName}
+                  {displayUser.teamInfo?.tag && (
+                    <span className="text-xs text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800/60 font-mono">
+                      [{displayUser.teamInfo.tag}]
+                    </span>
+                  )}
+                </h4>
+                <p className="text-xs text-slate-400 font-mono">
+                  Role: <strong className="text-cyan-300 uppercase">{displayUser.teamInfo?.roleInTeam || (displayUser.role === 'captain' ? 'Captain' : 'Roster Player')}</strong> • Game:{' '}
+                  <strong className="text-white">{displayUser.teamInfo?.game || displayUser.game || 'BGMI'}</strong>
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/tournaments"
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-mono text-xs font-bold shrink-0 text-center transition-colors"
+            >
+              View Tournaments
+            </Link>
           </div>
         )}
       </div>

@@ -19,6 +19,7 @@ import {
   XCircle,
   Eye,
   Lock,
+  Unlock,
   ChevronDown,
   ChevronUp,
   FileText,
@@ -30,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import RejectionModal from '../../components/RejectionModal/RejectionModal';
+import { toLocalDatetimeInput } from '../../utils/dateUtils';
 
 const AdminTournaments = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -78,6 +80,7 @@ const AdminTournaments = () => {
     identityProofDeadline: '',
     startDate: '',
     status: 'upcoming',
+    isRegistrationClosed: false,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -137,11 +140,11 @@ const AdminTournaments = () => {
       minTeamSize: 4,
       maxTeamSize: 5,
       allowSubstitutes: true,
-      maxSubstitutes: 1,
-      registrationDeadline: new Date(Date.now() + 7 * 24 * 3600000).toISOString().slice(0, 16),
-      identityProofDeadline: new Date(Date.now() + 7 * 24 * 3600000).toISOString().slice(0, 16),
-      startDate: new Date(Date.now() + 10 * 24 * 3600000).toISOString().slice(0, 16),
+      registrationDeadline: toLocalDatetimeInput(Date.now() + 7 * 24 * 3600000),
+      identityProofDeadline: toLocalDatetimeInput(Date.now() + 7 * 24 * 3600000),
+      startDate: toLocalDatetimeInput(Date.now() + 10 * 24 * 3600000),
       status: 'registration-open',
+      isRegistrationClosed: false,
     });
     setModalOpen(true);
   };
@@ -164,13 +167,13 @@ const AdminTournaments = () => {
       minTeamSize: tournament.minTeamSize || 4,
       maxTeamSize: tournament.maxTeamSize || 5,
       allowSubstitutes: tournament.allowSubstitutes !== false,
-      maxSubstitutes: tournament.maxSubstitutes || 1,
-      registrationDeadline: new Date(tournament.registrationDeadline).toISOString().slice(0, 16),
+      registrationDeadline: toLocalDatetimeInput(tournament.registrationDeadline),
       identityProofDeadline: tournament.identityProofDeadline
-        ? new Date(tournament.identityProofDeadline).toISOString().slice(0, 16)
-        : new Date(tournament.registrationDeadline).toISOString().slice(0, 16),
-      startDate: new Date(tournament.startDate).toISOString().slice(0, 16),
+        ? toLocalDatetimeInput(tournament.identityProofDeadline)
+        : toLocalDatetimeInput(tournament.registrationDeadline),
+      startDate: toLocalDatetimeInput(tournament.startDate),
       status: tournament.status || 'upcoming',
+      isRegistrationClosed: Boolean(tournament.isRegistrationClosed || tournament.status === 'registration-closed'),
     });
     setModalOpen(true);
   };
@@ -238,6 +241,23 @@ const AdminTournaments = () => {
       }
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to generate brackets. Need at least 2 registered teams.', 'error');
+    }
+  };
+
+  // Toggle Tournament Registration (Close / Open)
+  const handleToggleRegistration = async (tId, tName, currentlyClosed) => {
+    const actionWord = currentlyClosed ? 're-open' : 'close';
+    if (!window.confirm(`Are you sure you want to ${actionWord} registrations for "${tName}"?`)) {
+      return;
+    }
+    try {
+      const res = await API.patch(`/tournaments/${tId}/toggle-registration`);
+      if (res.data.success) {
+        addToast(res.data.message || `Registration status updated for "${tName}"`, 'success');
+        fetchData();
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to toggle registration status', 'error');
     }
   };
 
@@ -508,19 +528,26 @@ const AdminTournaments = () => {
                     </div>
                   </div>
 
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono shrink-0 ${
-                      t.status === 'live' || t.status === 'ongoing'
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                        : t.status === 'completed'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : t.status === 'cancelled'
-                        ? 'bg-red-50 text-red-700 border border-red-200'
-                        : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
-                    }`}
-                  >
-                    {t.status}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                        t.status === 'live' || t.status === 'ongoing'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : t.status === 'completed'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : t.status === 'cancelled'
+                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                      }`}
+                    >
+                      {t.status}
+                    </span>
+                    {(t.isRegistrationClosed || t.status === 'registration-closed') && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase font-mono bg-rose-100 text-rose-800 border border-rose-300">
+                        Reg Closed
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Progress & Prize Pool */}
@@ -570,6 +597,23 @@ const AdminTournaments = () => {
                   >
                     <FileCode className="w-3.5 h-3.5" />
                   </Link>
+
+                  {/* Toggle Registration Close/Open */}
+                  <button
+                    onClick={() => handleToggleRegistration(t._id, t.name, t.isRegistrationClosed || t.status === 'registration-closed')}
+                    title={t.isRegistrationClosed || t.status === 'registration-closed' ? 'Re-open Registration' : 'Close Registration'}
+                    className={`p-2 rounded-xl border cursor-pointer transition-colors ${
+                      t.isRegistrationClosed || t.status === 'registration-closed'
+                        ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                        : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+                    }`}
+                  >
+                    {t.isRegistrationClosed || t.status === 'registration-closed' ? (
+                      <Unlock className="w-3.5 h-3.5" />
+                    ) : (
+                      <Lock className="w-3.5 h-3.5" />
+                    )}
+                  </button>
 
                   <button
                     onClick={() => handleGenerateBracket(t._id, t.name)}
@@ -645,19 +689,26 @@ const AdminTournaments = () => {
                       </td>
 
                       <td className="p-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
-                            t.status === 'live' || t.status === 'ongoing'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : t.status === 'completed'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : t.status === 'cancelled'
-                              ? 'bg-red-50 text-red-700 border border-red-200'
-                              : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
-                          }`}
-                        >
-                          {t.status}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                              t.status === 'live' || t.status === 'ongoing'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : t.status === 'completed'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : t.status === 'cancelled'
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                            }`}
+                          >
+                            {t.status}
+                          </span>
+                          {(t.isRegistrationClosed || t.status === 'registration-closed') && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase font-mono bg-rose-100 text-rose-800 border border-rose-300">
+                              Reg Closed
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="p-4 text-right space-x-1.5">
@@ -669,6 +720,23 @@ const AdminTournaments = () => {
                         >
                           <FileCode className="w-3.5 h-3.5" />
                         </Link>
+
+                        {/* Toggle Registration Close/Open Button */}
+                        <button
+                          onClick={() => handleToggleRegistration(t._id, t.name, t.isRegistrationClosed || t.status === 'registration-closed')}
+                          title={t.isRegistrationClosed || t.status === 'registration-closed' ? 'Re-open Registration' : 'Close Registration'}
+                          className={`p-1.5 rounded-lg border transition-colors inline-block align-middle cursor-pointer shadow-xs ${
+                            t.isRegistrationClosed || t.status === 'registration-closed'
+                              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                              : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          {t.isRegistrationClosed || t.status === 'registration-closed' ? (
+                            <Unlock className="w-3.5 h-3.5" />
+                          ) : (
+                            <Lock className="w-3.5 h-3.5" />
+                          )}
+                        </button>
 
                         {/* Manage Stages, Lobbies & Matches */}
                         <Link
@@ -992,6 +1060,51 @@ const AdminTournaments = () => {
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               />
+            </div>
+          </div>
+
+          {/* Status and Registration Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Tournament Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-sky-500 font-semibold"
+              >
+                <option value="upcoming">Upcoming</option>
+                <option value="registration-open">Registration Open</option>
+                <option value="registration-closed">Registration Closed</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="live">Live</option>
+                <option value="on-hold">On Hold</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <div className="flex items-center">
+              <label className="flex items-center gap-2.5 p-2 rounded-xl border border-slate-200 bg-white w-full cursor-pointer hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.isRegistrationClosed || formData.status === 'registration-closed')}
+                  onChange={(e) => {
+                    const closed = e.target.checked;
+                    setFormData({
+                      ...formData,
+                      isRegistrationClosed: closed,
+                      status: closed ? 'registration-closed' : (formData.status === 'registration-closed' ? 'registration-open' : formData.status),
+                    });
+                  }}
+                  className="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-slate-800">
+                  Close Registration
+                  <span className="block text-[10px] text-slate-500 font-normal">Block new squads & players</span>
+                </span>
+              </label>
             </div>
           </div>
 

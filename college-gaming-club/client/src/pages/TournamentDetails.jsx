@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState/EmptyState';
 import Modal from '../components/Modal/Modal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { formatTournamentDateTime, formatShortDateTime } from '../utils/dateUtils';
 import {
   Trophy,
   Calendar,
@@ -411,10 +412,17 @@ const TournamentDetails = () => {
   if (loading) return <Loading message="Loading tournament specifications..." />;
   if (!tournament) return <EmptyState title="Tournament Not Found" description="The requested tournament does not exist." />;
 
+  const isRegistrationClosed =
+    Boolean(tournament.isRegistrationClosed) ||
+    tournament.status === 'registration-closed' ||
+    tournament.status === 'completed' ||
+    tournament.status === 'cancelled' ||
+    new Date() >= new Date(tournament.registrationDeadline) ||
+    ((tournament.registeredTeams?.length || 0) >= tournament.maxTeams);
+
   const isRegistrationOpen =
-    (tournament.status === 'upcoming' || tournament.status === 'registration-open') &&
-    new Date() < new Date(tournament.registrationDeadline) &&
-    tournament.registeredTeams?.length < tournament.maxTeams;
+    !isRegistrationClosed &&
+    (tournament.status === 'upcoming' || tournament.status === 'registration-open');
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -447,7 +455,9 @@ const TournamentDetails = () => {
               </span>
               <span
                 className={`px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider border font-mono ${
-                  tournament.status === 'live'
+                  tournament.isRegistrationClosed || tournament.status === 'registration-closed'
+                    ? 'bg-rose-950/80 text-rose-300 border-rose-500/50'
+                    : tournament.status === 'live'
                     ? 'bg-rose-950 text-rose-300 border-rose-500 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.3)]'
                     : tournament.status === 'ongoing'
                     ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.3)]'
@@ -462,7 +472,9 @@ const TournamentDetails = () => {
                     : 'bg-slate-900 text-slate-300 border-slate-700'
                 }`}
               >
-                {tournament.status === 'live'
+                {tournament.isRegistrationClosed || tournament.status === 'registration-closed'
+                  ? 'Registration Closed'
+                  : tournament.status === 'live'
                   ? '● LIVE ARENA'
                   : tournament.status === 'ongoing'
                   ? '● RUNNING TOURNAMENT'
@@ -535,7 +547,12 @@ const TournamentDetails = () => {
                   <UserPlus className="w-4 h-4" /> JOIN WITH TEAM CODE
                 </button>
               </div>
-            ) : null}
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-slate-400 font-mono text-xs font-bold uppercase tracking-wider shadow-md">
+                <Lock className="w-4 h-4 text-rose-400" />
+                <span>Registration Closed</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -633,24 +650,34 @@ const TournamentDetails = () => {
             {/* Schedule & Rules Quick Card */}
             <div className="space-y-6">
               <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-4">
-                <h3 className="text-base font-bold text-white font-mono">Tournament Schedule</h3>
+                <h3 className="text-base font-bold text-white font-mono flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-cyan-400" /> Tournament Schedule & Deadlines
+                </h3>
                 <div className="space-y-3 text-xs">
-                  <div className="flex justify-between py-2 border-b border-slate-800">
-                    <span className="text-slate-400">Registration Deadline</span>
-                    <span className="text-slate-200 font-semibold font-mono">
-                      {new Date(tournament.registrationDeadline).toLocaleDateString()}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-800 gap-1">
+                    <span className="text-slate-400 font-medium">Registration Deadline</span>
+                    <span className={`font-semibold font-mono ${isRegistrationClosed ? 'text-rose-400' : 'text-slate-200'}`}>
+                      {formatTournamentDateTime(tournament.registrationDeadline)}
                     </span>
                   </div>
-                  <div className="flex justify-between py-2 border-b border-slate-800">
-                    <span className="text-slate-400">Tournament Start</span>
-                    <span className="text-cyan-400 font-semibold font-mono">
-                      {new Date(tournament.startDate).toLocaleDateString()}
+                  {tournament.identityProofDeadline && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-800 gap-1">
+                      <span className="text-slate-400 font-medium">Identity Proof Deadline</span>
+                      <span className="text-purple-300 font-semibold font-mono">
+                        {formatTournamentDateTime(tournament.identityProofDeadline)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-slate-800 gap-1">
+                    <span className="text-slate-400 font-medium">Tournament Start Timing</span>
+                    <span className="text-cyan-400 font-bold font-mono">
+                      {formatTournamentDateTime(tournament.startDate)}
                     </span>
                   </div>
                   <div className="flex justify-between py-2">
-                    <span className="text-slate-400">Status</span>
+                    <span className="text-slate-400 font-medium">Status</span>
                     <span className="uppercase font-bold text-white font-mono">
-                      {tournament.status}
+                      {tournament.isRegistrationClosed || tournament.status === 'registration-closed' ? 'Registration Closed' : tournament.status}
                     </span>
                   </div>
                 </div>
@@ -943,8 +970,8 @@ const TournamentDetails = () => {
                           <span>🗺️ Map:</span>
                           <strong className="text-cyan-300">{match.map || 'Erangel'}</strong>
                         </span>
-                        <span className="text-slate-400">
-                          📅 {match.scheduledAt ? new Date(match.scheduledAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'TBD'}
+                        <span className="text-slate-300 font-semibold">
+                          📅 Match Start: <strong className="text-amber-300">{match.scheduledAt ? formatTournamentDateTime(match.scheduledAt) : 'TBD'}</strong>
                         </span>
                       </div>
 

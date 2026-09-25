@@ -31,7 +31,9 @@ import {
   FileText,
   Clock,
   Shield,
+  Unlock,
 } from 'lucide-react';
+import { toLocalDatetimeInput } from '../../utils/dateUtils';
 
 const FIELD_TYPES = [
   { id: 'short_text', label: 'Short Answer' },
@@ -127,7 +129,7 @@ const FormBuilder = () => {
 
         const idDeadline = res.data.tournament.identityProofDeadline || res.data.tournament.registrationDeadline;
         if (idDeadline) {
-          setIdentityProofDeadline(new Date(idDeadline).toISOString().slice(0, 16));
+          setIdentityProofDeadline(toLocalDatetimeInput(idDeadline));
         }
       }
     } catch (err) {
@@ -243,6 +245,32 @@ const FormBuilder = () => {
     }
   };
 
+  // Toggle Registration Form Closure
+  const handleToggleRegistration = async () => {
+    const isCurrentlyClosed = !isPublished || tournament?.isRegistrationClosed || tournament?.status === 'registration-closed';
+    const actionWord = isCurrentlyClosed ? 're-open' : 'close';
+    if (!window.confirm(`Are you sure you want to ${actionWord} registrations for this tournament?`)) {
+      return;
+    }
+    try {
+      setSaving(true);
+      const res = await API.patch(`/tournaments/${id}/toggle-registration`);
+      if (res.data.success) {
+        setIsPublished(!res.data.isRegistrationClosed);
+        setTournament((prev) => ({
+          ...prev,
+          isRegistrationClosed: res.data.isRegistrationClosed,
+          status: res.data.status,
+        }));
+        addToast(res.data.message, 'success');
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to toggle registration status', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Preview handlers
   const handlePreviewChange = (key, val) => {
     setPreviewValues({ ...previewValues, [key]: val });
@@ -333,6 +361,75 @@ const FormBuilder = () => {
 
       {activeMode === 'builder' ? (
         <div className="space-y-6">
+          {/* REGISTRATION FORM STATUS & CLOSE OPTION */}
+          <div
+            className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all shadow-sm ${
+              isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                ? 'bg-emerald-50/80 border-emerald-200'
+                : 'bg-rose-50/80 border-rose-200'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-rose-100 text-rose-700'
+                }`}
+              >
+                {isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed' ? (
+                  <Globe className="w-5 h-5" />
+                ) : (
+                  <Lock className="w-5 h-5" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900 font-mono">
+                    Registration Status:
+                  </h3>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                      isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                        ? 'bg-emerald-200/70 text-emerald-800'
+                        : 'bg-rose-200/70 text-rose-800'
+                    }`}
+                  >
+                    {isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                      ? '● OPEN / ACCEPTING SQUADS'
+                      : '🔒 REGISTRATION CLOSED'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  {isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                    ? 'Students can actively view this form and register their squads for the tournament.'
+                    : 'Registrations are locked. Students cannot create squads or register new teams.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleRegistration}
+              disabled={saving}
+              className={`px-4 py-2 rounded-xl text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer shrink-0 ${
+                isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+              }`}
+            >
+              {isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed' ? (
+                <>
+                  <Lock className="w-3.5 h-3.5" /> Close Registration Form
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-3.5 h-3.5" /> Re-Open Registration Form
+                </>
+              )}
+            </button>
+          </div>
+
           {/* 1. SQUAD SIZING & PLAYER COUNT CONFIGURATION */}
           <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">

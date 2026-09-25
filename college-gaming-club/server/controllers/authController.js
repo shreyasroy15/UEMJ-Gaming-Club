@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
+const Team = require('../models/Team');
 const { getCapitalLetterAvatarUrl } = require('../utils/avatar');
 
 // Helper to generate JWT token with unique session identifier
@@ -201,9 +202,51 @@ exports.getMe = async (req, res, next) => {
       user.avatar = getCapitalLetterAvatarUrl(user.name, user.username);
       await User.findByIdAndUpdate(user._id, { avatar: user.avatar });
     }
+    let teamInfo = {
+      name: 'Free Agent',
+      isFreeAgent: true,
+      isVerified: null,
+      roleInTeam: 'Solo Player',
+      game: user.game || (user.games && user.games[0]) || 'BGMI',
+    };
+
+    const teamDoc = await Team.findOne({
+      $or: [{ captain: user._id }, { 'members.user': user._id }],
+    }).select('name isVerified game tag captain members').lean();
+
+    if (teamDoc) {
+      const isCaptain = Boolean(
+        (teamDoc.captain && teamDoc.captain.toString() === user._id.toString()) ||
+        user.role === 'captain'
+      );
+      teamInfo = {
+        name: teamDoc.name,
+        tag: teamDoc.tag || '',
+        isFreeAgent: false,
+        isVerified: Boolean(teamDoc.isVerified),
+        teamId: teamDoc._id,
+        roleInTeam: isCaptain ? 'Captain' : 'Player',
+        game: teamDoc.game || user.game || 'BGMI',
+        memberCount: Array.isArray(teamDoc.members) ? teamDoc.members.length : 1,
+      };
+    } else if (user.teamName && !['free agent', 'none', 'solo'].includes(user.teamName.toLowerCase().trim())) {
+      teamInfo = {
+        name: user.teamName,
+        tag: '',
+        isFreeAgent: false,
+        isVerified: false,
+        roleInTeam: user.role === 'captain' ? 'Captain' : 'Player',
+        game: user.game || 'BGMI',
+        memberCount: 1,
+      };
+    }
+
     res.status(200).json({
       success: true,
-      user,
+      user: {
+        ...user.toObject(),
+        teamInfo,
+      },
     });
   } catch (error) {
     next(error);

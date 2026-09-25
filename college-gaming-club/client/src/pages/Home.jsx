@@ -19,10 +19,10 @@ import {
   Clock,
   Flame,
   ChevronRight,
-  Crown,
   Megaphone,
   Pin
 } from 'lucide-react';
+import { formatShortDateTime } from '../utils/dateUtils';
 
 // Fallback local assets
 import bgmiFallbackBanner from '../assets/game-warrior-gh-pages/img/slider-2.jpg';
@@ -469,6 +469,12 @@ const Home = () => {
                     </span>
                     <span className="font-semibold text-white">{m.round || 'Round 1'}</span>
                     <span className="text-slate-400 text-[11px]">Match {m.matchNumber || 1}</span>
+                    {m.scheduledAt && (
+                      <span className="text-cyan-300 text-[11px] font-mono flex items-center gap-1 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/40">
+                        <Clock className="w-3 h-3 text-cyan-400" />
+                        {formatShortDateTime(m.scheduledAt)}
+                      </span>
+                    )}
                     <span
                       className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
                         m.status === 'live' ? 'text-rose-400 bg-rose-950/60' : 'text-amber-400 bg-amber-950/60'

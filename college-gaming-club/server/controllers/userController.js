@@ -321,7 +321,10 @@ exports.getUserStatsOverview = async (req, res, next) => {
 // @access  Private (Staff / Admin)
 exports.getUserById = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id)
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id) && /^[0-9a-fA-F]{24}$/.test(req.params.id);
+    const query = isObjectId ? { _id: req.params.id } : { username: req.params.id.toLowerCase() };
+
+    const user = await User.findOne(query)
       .select('-password')
       .lean();
 

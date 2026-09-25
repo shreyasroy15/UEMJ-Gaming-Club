@@ -100,9 +100,13 @@ const tournamentSchema = new mongoose.Schema(
     endDate: {
       type: Date,
     },
+    isRegistrationClosed: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
-      enum: ['upcoming', 'registration-open', 'ongoing', 'live', 'on-hold', 'completed', 'cancelled'],
+      enum: ['upcoming', 'registration-open', 'registration-closed', 'ongoing', 'live', 'on-hold', 'completed', 'cancelled'],
       default: 'upcoming',
     },
     createdBy: {

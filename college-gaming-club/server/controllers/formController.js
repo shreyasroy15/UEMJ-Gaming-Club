@@ -63,6 +63,7 @@ exports.getTournamentForm = async (req, res, next) => {
         registrationDeadline: tournament.registrationDeadline,
         identityProofDeadline: tournament.identityProofDeadline || tournament.registrationDeadline,
         status: tournament.status,
+        isRegistrationClosed: Boolean(tournament.isRegistrationClosed || tournament.status === 'registration-closed'),
       },
     });
   } catch (error) {
@@ -139,6 +140,16 @@ exports.saveTournamentForm = async (req, res, next) => {
           : tournament.registrationDeadline;
       }
     }
+
+    if (isPublished !== undefined) {
+      tournament.isRegistrationClosed = !isPublished;
+      if (!isPublished && tournament.status === 'registration-open') {
+        tournament.status = 'registration-closed';
+      } else if (isPublished && tournament.status === 'registration-closed') {
+        tournament.status = 'registration-open';
+      }
+    }
+
     await tournament.save();
 
     res.status(200).json({
@@ -154,6 +165,8 @@ exports.saveTournamentForm = async (req, res, next) => {
         allowSubstitutes: tournament.allowSubstitutes,
         maxSubstitutes: tournament.maxSubstitutes,
         identityProofDeadline: tournament.identityProofDeadline || tournament.registrationDeadline,
+        isRegistrationClosed: Boolean(tournament.isRegistrationClosed || tournament.status === 'registration-closed'),
+        status: tournament.status,
       },
     });
   } catch (error) {
