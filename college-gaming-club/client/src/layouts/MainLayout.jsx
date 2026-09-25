@@ -30,8 +30,11 @@ const MainLayout = () => {
   const fetchSiteSettings = async () => {
     try {
       const res = await API.get('/settings/public');
-      if (res.data?.success && res.data?.settings?.whatsapp) {
-        setWhatsappSettings(res.data.settings.whatsapp);
+      if (res.data?.success && res.data?.settings) {
+        setWhatsappSettings({
+          ...(res.data.settings.whatsapp || {}),
+          whatsappGroups: res.data.settings.whatsappGroups || [],
+        });
       }
     } catch (err) {
       console.warn('Could not load site public settings:', err?.message);

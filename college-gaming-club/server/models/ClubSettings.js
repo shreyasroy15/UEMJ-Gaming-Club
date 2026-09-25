@@ -1,5 +1,46 @@
 const mongoose = require('mongoose');
 
+const whatsappGroupSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      default: 'Official Community',
+    },
+    category: {
+      type: String,
+      default: 'General',
+      trim: true,
+    },
+    link: {
+      type: String,
+      required: true,
+      trim: true,
+      default: 'https://chat.whatsapp.com/invite',
+    },
+    qrCode: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: 'Join for instant match room IDs, passwords, fixtures, and coordinator support.',
+      trim: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true }
+);
+
 const clubSettingsSchema = new mongoose.Schema(
   {
     whatsapp: {
@@ -28,6 +69,7 @@ const clubSettingsSchema = new mongoose.Schema(
         default: true,
       },
     },
+    whatsappGroups: [whatsappGroupSchema],
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
