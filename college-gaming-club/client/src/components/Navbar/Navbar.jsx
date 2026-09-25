@@ -26,10 +26,11 @@ import {
   AlertTriangle,
   ShieldCheck,
   Megaphone,
+  MessageCircle,
 } from 'lucide-react';
 import API from '../../services/api';
 
-const Navbar = () => {
+const Navbar = ({ onOpenWhatsApp, whatsappSettings }) => {
   const { user, isAuthenticated, isStaff, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -309,6 +310,18 @@ const Navbar = () => {
 
               {/* Right Side Action / CTA Pill Button (Far Right) */}
               <div className="flex items-center gap-2 sm:gap-2.5">
+                {/* WhatsApp Community Quick Button */}
+                {onOpenWhatsApp && whatsappSettings?.isActive !== false && (
+                  <button
+                    type="button"
+                    onClick={onOpenWhatsApp}
+                    className="hidden sm:flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-full bg-slate-950/60 hover:bg-slate-900 border border-emerald-500/30 hover:border-emerald-400 text-emerald-400 hover:text-emerald-300 font-mono text-xs font-bold transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer"
+                    title="Official WhatsApp Group & QR Code"
+                  >
+                    <MessageCircle className="w-4 h-4 fill-emerald-400/20" />
+                    <span className="hidden md:inline">WhatsApp</span>
+                  </button>
+                )}
                 {isAuthenticated ? (
                   <div className="flex items-center gap-2">
                     {/* Notifications & Tournament Invitations Bell */}
@@ -806,6 +819,21 @@ const Navbar = () => {
                   </NavLink>
                 ))}
               </div>
+
+              {/* WhatsApp Community Mobile Action */}
+              {onOpenWhatsApp && whatsappSettings?.isActive !== false && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenWhatsApp();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 font-bold text-xs uppercase font-mono tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-colors cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-400" />
+                  <span>WhatsApp Group (Scan QR)</span>
+                </button>
+              )}
 
               {/* Mobile Auth & Profile Section */}
               <div className="pt-2 border-t border-white/10 flex flex-col gap-2">

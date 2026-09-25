@@ -47,6 +47,7 @@ import AdminAnnouncements from './pages/admin/Announcements';
 import AdminGallery from './pages/admin/Gallery';
 import AdminUsers from './pages/admin/Users';
 import AdminGameView from './pages/admin/AdminGameView';
+import AdminSettings from './pages/admin/Settings';
 
 // Route Guards
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute/ProtectedRoute';
@@ -150,6 +151,7 @@ function App() {
               <Route path="announcements" element={<AdminAnnouncements />} />
               <Route path="gallery" element={<AdminGallery />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
           </Routes>
         </Router>

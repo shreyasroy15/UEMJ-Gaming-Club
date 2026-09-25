@@ -22,6 +22,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const pollRoutes = require('./routes/pollRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
 
 // Import error middleware
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
@@ -138,6 +139,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/polls', pollRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Error Handling
 app.use(notFound);

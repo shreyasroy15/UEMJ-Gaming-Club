@@ -10,6 +10,9 @@ import {
   Vote,
   Sparkles,
   Loader2,
+  MessageCircle,
+  QrCode,
+  ExternalLink,
 } from 'lucide-react';
 
 const getPollVoterId = () => {
@@ -46,7 +49,7 @@ const GAME_METADATA = {
   },
 };
 
-const Footer = ({ isCompact = false }) => {
+const Footer = ({ isCompact = false, whatsappSettings, onOpenWhatsApp }) => {
   const currentYear = new Date().getFullYear();
 
   // Poll state
@@ -290,6 +293,54 @@ const Footer = ({ isCompact = false }) => {
             </div>
           </div>
         </div>
+
+        {/* ========================================================================= */}
+        {/* WHATSAPP OFFICIAL COMMUNITY & QR CODE BANNER */}
+        {/* ========================================================================= */}
+        {whatsappSettings?.isActive !== false && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-950/80 to-emerald-950/30 border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)] flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 text-center md:text-left">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                <MessageCircle className="w-6 h-6 text-emerald-400 fill-emerald-400/20" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                  <h4 className="text-sm font-bold text-white font-mono uppercase tracking-wide">
+                    {whatsappSettings?.groupName || 'Official WhatsApp Community'}
+                  </h4>
+                  <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase font-mono bg-emerald-500 text-slate-950 shadow-xs">
+                    OFFICIAL
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  {whatsappSettings?.description || 'Scan the QR code or click to join for match room credentials, schedule updates, and coordinator support.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto justify-center">
+              {onOpenWhatsApp && (
+                <button
+                  type="button"
+                  onClick={onOpenWhatsApp}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer"
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span>Scan QR Code</span>
+                </button>
+              )}
+              <a
+                href={whatsappSettings?.link || 'https://chat.whatsapp.com/invite'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+              >
+                <span>Join Group</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* ========================================================================= */}
         {/* BOTTOM COPYRIGHT & DEV CREDITS */}

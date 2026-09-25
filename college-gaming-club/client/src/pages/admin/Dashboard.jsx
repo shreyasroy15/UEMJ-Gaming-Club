@@ -28,6 +28,8 @@ import {
   RotateCcw,
   Vote,
   TrendingUp,
+  QrCode,
+  MessageCircle,
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -280,6 +282,13 @@ const Dashboard = () => {
             >
               <Swords className="w-4 h-4" />
               Launch Next Round
+            </Link>
+            <Link
+              to="/admin/settings"
+              className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl px-4 sm:px-6 py-2.5 sm:py-3 transition-all hover:-translate-y-0.5 flex items-center gap-2 border border-emerald-400/40 text-xs sm:text-sm cursor-pointer shadow-sm shadow-emerald-500/20"
+            >
+              <QrCode className="w-4 h-4 text-emerald-200" />
+              WhatsApp & QR Setup
             </Link>
             <button
               onClick={fetchDashboard}
