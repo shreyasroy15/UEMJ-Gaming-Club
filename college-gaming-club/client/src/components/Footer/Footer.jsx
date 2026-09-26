@@ -160,10 +160,10 @@ const Footer = ({ isCompact = false, whatsappSettings, onOpenWhatsApp }) => {
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-cyan-400 shrink-0" />
                 <a
-                  href="mailto:gaminggeeks@uem.edu.in"
+                  href="mailto:sanglapghosh51@gmail.com"
                   className="hover:text-cyan-300 transition-colors text-slate-300 truncate"
                 >
-                  gaminggeeks@uem.edu.in
+                  sanglapghosh51@gmail.com
                 </a>
               </div>
             </div>

@@ -184,6 +184,10 @@ const AdminTournaments = () => {
       setSubmitting(true);
       const payload = {
         ...formData,
+        isRegistrationClosed: Boolean(formData.isRegistrationClosed),
+        registrationDeadline: formData.registrationDeadline ? new Date(formData.registrationDeadline).toISOString() : undefined,
+        identityProofDeadline: formData.identityProofDeadline ? new Date(formData.identityProofDeadline).toISOString() : undefined,
+        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
         prizePool: {
           total: Number(formData.prizeTotal) || 0,
           currency: 'INR (₹)',
@@ -1071,7 +1075,15 @@ const AdminTournaments = () => {
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                onChange={(e) => {
+                  const newStatus = e.target.value;
+                  const isClosed = newStatus === 'registration-closed' ? true : (newStatus === 'registration-open' ? false : formData.isRegistrationClosed);
+                  setFormData({
+                    ...formData,
+                    status: newStatus,
+                    isRegistrationClosed: isClosed,
+                  });
+                }}
                 className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-sky-500 font-semibold"
               >
                 <option value="upcoming">Upcoming</option>
@@ -1089,7 +1101,7 @@ const AdminTournaments = () => {
               <label className="flex items-center gap-2.5 p-2 rounded-xl border border-slate-200 bg-white w-full cursor-pointer hover:bg-slate-50">
                 <input
                   type="checkbox"
-                  checked={Boolean(formData.isRegistrationClosed || formData.status === 'registration-closed')}
+                  checked={Boolean(formData.isRegistrationClosed)}
                   onChange={(e) => {
                     const closed = e.target.checked;
                     setFormData({

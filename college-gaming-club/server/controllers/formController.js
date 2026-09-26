@@ -62,6 +62,7 @@ exports.getTournamentForm = async (req, res, next) => {
         maxSubstitutes: tournament.maxSubstitutes || 1,
         registrationDeadline: tournament.registrationDeadline,
         identityProofDeadline: tournament.identityProofDeadline || tournament.registrationDeadline,
+        startDate: tournament.startDate,
         status: tournament.status,
         isRegistrationClosed: Boolean(tournament.isRegistrationClosed || tournament.status === 'registration-closed'),
       },
@@ -88,7 +89,7 @@ exports.saveTournamentForm = async (req, res, next) => {
       });
     }
 
-    const { title, description, isPublished, questions, teamConfig } = req.body;
+    const { title, description, isPublished, isRegistrationClosed, questions, teamConfig } = req.body;
 
     if (!title || !Array.isArray(questions)) {
       return res.status(400).json({
@@ -108,12 +109,29 @@ exports.saveTournamentForm = async (req, res, next) => {
       }
     }
 
+    // Determine registration closed state
+    let closedState = undefined;
+    if (isRegistrationClosed !== undefined) {
+      closedState = Boolean(isRegistrationClosed);
+    } else if (isPublished !== undefined) {
+      closedState = !Boolean(isPublished);
+    }
+
+    if (closedState !== undefined) {
+      tournament.isRegistrationClosed = closedState;
+      if (closedState) {
+        tournament.status = 'registration-closed';
+      } else if (tournament.status === 'registration-closed') {
+        tournament.status = 'registration-open';
+      }
+    }
+
     let form = await TournamentForm.findOne({ tournament: tournament._id });
 
     if (form) {
       form.title = title;
       if (description !== undefined) form.description = description;
-      if (isPublished !== undefined) form.isPublished = isPublished;
+      form.isPublished = closedState !== undefined ? !closedState : form.isPublished;
       form.questions = questions;
       await form.save();
     } else {
@@ -121,7 +139,7 @@ exports.saveTournamentForm = async (req, res, next) => {
         tournament: tournament._id,
         title,
         description: description || '',
-        isPublished: isPublished !== false,
+        isPublished: closedState !== undefined ? !closedState : true,
         questions,
       });
 
@@ -134,19 +152,15 @@ exports.saveTournamentForm = async (req, res, next) => {
       if (teamConfig.maxTeamSize !== undefined) tournament.maxTeamSize = Number(teamConfig.maxTeamSize);
       if (teamConfig.allowSubstitutes !== undefined) tournament.allowSubstitutes = Boolean(teamConfig.allowSubstitutes);
       if (teamConfig.maxSubstitutes !== undefined) tournament.maxSubstitutes = Number(teamConfig.maxSubstitutes);
-      if (teamConfig.identityProofDeadline !== undefined) {
-        tournament.identityProofDeadline = teamConfig.identityProofDeadline
-          ? new Date(teamConfig.identityProofDeadline)
-          : tournament.registrationDeadline;
-      }
-    }
 
-    if (isPublished !== undefined) {
-      tournament.isRegistrationClosed = !isPublished;
-      if (!isPublished && tournament.status === 'registration-open') {
-        tournament.status = 'registration-closed';
-      } else if (isPublished && tournament.status === 'registration-closed') {
-        tournament.status = 'registration-open';
+      if (teamConfig.registrationDeadline) {
+        tournament.registrationDeadline = new Date(teamConfig.registrationDeadline);
+      }
+      if (teamConfig.identityProofDeadline) {
+        tournament.identityProofDeadline = new Date(teamConfig.identityProofDeadline);
+      }
+      if (teamConfig.startDate) {
+        tournament.startDate = new Date(teamConfig.startDate);
       }
     }
 
@@ -154,17 +168,21 @@ exports.saveTournamentForm = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Tournament form saved successfully',
+      message: 'Tournament form and settings saved successfully',
       form,
       tournament: {
         _id: tournament._id,
         name: tournament.name,
         slug: tournament.slug,
+        game: tournament.game,
+        banner: tournament.banner,
         minTeamSize: tournament.minTeamSize,
         maxTeamSize: tournament.maxTeamSize,
         allowSubstitutes: tournament.allowSubstitutes,
         maxSubstitutes: tournament.maxSubstitutes,
+        registrationDeadline: tournament.registrationDeadline,
         identityProofDeadline: tournament.identityProofDeadline || tournament.registrationDeadline,
+        startDate: tournament.startDate,
         isRegistrationClosed: Boolean(tournament.isRegistrationClosed || tournament.status === 'registration-closed'),
         status: tournament.status,
       },

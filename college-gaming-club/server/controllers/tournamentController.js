@@ -292,11 +292,30 @@ exports.updateTournament = async (req, res, next) => {
       });
     }
 
-    // Sync isRegistrationClosed if status is explicitly set to registration-closed or registration-open
-    if (req.body.status === 'registration-closed') {
+    // Determine registration closed state
+    if (req.body.isRegistrationClosed !== undefined) {
+      const isClosed = Boolean(req.body.isRegistrationClosed);
+      req.body.isRegistrationClosed = isClosed;
+      if (isClosed) {
+        req.body.status = 'registration-closed';
+      } else if (req.body.status === 'registration-closed') {
+        req.body.status = 'registration-open';
+      }
+    } else if (req.body.status === 'registration-closed') {
       req.body.isRegistrationClosed = true;
     } else if (req.body.status === 'registration-open') {
       req.body.isRegistrationClosed = false;
+    }
+
+    // Parse date fields properly
+    if (req.body.registrationDeadline) {
+      req.body.registrationDeadline = new Date(req.body.registrationDeadline);
+    }
+    if (req.body.identityProofDeadline) {
+      req.body.identityProofDeadline = new Date(req.body.identityProofDeadline);
+    }
+    if (req.body.startDate) {
+      req.body.startDate = new Date(req.body.startDate);
     }
 
     tournament = await Tournament.findByIdAndUpdate(req.params.id, req.body, {
@@ -304,13 +323,11 @@ exports.updateTournament = async (req, res, next) => {
       runValidators: true,
     });
 
-    // Sync connected form publication state if isRegistrationClosed is supplied
-    if (req.body.isRegistrationClosed !== undefined) {
-      await TournamentForm.findOneAndUpdate(
-        { tournament: tournament._id },
-        { isPublished: !req.body.isRegistrationClosed }
-      );
-    }
+    // Sync connected form publication state
+    await TournamentForm.findOneAndUpdate(
+      { tournament: tournament._id },
+      { isPublished: !tournament.isRegistrationClosed }
+    );
 
     res.status(200).json({
       success: true,
@@ -338,13 +355,9 @@ exports.toggleRegistration = async (req, res, next) => {
     tournament.isRegistrationClosed = nextClosed;
 
     if (nextClosed) {
-      if (tournament.status === 'registration-open') {
-        tournament.status = 'registration-closed';
-      }
+      tournament.status = 'registration-closed';
     } else {
-      if (tournament.status === 'registration-closed') {
-        tournament.status = 'registration-open';
-      }
+      tournament.status = 'registration-open';
     }
 
     await tournament.save();

@@ -33,6 +33,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import { formatTournamentDateTime } from '../utils/dateUtils';
 
 const TournamentRegister = () => {
   const { id } = useParams();
@@ -953,7 +954,7 @@ const TournamentRegister = () => {
               >
                 <span>
                   ⏰ <strong>Identity Proof Submission Deadline:</strong>{' '}
-                  {new Date(identityProofDeadline).toLocaleString()}
+                  {formatTournamentDateTime(identityProofDeadline)}
                 </span>
                 {isIdentityProofDeadlinePassed && (
                   <span className="font-bold text-rose-400 uppercase tracking-wide text-[10px]">
@@ -1509,6 +1510,14 @@ const TournamentRegister = () => {
             </h2>
             <p className="text-xs text-slate-400 leading-relaxed">
               Registrations for <strong>{tournament.name}</strong> are currently closed. No new squads can be created or joined at this time.
+              {tournament.registrationDeadline && (
+                <span className="block mt-1.5 font-mono text-slate-400">
+                  Registration Deadline:{' '}
+                  <span className="text-rose-400 font-bold">
+                    {formatTournamentDateTime(tournament.registrationDeadline)}
+                  </span>
+                </span>
+              )}
             </p>
           </div>
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">

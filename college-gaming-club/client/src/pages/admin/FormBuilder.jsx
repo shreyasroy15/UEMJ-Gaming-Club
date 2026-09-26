@@ -32,6 +32,7 @@ import {
   Clock,
   Shield,
   Unlock,
+  Calendar,
 } from 'lucide-react';
 import { toLocalDatetimeInput } from '../../utils/dateUtils';
 
@@ -61,6 +62,7 @@ const FormBuilder = () => {
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [isPublished, setIsPublished] = useState(true);
+  const [isRegistrationClosed, setIsRegistrationClosed] = useState(false);
   const [questions, setQuestions] = useState([]);
 
   // Sizing & Roster Rules
@@ -68,7 +70,11 @@ const FormBuilder = () => {
   const [maxTeamSize, setMaxTeamSize] = useState(5);
   const [allowSubstitutes, setAllowSubstitutes] = useState(true);
   const [maxSubstitutes, setMaxSubstitutes] = useState(1);
+
+  // Deadlines & Match Schedule
+  const [registrationDeadline, setRegistrationDeadline] = useState('');
   const [identityProofDeadline, setIdentityProofDeadline] = useState('');
+  const [startDate, setStartDate] = useState('');
 
   // Preview form state
   const [previewValues, setPreviewValues] = useState({});
@@ -117,19 +123,34 @@ const FormBuilder = () => {
         }
 
         setQuestions(sanitized);
-        setTournament(res.data.tournament);
+        const t = res.data.tournament;
+        setTournament(t);
 
-        const minS = res.data.tournament.minTeamSize || 4;
-        const maxS = res.data.tournament.maxTeamSize || 5;
+        const closed = Boolean(
+          t.isRegistrationClosed ||
+          t.status === 'registration-closed' ||
+          form.isPublished === false
+        );
+        setIsRegistrationClosed(closed);
+        setIsPublished(!closed);
+
+        const minS = t.minTeamSize || 4;
+        const maxS = t.maxTeamSize || 5;
         setMinTeamSize(minS);
         setMaxTeamSize(maxS);
-        setAllowSubstitutes(res.data.tournament.allowSubstitutes !== false);
-        setMaxSubstitutes(res.data.tournament.maxSubstitutes || 1);
+        setAllowSubstitutes(t.allowSubstitutes !== false);
+        setMaxSubstitutes(t.maxSubstitutes || 1);
         setPreviewSlotCount(minS);
 
-        const idDeadline = res.data.tournament.identityProofDeadline || res.data.tournament.registrationDeadline;
+        if (t.registrationDeadline) {
+          setRegistrationDeadline(toLocalDatetimeInput(t.registrationDeadline));
+        }
+        const idDeadline = t.identityProofDeadline || t.registrationDeadline;
         if (idDeadline) {
           setIdentityProofDeadline(toLocalDatetimeInput(idDeadline));
+        }
+        if (t.startDate) {
+          setStartDate(toLocalDatetimeInput(t.startDate));
         }
       }
     } catch (err) {
@@ -223,20 +244,40 @@ const FormBuilder = () => {
       const payload = {
         title: formTitle.trim(),
         description: formDescription,
-        isPublished,
+        isPublished: !isRegistrationClosed,
+        isRegistrationClosed: isRegistrationClosed,
         questions: questions.map((q, idx) => ({ ...q, order: idx + 1 })),
         teamConfig: {
           minTeamSize: Number(minTeamSize),
           maxTeamSize: Number(maxTeamSize),
           allowSubstitutes: Boolean(allowSubstitutes),
           maxSubstitutes: Number(maxSubstitutes),
+          registrationDeadline: registrationDeadline ? new Date(registrationDeadline).toISOString() : undefined,
           identityProofDeadline: identityProofDeadline ? new Date(identityProofDeadline).toISOString() : undefined,
+          startDate: startDate ? new Date(startDate).toISOString() : undefined,
         },
       };
 
       const res = await API.put(`/tournaments/${id}/form`, payload);
       if (res.data.success) {
-        addToast('Registration form & squad sizing rules saved successfully!', 'success');
+        if (res.data.tournament) {
+          setTournament(res.data.tournament);
+          const updatedClosed = Boolean(
+            res.data.tournament.isRegistrationClosed || res.data.tournament.status === 'registration-closed'
+          );
+          setIsRegistrationClosed(updatedClosed);
+          setIsPublished(!updatedClosed);
+          if (res.data.tournament.registrationDeadline) {
+            setRegistrationDeadline(toLocalDatetimeInput(res.data.tournament.registrationDeadline));
+          }
+          if (res.data.tournament.identityProofDeadline) {
+            setIdentityProofDeadline(toLocalDatetimeInput(res.data.tournament.identityProofDeadline));
+          }
+          if (res.data.tournament.startDate) {
+            setStartDate(toLocalDatetimeInput(res.data.tournament.startDate));
+          }
+        }
+        addToast('Registration form, deadlines & squad rules saved successfully!', 'success');
       }
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to save form', 'error');
@@ -247,8 +288,8 @@ const FormBuilder = () => {
 
   // Toggle Registration Form Closure
   const handleToggleRegistration = async () => {
-    const isCurrentlyClosed = !isPublished || tournament?.isRegistrationClosed || tournament?.status === 'registration-closed';
-    const actionWord = isCurrentlyClosed ? 're-open' : 'close';
+    const nextClosed = !isRegistrationClosed;
+    const actionWord = nextClosed ? 'close' : 're-open';
     if (!window.confirm(`Are you sure you want to ${actionWord} registrations for this tournament?`)) {
       return;
     }
@@ -256,10 +297,14 @@ const FormBuilder = () => {
       setSaving(true);
       const res = await API.patch(`/tournaments/${id}/toggle-registration`);
       if (res.data.success) {
-        setIsPublished(!res.data.isRegistrationClosed);
+        const updatedClosed = Boolean(
+          res.data.isRegistrationClosed || res.data.status === 'registration-closed'
+        );
+        setIsRegistrationClosed(updatedClosed);
+        setIsPublished(!updatedClosed);
         setTournament((prev) => ({
           ...prev,
-          isRegistrationClosed: res.data.isRegistrationClosed,
+          isRegistrationClosed: updatedClosed,
           status: res.data.status,
         }));
         addToast(res.data.message, 'success');
@@ -364,7 +409,7 @@ const FormBuilder = () => {
           {/* REGISTRATION FORM STATUS & CLOSE OPTION */}
           <div
             className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all shadow-sm ${
-              isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+              !isRegistrationClosed
                 ? 'bg-emerald-50/80 border-emerald-200'
                 : 'bg-rose-50/80 border-rose-200'
             }`}
@@ -372,12 +417,12 @@ const FormBuilder = () => {
             <div className="flex items-center gap-3">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                  !isRegistrationClosed
                     ? 'bg-emerald-100 text-emerald-700'
                     : 'bg-rose-100 text-rose-700'
                 }`}
               >
-                {isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed' ? (
+                {!isRegistrationClosed ? (
                   <Globe className="w-5 h-5" />
                 ) : (
                   <Lock className="w-5 h-5" />
@@ -390,18 +435,18 @@ const FormBuilder = () => {
                   </h3>
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
-                      isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                      !isRegistrationClosed
                         ? 'bg-emerald-200/70 text-emerald-800'
                         : 'bg-rose-200/70 text-rose-800'
                     }`}
                   >
-                    {isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                    {!isRegistrationClosed
                       ? '● OPEN / ACCEPTING SQUADS'
                       : '🔒 REGISTRATION CLOSED'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  {isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                  {!isRegistrationClosed
                     ? 'Students can actively view this form and register their squads for the tournament.'
                     : 'Registrations are locked. Students cannot create squads or register new teams.'}
                 </p>
@@ -413,12 +458,12 @@ const FormBuilder = () => {
               onClick={handleToggleRegistration}
               disabled={saving}
               className={`px-4 py-2 rounded-xl text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer shrink-0 ${
-                isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed'
+                !isRegistrationClosed
                   ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
               }`}
             >
-              {isPublished && !tournament?.isRegistrationClosed && tournament?.status !== 'registration-closed' ? (
+              {!isRegistrationClosed ? (
                 <>
                   <Lock className="w-3.5 h-3.5" /> Close Registration Form
                 </>
@@ -431,15 +476,15 @@ const FormBuilder = () => {
           </div>
 
           {/* 1. SQUAD SIZING & PLAYER COUNT CONFIGURATION */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+          <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h2 className="text-sm font-bold text-slate-900 uppercase font-mono flex items-center gap-2">
                 <Settings className="w-4 h-4 text-indigo-600" /> Player Count & Squad Configuration
               </h2>
-              <span className="text-[11px] text-slate-500 font-mono">Controls squad rules & deadlines</span>
+              <span className="text-[11px] text-slate-500 font-mono">Controls squad rules & capacity</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-mono font-bold text-slate-700">
                   Required Players *
@@ -511,20 +556,62 @@ const FormBuilder = () => {
                   Usually 1 for esports.
                 </p>
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-mono font-bold text-slate-700 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-amber-600" /> Identity Proof Deadline *
-                </label>
-                <input
-                  type="datetime-local"
-                  value={identityProofDeadline}
-                  onChange={(e) => setIdentityProofDeadline(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-mono"
-                />
-                <p className="text-[10px] text-slate-500">
-                  After this deadline, user uploads are closed.
-                </p>
+            {/* TOURNAMENT DEADLINES & MATCH TIMINGS */}
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 uppercase font-mono flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-600" /> Tournament Deadlines & Match Schedule
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">Synced with user tournament page</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono font-bold text-slate-700 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" /> Registration Deadline *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={registrationDeadline}
+                    onChange={(e) => setRegistrationDeadline(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-mono font-semibold"
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    Registration closes on user side after this.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono font-bold text-slate-700 flex items-center gap-1">
+                    <Shield className="w-3.5 h-3.5 text-purple-600" /> Identity Proof Deadline *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={identityProofDeadline}
+                    onChange={(e) => setIdentityProofDeadline(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-mono font-semibold"
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    Team ID/proof PDF upload closes after this.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono font-bold text-slate-700 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-cyan-600" /> Tournament Start Timing *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500 font-mono font-semibold"
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    Displayed as match start time to users.
+                  </p>
+                </div>
               </div>
             </div>
 
