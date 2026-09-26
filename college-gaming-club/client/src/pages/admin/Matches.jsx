@@ -43,6 +43,7 @@ import {
   Save,
   Flame,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 
 // Official Esports Pointing System Presets
@@ -681,10 +682,15 @@ const AdminMatches = () => {
       return;
     }
     const nextRoundNumber = activeLobbyMatches.length + 1;
+    const gameName = (selectedTournament?.game || '').toLowerCase();
+    let defaultMap = 'Erangel';
+    if (gameName.includes('free fire')) defaultMap = 'Bermuda';
+    else if (gameName.includes('valorant')) defaultMap = 'Ascent';
+
     setEditingRound(null);
     setRoundFormData({
       title: `Round ${nextRoundNumber}`,
-      map: 'Erangel',
+      map: defaultMap,
       matchNumber: nextRoundNumber,
       scheduledAt: new Date().toISOString().slice(0, 16),
       status: 'scheduled',
@@ -695,6 +701,24 @@ const AdminMatches = () => {
       winner: '',
     });
     setRoundModalOpen(true);
+  };
+
+  const handleDeleteAllUnassignedMatches = async () => {
+    const count = matchesByLobby['unassigned']?.length || 0;
+    if (!window.confirm(`Are you sure you want to permanently delete all ${count} unassigned match(es)?`)) {
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await API.delete(`/tournaments/${selectedTournamentId}/matches?unassignedOnly=true`);
+      addToast(`Deleted ${count} unassigned matches successfully!`, 'success');
+      fetchTournamentStructure(selectedTournamentId);
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to delete unassigned matches', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleOpenEditRound = (match) => {
@@ -1661,6 +1685,55 @@ const AdminMatches = () => {
           )}
         </div>
 
+        {/* Unassigned / Stray Matches Banner (e.g. from previous bracket generation) */}
+        {matchesByLobby['unassigned'] && matchesByLobby['unassigned'].length > 0 && (
+          <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 space-y-3.5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-bold text-rose-900 flex items-center gap-2 font-mono">
+                  <AlertTriangle className="w-4 h-4 text-rose-600" />
+                  {matchesByLobby['unassigned'].length} Stray / Bracket Matches Found (Unassigned to any Lobby)
+                </h4>
+                <p className="text-xs text-rose-700 mt-0.5">
+                  These 2-team matches were previously generated and appear on the user page under Lobbies & Matches. Delete them to clean up the schedule.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleDeleteAllUnassignedMatches}
+                disabled={submitting}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs font-mono flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer self-start sm:self-center disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete All {matchesByLobby['unassigned'].length} Unassigned Matches
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
+              {matchesByLobby['unassigned'].map((m) => (
+                <div key={m._id} className="p-3 rounded-xl bg-white border border-rose-200 flex items-center justify-between gap-2 text-xs shadow-2xs">
+                  <div className="min-w-0">
+                    <span className="font-bold text-slate-800 font-mono truncate block">
+                      {m.title || `Match #${m.matchNumber}`}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono block">
+                      Map: {m.map || 'Default'} • {m.teams?.length || 0} teams
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRound(m)}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer shrink-0"
+                    title="Delete this match"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Selected Lobby Details & Controls */}
         {activeLobby && (
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
@@ -2396,15 +2469,38 @@ const AdminMatches = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                Map
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Map
+                </label>
+                <div className="flex flex-wrap items-center gap-1">
+                  {(selectedTournament?.game?.toLowerCase().includes('free fire')
+                    ? ['Bermuda', 'Purgatory', 'Kalahari', 'Alpine']
+                    : selectedTournament?.game?.toLowerCase().includes('valorant')
+                    ? ['Ascent', 'Bind', 'Haven', 'Lotus']
+                    : ['Erangel', 'Miramar', 'Sanhok', 'Vikendi']
+                  ).map((mName) => (
+                    <button
+                      key={mName}
+                      type="button"
+                      onClick={() => setRoundFormData({ ...roundFormData, map: mName })}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
+                        roundFormData.map === mName
+                          ? 'bg-cyan-100 border-cyan-300 text-cyan-800 font-bold'
+                          : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {mName}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <input
                 type="text"
                 value={roundFormData.map}
                 onChange={(e) => setRoundFormData({ ...roundFormData, map: e.target.value })}
-                placeholder="e.g. Erangel, Miramar"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium"
+                placeholder="e.g. Bermuda, Erangel, Ascent"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:bg-white focus:border-cyan-500 font-medium font-mono"
               />
             </div>
           </div>

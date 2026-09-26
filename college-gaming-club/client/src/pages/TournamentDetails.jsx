@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import API from '../services/api';
-import TournamentBracket from '../components/Leaderboard/TournamentBracket';
 import Loading from '../components/Loading/Loading';
 import EmptyState from '../components/EmptyState/EmptyState';
 import Modal from '../components/Modal/Modal';
@@ -51,7 +50,7 @@ const TournamentDetails = () => {
   // Sync activeTab with URL tab query parameter (e.g. ?tab=matches)
   const urlTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(
-    urlTab && ['overview', 'rules', 'teams', 'matches', 'leaderboard', 'bracket'].includes(urlTab)
+    urlTab && ['overview', 'rules', 'teams', 'matches', 'leaderboard'].includes(urlTab)
       ? urlTab
       : 'overview'
   );
@@ -59,7 +58,7 @@ const TournamentDetails = () => {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['overview', 'rules', 'teams', 'matches', 'leaderboard', 'bracket'].includes(tabParam)) {
+    if (tabParam && ['overview', 'rules', 'teams', 'matches', 'leaderboard'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -430,7 +429,6 @@ const TournamentDetails = () => {
     { id: 'teams', label: `Teams (${publicTeams.length || tournament.registeredTeams?.length || 0})` },
     { id: 'matches', label: `Lobbies & Matches (${matches.length})` },
     { id: 'leaderboard', label: 'Points Table' },
-    { id: 'bracket', label: 'Bracket' },
   ];
 
   return (
@@ -968,12 +966,81 @@ const TournamentDetails = () => {
                       <div className="flex items-center justify-between text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-2 rounded-xl border border-slate-800/80">
                         <span className="flex items-center gap-1.5">
                           <span>🗺️ Map:</span>
-                          <strong className="text-cyan-300">{match.map || 'Erangel'}</strong>
+                          <strong className="text-cyan-300">
+                            {match.map || (
+                              tournament.game?.toLowerCase().includes('free fire')
+                                ? 'Bermuda'
+                                : tournament.game?.toLowerCase().includes('valorant')
+                                ? 'Ascent'
+                                : 'Erangel'
+                            )}
+                          </strong>
                         </span>
                         <span className="text-slate-300 font-semibold">
                           📅 Match Start: <strong className="text-amber-300">{match.scheduledAt ? formatTournamentDateTime(match.scheduledAt) : 'TBD'}</strong>
                         </span>
                       </div>
+
+                      {/* Head-to-Head 2-Team Matchup (Valorant / 1v1 Team Clash) */}
+                      {(match.teamA || match.teamB) && (
+                        <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-cyan-950/50 via-slate-950 to-indigo-950/50 border border-slate-800 shadow-md">
+                          <div className="flex items-center justify-between gap-2 sm:gap-4">
+                            {/* Team A */}
+                            <div className="flex-1 flex items-center gap-2.5 min-w-0">
+                              <img
+                                src={
+                                  match.teamA?.teamLogo ||
+                                  match.teamA?.logo ||
+                                  'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'
+                                }
+                                alt={match.teamA?.teamName || match.teamA?.name || 'Team A'}
+                                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-cyan-500/40 shrink-0 bg-slate-900"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-bold text-white font-mono truncate">
+                                  {match.teamA?.teamName || match.teamA?.name || 'TBD (Team A)'}
+                                </p>
+                                <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block"></span>
+                                  Opponent A
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Versus & Score Center Badge */}
+                            <div className="shrink-0 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-center shadow-lg">
+                              <div className="text-sm sm:text-base font-black font-mono text-amber-400 tracking-wider">
+                                {match.scoreA ?? 0} : {match.scoreB ?? 0}
+                              </div>
+                              <span className="text-[9px] uppercase font-mono font-bold text-slate-400">
+                                {match.status === 'completed' ? 'FINAL' : 'VS'}
+                              </span>
+                            </div>
+
+                            {/* Team B */}
+                            <div className="flex-1 flex items-center justify-end gap-2.5 min-w-0 text-right">
+                              <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-bold text-white font-mono truncate">
+                                  {match.teamB?.teamName || match.teamB?.name || 'TBD (Team B)'}
+                                </p>
+                                <span className="text-[10px] text-indigo-400 font-mono flex items-center justify-end gap-1">
+                                  Opponent B
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 inline-block"></span>
+                                </span>
+                              </div>
+                              <img
+                                src={
+                                  match.teamB?.teamLogo ||
+                                  match.teamB?.logo ||
+                                  'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'
+                                }
+                                alt={match.teamB?.teamName || match.teamB?.name || 'Team B'}
+                                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-indigo-500/40 shrink-0 bg-slate-900"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Room Credentials Box */}
                       <div className="p-3 rounded-xl bg-slate-950 border border-cyan-500/30 space-y-2">
@@ -1157,23 +1224,6 @@ const TournamentDetails = () => {
           </div>
         )}
 
-        {/* 5. BRACKET */}
-        {activeTab === 'bracket' && (
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <h3 className="text-lg font-bold text-white font-mono flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-amber-400" /> Elimination Progression
-              </h3>
-              {isStaff && (
-                <span className="text-xs text-fuchsia-400 font-mono">
-                  (Click any match node to update scores)
-                </span>
-              )}
-            </div>
-
-            <TournamentBracket matches={matches} onMatchClick={handleMatchClick} />
-          </div>
-        )}
 
         {/* 6. POINTS TABLE / LEADERBOARD */}
         {activeTab === 'leaderboard' && (

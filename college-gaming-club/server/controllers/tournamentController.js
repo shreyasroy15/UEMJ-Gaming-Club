@@ -175,10 +175,16 @@ exports.getTournamentById = async (req, res, next) => {
       });
     });
 
+    // Only return matches that belong to an actual existing lobby in this tournament
+    const validLobbyIdStrings = allLobbies.map((l) => l._id.toString());
+    const validMatches = sanitizedMatches.filter(
+      (m) => m.lobbyId && validLobbyIdStrings.includes(m.lobbyId.toString())
+    );
+
     res.status(200).json({
       success: true,
       tournament,
-      matches: sanitizedMatches,
+      matches: validMatches,
       lobbies: allLobbies,
     });
   } catch (error) {
@@ -577,7 +583,7 @@ exports.registerTeam = async (req, res, next) => {
 // @access  Private (Admin)
 exports.generateBracket = async (req, res, next) => {
   try {
-    const tournament = await Tournament.findById(req.params.id).populate('registeredTeams.team');
+    const tournament = await Tournament.findById(req.params.id);
 
     if (!tournament) {
       return res.status(404).json({
@@ -586,19 +592,41 @@ exports.generateBracket = async (req, res, next) => {
       });
     }
 
-    const teams = tournament.registeredTeams.map((r) => r.team).filter(Boolean);
+    if (tournament.format === 'Round Robin') {
+      return res.status(400).json({
+        success: false,
+        message: 'Brackets are not used for Round Robin format. Round Robin uses league/group fixtures instead of elimination brackets.',
+      });
+    }
+
+    // 1. Fetch registered squads from TournamentRegistration
+    let teams = await TournamentRegistration.find({
+      tournament: tournament._id,
+      status: { $ne: 'rejected' },
+    }).sort({ createdAt: 1 });
+
+    // 2. If fewer than 2 squads in TournamentRegistration, fallback to legacy tournament.registeredTeams
+    let isRegModel = true;
+    if (teams.length < 2) {
+      const populatedTourney = await Tournament.findById(req.params.id).populate('registeredTeams.team');
+      const legacyTeams = (populatedTourney.registeredTeams || []).map((r) => r.team).filter(Boolean);
+      if (legacyTeams.length >= 2) {
+        teams = legacyTeams;
+        isRegModel = false;
+      }
+    }
 
     if (teams.length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Need at least 2 registered teams to generate brackets',
+        message: `Need at least 2 registered teams to generate brackets. Currently have ${teams.length} registered team(s).`,
       });
     }
 
-    // Clear existing matches
+    // Clear existing bracket matches for this tournament
     await Match.deleteMany({ tournament: tournament._id });
 
-    // Build single-elimination bracket rounds
+    // Build single-elimination bracket rounds (head-to-head pairs)
     const matchesToCreate = [];
     const count = teams.length;
 
@@ -611,13 +639,21 @@ exports.generateBracket = async (req, res, next) => {
     let matchNumber = 1;
     for (let i = 0; i < count; i += 2) {
       if (i + 1 < count) {
+        const team1 = teams[i];
+        const team2 = teams[i + 1];
+        const name1 = team1.teamName || team1.name || `Team ${i + 1}`;
+        const name2 = team2.teamName || team2.name || `Team ${i + 2}`;
+
         matchesToCreate.push({
           tournament: tournament._id,
+          title: `${name1} vs ${name2}`,
           round: roundName,
           roundIndex: 1,
           matchNumber: matchNumber++,
-          teamA: teams[i]._id,
-          teamB: teams[i + 1]._id,
+          teamModel: isRegModel ? 'TournamentRegistration' : 'Team',
+          teamA: team1._id,
+          teamB: team2._id,
+          teams: [team1._id, team2._id],
           status: 'scheduled',
           scheduledAt: new Date(tournament.startDate.getTime() + (matchNumber - 1) * 3600000),
         });
@@ -630,7 +666,7 @@ exports.generateBracket = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: `Generated ${createdMatches.length} bracket matches`,
+      message: `Generated ${createdMatches.length} bracket match(es) for ${tournament.name}`,
       matches: createdMatches,
     });
   } catch (error) {

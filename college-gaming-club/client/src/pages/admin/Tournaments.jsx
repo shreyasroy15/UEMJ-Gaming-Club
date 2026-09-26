@@ -10,7 +10,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  GitBranch,
   Calendar,
   Users,
   ExternalLink,
@@ -32,6 +31,13 @@ import {
 import { Link } from 'react-router-dom';
 import RejectionModal from '../../components/RejectionModal/RejectionModal';
 import { toLocalDatetimeInput } from '../../utils/dateUtils';
+
+const DEFAULT_RULES = [
+  'All players must be verified college students.',
+  'Cheating, exploiting, or unsportsmanlike conduct results in immediate disqualification.',
+  'Teams must check in 15 minutes prior to scheduled match time.',
+  'Tournament admins reserve the right to rule on discrepancies.',
+];
 
 const AdminTournaments = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -78,6 +84,7 @@ const AdminTournaments = () => {
     maxSubstitutes: 1,
     registrationDeadline: '',
     identityProofDeadline: '',
+    rules: DEFAULT_RULES,
     startDate: '',
     status: 'upcoming',
     isRegistrationClosed: false,
@@ -140,6 +147,7 @@ const AdminTournaments = () => {
       minTeamSize: 4,
       maxTeamSize: 5,
       allowSubstitutes: true,
+      rules: [...DEFAULT_RULES],
       registrationDeadline: toLocalDatetimeInput(Date.now() + 7 * 24 * 3600000),
       identityProofDeadline: toLocalDatetimeInput(Date.now() + 7 * 24 * 3600000),
       startDate: toLocalDatetimeInput(Date.now() + 10 * 24 * 3600000),
@@ -167,6 +175,7 @@ const AdminTournaments = () => {
       minTeamSize: tournament.minTeamSize || 4,
       maxTeamSize: tournament.maxTeamSize || 5,
       allowSubstitutes: tournament.allowSubstitutes !== false,
+      rules: Array.isArray(tournament.rules) && tournament.rules.length > 0 ? [...tournament.rules] : [...DEFAULT_RULES],
       registrationDeadline: toLocalDatetimeInput(tournament.registrationDeadline),
       identityProofDeadline: tournament.identityProofDeadline
         ? toLocalDatetimeInput(tournament.identityProofDeadline)
@@ -184,6 +193,7 @@ const AdminTournaments = () => {
       setSubmitting(true);
       const payload = {
         ...formData,
+        rules: (formData.rules || []).map((r) => r.trim()).filter(Boolean),
         isRegistrationClosed: Boolean(formData.isRegistrationClosed),
         registrationDeadline: formData.registrationDeadline ? new Date(formData.registrationDeadline).toISOString() : undefined,
         identityProofDeadline: formData.identityProofDeadline ? new Date(formData.identityProofDeadline).toISOString() : undefined,
@@ -218,7 +228,7 @@ const AdminTournaments = () => {
   };
 
   const handleDelete = async (tId, tName) => {
-    if (!window.confirm(`Are you sure you want to delete tournament "${tName}"? This also removes its bracket matches.`)) {
+    if (!window.confirm(`Are you sure you want to delete tournament "${tName}"? All matches and data will be removed.`)) {
       return;
     }
 
@@ -228,23 +238,6 @@ const AdminTournaments = () => {
       fetchData();
     } catch (err) {
       addToast(err.response?.data?.message || 'Delete failed', 'error');
-    }
-  };
-
-  // Generate Bracket Button
-  const handleGenerateBracket = async (tId, tName) => {
-    if (!window.confirm(`Generate automated elimination bracket matches for "${tName}"? Existing matches for this tournament will be reset.`)) {
-      return;
-    }
-
-    try {
-      const res = await API.post(`/tournaments/${tId}/generate-bracket`);
-      if (res.data.success) {
-        addToast(res.data.message || 'Bracket matches generated!', 'success');
-        fetchData();
-      }
-    } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to generate brackets. Need at least 2 registered teams.', 'error');
     }
   };
 
@@ -619,13 +612,6 @@ const AdminTournaments = () => {
                     )}
                   </button>
 
-                  <button
-                    onClick={() => handleGenerateBracket(t._id, t.name)}
-                    title="Brackets"
-                    className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 cursor-pointer"
-                  >
-                    <GitBranch className="w-3.5 h-3.5" />
-                  </button>
 
                   <button
                     onClick={() => handleOpenEdit(t)}
@@ -760,14 +746,6 @@ const AdminTournaments = () => {
                           <Users className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* Generate Bracket */}
-                        <button
-                          onClick={() => handleGenerateBracket(t._id, t.name)}
-                          title="Generate Elimination Brackets"
-                          className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer shadow-xs"
-                        >
-                          <GitBranch className="w-3.5 h-3.5" />
-                        </button>
 
                         {/* Edit */}
                         <button
@@ -1159,6 +1137,85 @@ const AdminTournaments = () => {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
             />
+          </div>
+
+          {/* Tournament Rules & Guidelines Editor */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5 font-mono">
+                  <FileText className="w-3.5 h-3.5 text-indigo-600" /> Tournament Rules & Guidelines
+                </h4>
+                <p className="text-[10px] text-slate-500">
+                  Rules appear on the tournament details page for players to review before registering.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      rules: [...DEFAULT_RULES],
+                    }))
+                  }
+                  className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[10px] font-mono text-slate-600 hover:text-slate-900 cursor-pointer transition-colors shadow-2xs"
+                  title="Reset to default college rules"
+                >
+                  Reset Defaults
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      rules: [...(prev.rules || []), ''],
+                    }))
+                  }
+                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold font-mono flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Plus className="w-3 h-3" /> Add Rule
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {(formData.rules || []).map((rule, rIdx) => (
+                <div key={rIdx} className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-white border border-slate-200 text-slate-600 text-[11px] font-mono font-bold flex items-center justify-center shrink-0">
+                    {rIdx + 1}
+                  </span>
+                  <input
+                    type="text"
+                    value={rule}
+                    onChange={(e) => {
+                      const nextRules = [...formData.rules];
+                      nextRules[rIdx] = e.target.value;
+                      setFormData({ ...formData, rules: nextRules });
+                    }}
+                    placeholder={`Rule #${rIdx + 1} (e.g. Teams must check in 15 mins prior to match)`}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextRules = formData.rules.filter((_, i) => i !== rIdx);
+                      setFormData({ ...formData, rules: nextRules });
+                    }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="Remove Rule"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              {(!formData.rules || formData.rules.length === 0) && (
+                <div className="p-3 text-center rounded-xl bg-white border border-dashed border-slate-200 text-xs text-slate-400 font-mono">
+                  No rules configured. Click &quot;Add Rule&quot; or &quot;Reset Defaults&quot;.
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">

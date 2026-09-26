@@ -422,42 +422,32 @@ const Home = () => {
           {/* ========================================================= */}
           {/* 6. CURRENT MATCHES / LIVE STATUS */}
           {/* ========================================================= */}
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
-                </span>
-                <span className="text-xs font-bold text-rose-400 font-mono uppercase tracking-wider">
-                  LIVE MATCHES
-                </span>
-                <span className="text-slate-600 hidden sm:inline">•</span>
-                <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-                  Ongoing Collegiate Rounds
-                </span>
-              </div>
-
-              <Link
-                to="/tournaments"
-                className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
-              >
-                <span>View All Matches</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {activeMatches.length === 0 ? (
-              <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-400 font-mono">
+          {activeMatches.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-slate-500 shrink-0" />
-                  <span>No matches currently running.</span>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                  </span>
+                  <span className="text-xs font-bold text-rose-400 font-mono uppercase tracking-wider">
+                    LIVE MATCHES
+                  </span>
+                  <span className="text-slate-600 hidden sm:inline">•</span>
+                  <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+                    Ongoing Collegiate Rounds
+                  </span>
                 </div>
-                <span className="text-[11px] text-slate-500">
-                  Scores and rounds update automatically as match results post.
-                </span>
+
+                <Link
+                  to="/tournaments"
+                  className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
+                >
+                  <span>View All Matches</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-            ) : (
+
               <div className="flex flex-wrap gap-2 sm:gap-2.5">
                 {activeMatches.map((m) => (
                   <div
@@ -485,8 +475,8 @@ const Home = () => {
                   </div>
                 ))}
               </div>
-            )}
-          </section>
+            </section>
+          )}
 
           {/* ========================================================= */}
           {/* 7. LEADERBOARD PREVIEW (TOP SQUADS FROM BACKEND) */}

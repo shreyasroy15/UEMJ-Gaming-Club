@@ -16,17 +16,20 @@ exports.getMatches = async (req, res, next) => {
     }
 
     const matches = await Match.find(query)
-      .populate('tournament', 'name game banner status')
-      .populate('teamA', 'name tag logo')
-      .populate('teamB', 'name tag logo')
-      .populate('teams', 'teamName teamTag teamType captain')
-      .populate('winner', 'name tag logo teamName teamTag')
+      .populate('tournament', 'name game banner status format')
+      .populate('teamA', 'name teamName tag teamTag logo teamLogo players captain')
+      .populate('teamB', 'name teamName tag teamTag logo teamLogo players captain')
+      .populate('teams', 'teamName teamTag teamType captain players')
+      .populate('winner', 'name tag logo teamName teamTag teamLogo')
       .sort({ scheduledAt: 1 });
+
+    // Filter out any ghost matches where tournament reference no longer exists
+    const validMatches = matches.filter((m) => m.tournament && m.tournament._id);
 
     res.status(200).json({
       success: true,
-      count: matches.length,
-      matches,
+      count: validMatches.length,
+      matches: validMatches,
     });
   } catch (error) {
     next(error);

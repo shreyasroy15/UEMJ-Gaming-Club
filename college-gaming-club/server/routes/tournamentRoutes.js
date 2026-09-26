@@ -35,6 +35,7 @@ const {
   createLobbyMatch,
   updateLobbyMatch,
   deleteLobbyMatch,
+  clearTournamentMatches,
   createDirectLobby,
   updateDirectLobby,
   deleteDirectLobby,
@@ -80,6 +81,7 @@ router.post('/:id/stages/:stageId/lobbies/:lobbyId/matches', protect, staffOnly,
 router.post('/:id/matches/:matchId/results', protect, staffOnly, recordMatchResults);
 router.put('/:id/matches/:matchId', protect, staffOnly, updateLobbyMatch);
 router.delete('/:id/matches/:matchId', protect, staffOnly, deleteLobbyMatch);
+router.delete('/:id/matches', protect, staffOnly, clearTournamentMatches);
 
 router
   .route('/')
@@ -97,7 +99,6 @@ router.patch('/:id/status', protect, staffOnly, updateTournamentStatus);
 router.patch('/:id/toggle-registration', protect, staffOnly, toggleRegistration);
 
 router.post('/:id/register', protect, registerTeam);
-router.post('/:id/generate-bracket', protect, staffOnly, generateBracket);
 
 module.exports = router;
 

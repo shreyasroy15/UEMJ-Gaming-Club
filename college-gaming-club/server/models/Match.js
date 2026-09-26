@@ -27,7 +27,7 @@ const matchSchema = new mongoose.Schema(
     },
     map: {
       type: String,
-      default: 'Erangel',
+      default: '',
     },
     roomId: {
       type: String,
@@ -58,13 +58,18 @@ const matchSchema = new mongoose.Schema(
       required: true,
       default: 1,
     },
+    teamModel: {
+      type: String,
+      enum: ['TournamentRegistration', 'Team'],
+      default: 'TournamentRegistration',
+    },
     teamA: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Team',
+      refPath: 'teamModel',
     },
     teamB: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Team',
+      refPath: 'teamModel',
     },
     scoreA: {
       type: Number,

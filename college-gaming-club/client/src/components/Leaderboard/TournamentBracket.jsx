@@ -82,12 +82,12 @@ const TournamentBracket = ({ matches = [], onMatchClick }) => {
                     >
                       <div className="flex items-center gap-2 truncate">
                         <img
-                          src={match.teamA?.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
-                          alt={match.teamA?.name || 'TBD'}
+                          src={match.teamA?.teamLogo || match.teamA?.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
+                          alt={match.teamA?.teamName || match.teamA?.name || 'TBD'}
                           className="w-5 h-5 rounded-md object-cover"
                         />
                         <span className={`text-xs truncate ${isTeamAWinner ? 'text-cyan-300' : 'text-slate-200'}`}>
-                          {match.teamA?.name || 'TBD'}
+                          {match.teamA?.teamName || match.teamA?.name || 'TBD'}
                         </span>
                       </div>
                       <span className="text-xs font-mono font-bold px-1 text-slate-300">
@@ -106,12 +106,12 @@ const TournamentBracket = ({ matches = [], onMatchClick }) => {
                     >
                       <div className="flex items-center gap-2 truncate">
                         <img
-                          src={match.teamB?.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
-                          alt={match.teamB?.name || 'TBD'}
+                          src={match.teamB?.teamLogo || match.teamB?.logo || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'}
+                          alt={match.teamB?.teamName || match.teamB?.name || 'TBD'}
                           className="w-5 h-5 rounded-md object-cover"
                         />
                         <span className={`text-xs truncate ${isTeamBWinner ? 'text-cyan-300' : 'text-slate-200'}`}>
-                          {match.teamB?.name || 'TBD'}
+                          {match.teamB?.teamName || match.teamB?.name || 'TBD'}
                         </span>
                       </div>
                       <span className="text-xs font-mono font-bold px-1 text-slate-300">

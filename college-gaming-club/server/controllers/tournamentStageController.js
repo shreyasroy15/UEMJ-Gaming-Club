@@ -732,6 +732,29 @@ exports.deleteLobbyMatch = async (req, res, next) => {
   }
 };
 
+// @desc    Clear matches for tournament (or unassigned only)
+// @route   DELETE /api/tournaments/:id/matches
+// @access  Private (Admin / Staff)
+exports.clearTournamentMatches = async (req, res, next) => {
+  try {
+    const { unassignedOnly } = req.query;
+    let filter = { tournament: req.params.id };
+    if (unassignedOnly === 'true') {
+      filter.$or = [{ lobbyId: { $exists: false } }, { lobbyId: null }];
+    }
+
+    const result = await Match.deleteMany(filter);
+
+    res.status(200).json({
+      success: true,
+      message: `Cleared ${result.deletedCount} match(es) successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ==========================================
 // DIRECT TOURNAMENT LOBBY ENDPOINTS
 // (Streamlined for esports organizer workflow)
