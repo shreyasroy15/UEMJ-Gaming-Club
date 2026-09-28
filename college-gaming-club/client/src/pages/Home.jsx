@@ -20,7 +20,8 @@ import {
   Flame,
   ChevronRight,
   Megaphone,
-  Pin
+  Pin,
+  Crown
 } from 'lucide-react';
 import { formatShortDateTime } from '../utils/dateUtils';
 
@@ -112,9 +113,6 @@ const Home = () => {
     return titles.length > 0 ? titles.join(' & ') : 'BGMI & Free Fire';
   }, [allTournaments]);
 
-  if (loading) {
-    return <Loading message="Loading collegiate arena..." />;
-  }
 
 
   return (
@@ -239,7 +237,11 @@ const Home = () => {
                 <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
               </div>
               <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-black text-white font-mono">
-                {isAuthenticated ? myTournaments.length : allTournaments.length}
+                {loading ? (
+                  <span className="inline-block w-8 h-6 bg-slate-800 rounded animate-pulse" />
+                ) : (
+                  isAuthenticated ? myTournaments.length : allTournaments.length
+                )}
               </div>
               <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5 truncate">Collegiate registrations</p>
             </div>
@@ -252,7 +254,11 @@ const Home = () => {
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 shrink-0" />
               </div>
               <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-black text-white font-mono">
-                {teams.length}
+                {loading ? (
+                  <span className="inline-block w-8 h-6 bg-slate-800 rounded animate-pulse" />
+                ) : (
+                  teams.length
+                )}
               </div>
               <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5 truncate">Campus squads formed</p>
             </div>
@@ -265,7 +271,11 @@ const Home = () => {
                 <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 animate-pulse shrink-0" />
               </div>
               <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-black text-rose-400 font-mono">
-                {runningTournaments.length}
+                {loading ? (
+                  <span className="inline-block w-8 h-6 bg-slate-800 rounded animate-pulse" />
+                ) : (
+                  runningTournaments.length
+                )}
               </div>
               <p className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5 truncate">Active competitions</p>
             </div>
@@ -291,7 +301,22 @@ const Home = () => {
               </Link>
             </div>
 
-            {allTournaments.length === 0 ? (
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+                {[1, 2].map((i) => (
+                  <div key={i} className="rounded-2xl overflow-hidden bg-slate-900/60 border border-slate-800/80 animate-pulse">
+                    <div className="h-44 sm:h-52 bg-slate-800/50 flex items-center justify-center">
+                      <Gamepad2 className="w-8 h-8 text-slate-700/50" />
+                    </div>
+                    <div className="p-4 bg-slate-950/90 grid grid-cols-4 gap-2">
+                      {[1, 2, 3, 4].map((j) => (
+                        <div key={j} className="h-8 bg-slate-800/40 rounded" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : allTournaments.length === 0 ? (
               <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800/80 text-center space-y-2">
                 <Gamepad2 className="w-10 h-10 text-slate-600 mx-auto" />
                 <h3 className="text-sm font-bold text-slate-200 font-mono">No Tournaments Available Yet</h3>
@@ -532,7 +557,13 @@ const Home = () => {
 
             {/* Standings Grid */}
             <div className="rounded-2xl bg-slate-900/70 border border-slate-800 p-4 sm:p-5 backdrop-blur-md">
-              {filteredLeaderboardTeams.length === 0 ? (
+              {loading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-12 bg-slate-950/70 border border-slate-800/60 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : filteredLeaderboardTeams.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400 font-mono">
                   No {leaderboardGame} team standings recorded yet. Points update as varsity matches conclude.
                 </div>
@@ -598,7 +629,18 @@ const Home = () => {
               </Link>
             </div>
 
-            {announcements.length === 0 ? (
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-2xl bg-slate-900/50 border border-slate-800/70 p-5 space-y-3 animate-pulse">
+                    <div className="h-4 bg-slate-800 rounded w-1/3" />
+                    <div className="h-5 bg-slate-800 rounded w-3/4" />
+                    <div className="h-3 bg-slate-800/60 rounded w-full" />
+                    <div className="h-3 bg-slate-800/60 rounded w-2/3" />
+                  </div>
+                ))}
+              </div>
+            ) : announcements.length === 0 ? (
               <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800/80 text-center space-y-2">
                 <Megaphone className="w-10 h-10 text-slate-600 mx-auto" />
                 <h3 className="text-sm font-bold text-slate-200 font-mono">No Announcements Yet</h3>

@@ -124,6 +124,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Gaming Club Server is healthy' });
 });
 
+// Ensure database connection is ready for API routes (critical for serverless cold-starts)
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api') && req.path !== '/api/health') {
+    try {
+      await connectDB();
+    } catch (err) {
+      console.error('Failed to establish database connection for request:', err.message);
+    }
+  }
+  next();
+});
+
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

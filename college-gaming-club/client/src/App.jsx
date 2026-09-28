@@ -1,53 +1,56 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import "animate.css/animate.compat.css";
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import Loading from './components/Loading/Loading';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
 
-// Public & Student Pages
+// Home is kept eager for immediate 0ms first paint
 import Home from './pages/Home';
-import Tournaments from './pages/Tournaments';
-import TournamentDetails from './pages/TournamentDetails';
-import TournamentRegister from './pages/TournamentRegister';
-import Games from './pages/Games';
-import Teams from './pages/Teams';
-import TeamDetails from './pages/TeamDetails';
-import Leaderboard from './pages/Leaderboard';
-import Events from './pages/Events';
-import Gallery from './pages/Gallery';
-import News from './pages/News';
-import About from './pages/About';
-import Contact from './pages/Contact';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Profile from './pages/Profile';
-import MyTournaments from './pages/MyTournaments';
-import MyTeams from './pages/MyTeams';
-import NotFound from './pages/NotFound';
-import Dashboard from './pages/Dashboard';
 
-// Admin Pages
-import AdminDashboard from './pages/admin/Dashboard';
-import AdminTournaments from './pages/admin/Tournaments';
-import AdminFormBuilder from './pages/admin/FormBuilder';
-import AdminMatches from './pages/admin/Matches';
-import AdminPointsTable from './pages/admin/PointsTable';
-import AdminTeams from './pages/admin/Teams';
-import AdminTournamentTeams from './pages/admin/AdminTournamentTeams';
-import AdminTeamDetails from './pages/admin/AdminTeamDetails';
-import AdminGames from './pages/admin/Games';
-import AdminEvents from './pages/admin/Events';
-import AdminAnnouncements from './pages/admin/Announcements';
-import AdminGallery from './pages/admin/Gallery';
-import AdminUsers from './pages/admin/Users';
-import AdminGameView from './pages/admin/AdminGameView';
-import AdminSettings from './pages/admin/Settings';
+// Lazy-loaded Public & Student Pages (Code Splitting)
+const Tournaments = lazy(() => import('./pages/Tournaments'));
+const TournamentDetails = lazy(() => import('./pages/TournamentDetails'));
+const TournamentRegister = lazy(() => import('./pages/TournamentRegister'));
+const Games = lazy(() => import('./pages/Games'));
+const Teams = lazy(() => import('./pages/Teams'));
+const TeamDetails = lazy(() => import('./pages/TeamDetails'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Events = lazy(() => import('./pages/Events'));
+const Gallery = lazy(() => import('./pages/Gallery'));
+const News = lazy(() => import('./pages/News'));
+const About = lazy(() => import('./pages/About'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Profile = lazy(() => import('./pages/Profile'));
+const MyTournaments = lazy(() => import('./pages/MyTournaments'));
+const MyTeams = lazy(() => import('./pages/MyTeams'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+
+// Lazy-loaded Admin Pages (Massive bundle reduction for normal visitors)
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const AdminTournaments = lazy(() => import('./pages/admin/Tournaments'));
+const AdminFormBuilder = lazy(() => import('./pages/admin/FormBuilder'));
+const AdminMatches = lazy(() => import('./pages/admin/Matches'));
+const AdminPointsTable = lazy(() => import('./pages/admin/PointsTable'));
+const AdminTeams = lazy(() => import('./pages/admin/Teams'));
+const AdminTournamentTeams = lazy(() => import('./pages/admin/AdminTournamentTeams'));
+const AdminTeamDetails = lazy(() => import('./pages/admin/AdminTeamDetails'));
+const AdminGames = lazy(() => import('./pages/admin/Games'));
+const AdminEvents = lazy(() => import('./pages/admin/Events'));
+const AdminAnnouncements = lazy(() => import('./pages/admin/Announcements'));
+const AdminGallery = lazy(() => import('./pages/admin/Gallery'));
+const AdminUsers = lazy(() => import('./pages/admin/Users'));
+const AdminGameView = lazy(() => import('./pages/admin/AdminGameView'));
+const AdminSettings = lazy(() => import('./pages/admin/Settings'));
 
 // Route Guards
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute/ProtectedRoute';
@@ -57,7 +60,8 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <Router>
-          <Routes>
+          <Suspense fallback={<Loading message="Entering arena..." compact />}>
+            <Routes>
             {/* Main Public & Player Layout */}
             <Route path="/" element={<MainLayout />}>
               <Route index element={<Home />} />
@@ -154,6 +158,7 @@ function App() {
               <Route path="settings" element={<AdminSettings />} />
             </Route>
           </Routes>
+          </Suspense>
         </Router>
       </ToastProvider>
     </AuthProvider>
