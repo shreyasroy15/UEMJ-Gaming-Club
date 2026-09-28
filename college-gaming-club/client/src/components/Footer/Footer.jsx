@@ -15,6 +15,21 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
+const GitHubIcon = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+    />
+  </svg>
+);
+
 const getPollVoterId = () => {
   if (typeof window === 'undefined') return 'voter_ssr';
   let id = localStorage.getItem('uemj_gaming_poll_voter_id');
@@ -343,30 +358,52 @@ const Footer = ({ isCompact = false, whatsappSettings, onOpenWhatsApp }) => {
         )}
 
         {/* ========================================================================= */}
-        {/* BOTTOM COPYRIGHT & DEV CREDITS */}
+        {/* BOTTOM COPYRIGHT & DEV CREDITS (Fully responsive across Android & Desktop) */}
         {/* ========================================================================= */}
-        <div className="border-t border-white/10 pt-6 mt-6 flex items-center justify-center text-xs text-slate-500 font-mono text-center">
-          <p>
-            © {currentYear} <span className="text-slate-300 font-bold">UEM Jaipur Gaming Geeks Club</span>. Designed & Maintained by{' '}
-            <a
-              href="https://github.com/sanglap1221"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-slate-300 font-bold hover:text-cyan-300 transition-colors underline decoration-cyan-500/40 hover:decoration-cyan-400"
-            >
-              Sanglap Ghosh
-            </a>{' '}
-            &{' '}
-            <a
-              href="https://github.com/shreyasroy15"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-slate-300 font-bold hover:text-cyan-300 transition-colors underline decoration-cyan-500/40 hover:decoration-cyan-400"
-            >
-              Shreyas Roy
-            </a>
-            .
-          </p>
+        <div className="border-t border-white/10 pt-6 mt-6 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3.5 sm:gap-4 text-xs font-mono text-center md:text-left">
+            {/* Copyright & Organization */}
+            <div className="flex items-center gap-1.5 flex-wrap justify-center text-slate-400">
+              <span className="text-slate-500">© {currentYear}</span>
+              <span className="text-slate-200 font-bold tracking-tight">
+                UEM Jaipur Gaming Geeks Club
+              </span>
+              <span className="hidden sm:inline text-slate-600">•</span>
+              <span className="text-slate-500 text-[11px] sm:text-xs">All Rights Reserved</span>
+            </div>
+
+            {/* Developer Credits - Mobile/Android Optimized Touch Badges */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+              <span className="text-slate-400">Designed & Maintained by</span>
+              <div className="inline-flex items-center gap-1.5 flex-wrap justify-center">
+                <a
+                  href="https://github.com/sanglap1221"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-cyan-500/15 active:bg-cyan-500/25 border border-white/10 hover:border-cyan-400/50 active:scale-95 text-slate-200 hover:text-cyan-300 font-bold transition-all duration-200 shadow-xs cursor-pointer select-none group"
+                  aria-label="Sanglap Ghosh GitHub profile"
+                >
+                  <GitHubIcon className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
+                  <span className="whitespace-nowrap">Sanglap Ghosh</span>
+                  <ExternalLink className="w-2.5 h-2.5 text-slate-400 group-hover:text-cyan-300 opacity-60 group-hover:opacity-100 transition-all shrink-0" />
+                </a>
+
+                <span className="text-slate-500 font-bold text-[11px]">&</span>
+
+                <a
+                  href="https://github.com/shreyasroy15"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-cyan-500/15 active:bg-cyan-500/25 border border-white/10 hover:border-cyan-400/50 active:scale-95 text-slate-200 hover:text-cyan-300 font-bold transition-all duration-200 shadow-xs cursor-pointer select-none group"
+                  aria-label="Shreyas Roy GitHub profile"
+                >
+                  <GitHubIcon className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
+                  <span className="whitespace-nowrap">Shreyas Roy</span>
+                  <ExternalLink className="w-2.5 h-2.5 text-slate-400 group-hover:text-cyan-300 opacity-60 group-hover:opacity-100 transition-all shrink-0" />
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
