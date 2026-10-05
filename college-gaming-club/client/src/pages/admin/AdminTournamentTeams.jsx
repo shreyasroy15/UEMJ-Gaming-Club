@@ -37,6 +37,10 @@ const AdminTournamentTeams = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'verified' | 'pending' | 'rejected'
 
+  // Multi-selection state
+  const [selectedRegIds, setSelectedRegIds] = useState([]);
+  const [bulkRejectModalOpen, setBulkRejectModalOpen] = useState(false);
+
   // Rejection modal state
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRegForReject, setSelectedRegForReject] = useState(null);
@@ -48,6 +52,7 @@ const AdminTournamentTeams = () => {
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
 
   useEffect(() => {
+    setSelectedRegIds([]);
     fetchRegistrations();
   }, [tournamentId]);
 
@@ -107,6 +112,116 @@ const AdminTournamentTeams = () => {
     }
   };
 
+  // Bulk Actions
+  const handleToggleSelectOne = (regId) => {
+    setSelectedRegIds((prev) =>
+      prev.includes(regId) ? prev.filter((id) => id !== regId) : [...prev, regId]
+    );
+  };
+
+  const handleToggleSelectAll = (filteredList) => {
+    const filteredIds = filteredList.map((r) => r._id);
+    const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedRegIds.includes(id));
+
+    if (allSelected) {
+      // Unselect all in current filtered view
+      const filterSet = new Set(filteredIds);
+      setSelectedRegIds((prev) => prev.filter((id) => !filterSet.has(id)));
+    } else {
+      // Add all currently filtered items
+      setSelectedRegIds((prev) => Array.from(new Set([...prev, ...filteredIds])));
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedRegIds.length === 0) return;
+    const count = selectedRegIds.length;
+    try {
+      setSubmitting(true);
+      let success = false;
+      try {
+        await API.post('/registrations/bulk-verify', {
+          registrationIds: selectedRegIds,
+          action: 'approve',
+          status: 'verified',
+          isVerified: true,
+        });
+        success = true;
+      } catch (bulkErr) {
+        console.warn('Bulk approve endpoint error, falling back to sequential calls...', bulkErr);
+        // Fallback to guarantee execution always works
+        await Promise.all(
+          selectedRegIds.map((id) =>
+            API.put(`/registrations/${id}/verify`, {
+              isVerified: true,
+              status: 'verified',
+            })
+          )
+        );
+        success = true;
+      }
+
+      if (success) {
+        addToast(`Successfully approved ${count} team${count > 1 ? 's' : ''}!`, 'success');
+        setSelectedRegIds([]);
+        fetchRegistrations();
+      }
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to approve selected teams', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBulkConfirmReject = async (reason) => {
+    if (selectedRegIds.length === 0) return;
+    const count = selectedRegIds.length;
+    const note = reason || 'You need to upload all proofs by merging in a single PDF.';
+    try {
+      setSubmitting(true);
+      let success = false;
+      try {
+        await API.post('/registrations/bulk-verify', {
+          registrationIds: selectedRegIds,
+          action: 'reject',
+          status: 'rejected',
+          isVerified: false,
+          identityProofStatus: 'rejected',
+          verificationNotes: note,
+          reason: note,
+        });
+        success = true;
+      } catch (bulkErr) {
+        console.warn('Bulk reject endpoint error, falling back to sequential calls...', bulkErr);
+        await Promise.all(
+          selectedRegIds.map((id) =>
+            API.put(`/registrations/${id}/verify`, {
+              isVerified: false,
+              status: 'rejected',
+              identityProofStatus: 'rejected',
+              verificationNotes: note,
+              reason: note,
+            })
+          )
+        );
+        success = true;
+      }
+
+      if (success) {
+        addToast(`Successfully rejected ${count} team${count > 1 ? 's' : ''}. Notification dispatched.`, 'info');
+        setBulkRejectModalOpen(false);
+        setSelectedRegIds([]);
+        fetchRegistrations();
+      }
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to reject selected teams', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const tournament = data?.tournament;
   const registrations = useMemo(() => data?.registrations || [], [data]);
 
@@ -158,6 +273,20 @@ const AdminTournamentTeams = () => {
       return true;
     });
   }, [registrations, searchQuery, statusFilter]);
+
+  const isAllFilteredSelected = useMemo(() => {
+    return (
+      filteredRegistrations.length > 0 &&
+      filteredRegistrations.every((r) => selectedRegIds.includes(r._id))
+    );
+  }, [filteredRegistrations, selectedRegIds]);
+
+  const isSomeFilteredSelected = useMemo(() => {
+    return (
+      filteredRegistrations.some((r) => selectedRegIds.includes(r._id)) &&
+      !isAllFilteredSelected
+    );
+  }, [filteredRegistrations, selectedRegIds, isAllFilteredSelected]);
 
   if (loading) return <Loading message="Loading teams..." />;
   if (!data) return <div className="text-white p-6">Error: No data loaded.</div>;
@@ -333,6 +462,56 @@ const AdminTournamentTeams = () => {
         </div>
       )}
 
+      {/* Floating / Sticky Bulk Actions Bar */}
+      {selectedRegIds.length > 0 && (
+        <div className="sticky top-4 z-30 p-3 sm:p-4 rounded-2xl bg-slate-900/95 backdrop-blur-md text-white shadow-xl flex flex-wrap items-center justify-between gap-3 border border-slate-700/80 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 font-mono font-bold text-sm flex items-center justify-center border border-cyan-500/30">
+              {selectedRegIds.length}
+            </span>
+            <div>
+              <div className="text-xs font-mono font-bold text-white">
+                {selectedRegIds.length} {selectedRegIds.length === 1 ? 'Team' : 'Teams'} Selected
+              </div>
+              <div className="text-[11px] font-mono text-slate-400">
+                Bulk action on selected teams
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={handleBulkApprove}
+              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Approve Selected ({selectedRegIds.length})
+            </button>
+
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => setBulkRejectModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-rose-950/40 transition cursor-pointer"
+            >
+              <XCircle className="w-4 h-4" />
+              Reject Selected ({selectedRegIds.length})
+            </button>
+
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => setSelectedRegIds([])}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-mono font-bold transition cursor-pointer"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Team List */}
       {registrations.length === 0 ? (
         <EmptyState
@@ -367,12 +546,15 @@ const AdminTournamentTeams = () => {
               const isVerified = reg.status === 'verified' || reg.isVerified;
               const isRejected = reg.status === 'rejected';
               const hasProof = Boolean(reg.identityProof?.url);
+              const isSelected = selectedRegIds.includes(reg._id);
 
               return (
                 <div
                   key={reg._id}
                   className={`p-4 rounded-2xl border space-y-3 transition-all shadow-sm ${
-                    isVerified
+                    isSelected
+                      ? 'bg-cyan-50/60 border-cyan-400 ring-1 ring-cyan-300'
+                      : isVerified
                       ? 'bg-white border-emerald-300'
                       : isRejected
                       ? 'bg-white border-rose-300'
@@ -380,13 +562,22 @@ const AdminTournamentTeams = () => {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-bold text-slate-900 font-mono truncate">
-                        {reg.teamName}
-                      </h3>
-                      <p className="text-xs text-slate-500 font-mono truncate mt-0.5">
-                        Captain: {reg.captain?.name || reg.captain?.username || 'N/A'}
-                      </p>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectOne(reg._id)}
+                        className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer accent-cyan-600 shrink-0"
+                        title={`Select ${reg.teamName}`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-bold text-slate-900 font-mono truncate">
+                          {reg.teamName}
+                        </h3>
+                        <p className="text-xs text-slate-500 font-mono truncate mt-0.5">
+                          Captain: {reg.captain?.name || reg.captain?.username || 'N/A'}
+                        </p>
+                      </div>
                     </div>
                     {isVerified ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
@@ -471,6 +662,18 @@ const AdminTournamentTeams = () => {
               <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
                 <thead className="bg-slate-50 uppercase font-mono text-slate-500 border-b border-slate-200">
                   <tr>
+                    <th className="p-4 w-12 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isAllFilteredSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = isSomeFilteredSelected;
+                        }}
+                        onChange={() => handleToggleSelectAll(filteredRegistrations)}
+                        className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer accent-cyan-600"
+                        title="Select or deselect all teams in list"
+                      />
+                    </th>
                     <th className="p-4 text-slate-800">Team Name</th>
                     <th className="p-4 text-center">Players</th>
                     <th className="p-4">Captain</th>
@@ -484,14 +687,30 @@ const AdminTournamentTeams = () => {
                     const isVerified = reg.status === 'verified' || reg.isVerified;
                     const isRejected = reg.status === 'rejected';
                     const hasProof = Boolean(reg.identityProof?.url);
+                    const isSelected = selectedRegIds.includes(reg._id);
 
                     return (
                       <tr
                         key={reg._id}
-                        className={`hover:bg-slate-50 transition-colors ${
-                          isVerified ? 'bg-emerald-50/40' : isRejected ? 'bg-rose-50/40' : ''
+                        className={`hover:bg-slate-50/80 transition-colors ${
+                          isSelected
+                            ? 'bg-cyan-50/70 ring-1 ring-inset ring-cyan-200'
+                            : isVerified
+                            ? 'bg-emerald-50/30'
+                            : isRejected
+                            ? 'bg-rose-50/30'
+                            : ''
                         }`}
                       >
+                        <td className="p-4 w-12 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectOne(reg._id)}
+                            className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer accent-cyan-600"
+                            title={`Select ${reg.teamName}`}
+                          />
+                        </td>
                         <td className="p-4">
                           <div className="font-bold text-slate-900 text-sm">{reg.teamName}</div>
                           <div className="text-[10px] text-slate-400">Code: {reg.teamCode}</div>
@@ -582,7 +801,7 @@ const AdminTournamentTeams = () => {
         </div>
       )}
 
-      {/* Rejection Modal */}
+      {/* Individual Rejection Modal */}
       <RejectionModal
         isOpen={rejectionModalOpen}
         onClose={() => {
@@ -592,6 +811,17 @@ const AdminTournamentTeams = () => {
         onConfirm={handleConfirmReject}
         teamName={selectedRegForReject?.teamName}
         tournamentName={tournament?.name}
+        submitting={submitting}
+      />
+
+      {/* Bulk Rejection Modal */}
+      <RejectionModal
+        isOpen={bulkRejectModalOpen}
+        onClose={() => setBulkRejectModalOpen(false)}
+        onConfirm={handleBulkConfirmReject}
+        teamName={`${selectedRegIds.length} Selected Teams`}
+        title={`Reject ${selectedRegIds.length} Selected Teams`}
+        submitting={submitting}
       />
 
       {/* Edit Team & Members Modal */}

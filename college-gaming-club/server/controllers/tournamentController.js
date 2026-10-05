@@ -453,8 +453,9 @@ exports.togglePointsTableVisibility = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Tournament not found' });
     }
 
+    const body = req.body || {};
     const nextVisibility =
-      req.body.show !== undefined ? Boolean(req.body.show) : !tournament.showPointsTableOnUserSide;
+      body.show !== undefined ? Boolean(body.show) : !tournament.showPointsTableOnUserSide;
 
     // If making this points table active on the user side, unset others so this one is featured
     if (nextVisibility) {

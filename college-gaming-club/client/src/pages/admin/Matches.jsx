@@ -580,7 +580,7 @@ const AdminMatches = () => {
     if (!selectedTournamentId) return;
     try {
       setTogglingPointsVisibility(true);
-      const res = await API.patch(`/tournaments/${selectedTournamentId}/toggle-points-table-visibility`);
+      const res = await API.patch(`/tournaments/${selectedTournamentId}/toggle-points-table-visibility`, {});
       if (res.data.success) {
         addToast(res.data.message, 'success');
         const nextVal = res.data.showPointsTableOnUserSide;

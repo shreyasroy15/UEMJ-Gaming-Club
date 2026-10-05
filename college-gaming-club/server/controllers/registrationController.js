@@ -157,7 +157,8 @@ exports.createTeamRegistration = async (req, res, next) => {
     }
 
     // Check max teams - only approved/verified active teams count towards tournament capacity
-    const approvedTeamsCount = await TournamentRegistration.countDocuments({
+    const approvedTeamsCount = await Tournamen
+    tRegistration.countDocuments({
       tournament: tournament._id,
       $or: [{ status: 'verified' }, { isVerified: true }],
     });
@@ -1344,6 +1345,131 @@ exports.verifyRegistration = async (req, res, next) => {
       success: true,
       message: `Registration ${effectiveStatus === 'rejected' ? 'rejected' : 'verified'} successfully`,
       registration,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Admin: Bulk verify or reject team registrations
+// @route   POST /api/registrations/bulk-verify
+// @access  Private (Admin / Staff)
+exports.bulkVerifyRegistrations = async (req, res, next) => {
+  try {
+    const { registrationIds, action, status, reason, verificationNotes } = req.body;
+    const targetStatus = status || (action === 'reject' ? 'rejected' : 'verified');
+    const note =
+      verificationNotes ||
+      reason ||
+      (targetStatus === 'rejected' ? 'You need to upload all proofs by merging in a single PDF.' : '');
+
+    if (!Array.isArray(registrationIds) || registrationIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'registrationIds array is required and must not be empty',
+      });
+    }
+
+    if (!['verified', 'rejected'].includes(targetStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status must be verified or rejected',
+      });
+    }
+
+    // Find all matching registrations
+    const registrations = await TournamentRegistration.find({
+      _id: { $in: registrationIds },
+    })
+      .populate('tournament', 'name slug game')
+      .populate('captain', 'name username')
+      .populate('leader', 'name username');
+
+    if (!registrations || registrations.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No matching registrations found',
+      });
+    }
+
+    const isApprove = targetStatus === 'verified';
+    const now = new Date();
+
+    const updateDoc = isApprove
+      ? {
+          $set: {
+            status: 'verified',
+            isVerified: true,
+            verifiedAt: now,
+            'identityProof.status': 'verified',
+            ...(note ? { verificationNotes: note, 'identityProof.verificationNotes': note } : {}),
+          },
+        }
+      : {
+          $set: {
+            status: 'rejected',
+            isVerified: false,
+            'identityProof.status': 'rejected',
+            verificationNotes: note,
+            'identityProof.verificationNotes': note,
+          },
+        };
+
+    // Bulk update all matching registrations
+    await TournamentRegistration.updateMany(
+      { _id: { $in: registrationIds } },
+      updateDoc
+    );
+
+    // If rejecting: pull rejected teams from tournament lobbies and scheduled matches
+    if (!isApprove) {
+      const tournamentIds = Array.from(
+        new Set(
+          registrations
+            .map((r) => r.tournament?._id || r.tournament)
+            .filter(Boolean)
+            .map((id) => id.toString())
+        )
+      );
+
+      const Match = require('../models/Match');
+      for (const tId of tournamentIds) {
+        const tRegIds = registrations
+          .filter((r) => (r.tournament?._id || r.tournament)?.toString() === tId)
+          .map((r) => r._id);
+
+        await Tournament.updateOne(
+          { _id: tId },
+          {
+            $pull: {
+              'stages.$[].lobbies.$[].teams': { $in: tRegIds },
+              'stages.$[].qualifiedTeams': { $in: tRegIds },
+              'stages.$[].advancedTeams': { $in: tRegIds },
+            },
+          }
+        ).catch((err) => console.error('Error removing rejected teams from tournament lobbies:', err));
+
+        await Match.updateMany(
+          { tournament: tId, status: 'scheduled' },
+          { $pull: { teams: { $in: tRegIds } } }
+        ).catch((err) => console.error('Error removing rejected teams from scheduled matches:', err));
+      }
+    }
+
+    // Dispatch notifications non-blockingly
+    for (const reg of registrations) {
+      sendRegistrationVerificationNotification({
+        registration: reg,
+        tournament: reg.tournament,
+        status: targetStatus,
+        reason: note,
+      }).catch((e) => console.error('Bulk verification notification error:', e));
+    }
+
+    res.status(200).json({
+      success: true,
+      count: registrations.length,
+      message: `Successfully ${isApprove ? 'approved' : 'rejected'} ${registrations.length} team(s)!`,
     });
   } catch (error) {
     next(error);

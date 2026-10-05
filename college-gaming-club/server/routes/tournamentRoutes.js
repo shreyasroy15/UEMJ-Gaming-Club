@@ -23,6 +23,7 @@ const {
   deregisterFromTournament,
   updateRegistrationByAdmin,
   adminCreateTeamRegistration,
+  bulkVerifyRegistrations,
 } = require('../controllers/registrationController');
 const {
   getTournamentStructure,
@@ -59,6 +60,8 @@ router.post('/:id/deregister', protect, deregisterFromTournament);
 router.get('/:id/public-teams', getPublicTeams);
 router.get('/:id/admin-registrations', protect, staffOnly, getAdminRegistrations);
 router.post('/:id/admin-add-team', protect, staffOnly, adminCreateTeamRegistration);
+router.post('/:id/registrations/bulk-verify', protect, staffOnly, bulkVerifyRegistrations);
+router.put('/:id/registrations/bulk-verify', protect, staffOnly, bulkVerifyRegistrations);
 router.put('/:id/registrations/:registrationId/admin-update', protect, staffOnly, updateRegistrationByAdmin);
 
 // Direct Tournament Lobby Routes (Esports Manager Flow)
@@ -106,7 +109,11 @@ router
 
 router.patch('/:id/status', protect, staffOnly, updateTournamentStatus);
 router.patch('/:id/toggle-registration', protect, staffOnly, toggleRegistration);
-router.patch('/:id/toggle-points-table-visibility', protect, staffOnly, togglePointsTableVisibility);
+router
+  .route('/:id/toggle-points-table-visibility')
+  .patch(protect, staffOnly, togglePointsTableVisibility)
+  .post(protect, staffOnly, togglePointsTableVisibility)
+  .put(protect, staffOnly, togglePointsTableVisibility);
 
 router.post('/:id/register', protect, registerTeam);
 

@@ -21,6 +21,7 @@ const {
   getIdentityProofSecureUrl,
   streamIdentityProofFile,
   updateRegistrationByAdmin,
+  bulkVerifyRegistrations,
 } = require('../controllers/registrationController');
 const { protect } = require('../middleware/authMiddleware');
 const { staffOnly } = require('../middleware/adminMiddleware');
@@ -83,6 +84,8 @@ router.delete('/:id/members/:userId', protect, removeTeamMember);
 router.post('/:id/leave', protect, leaveSquad);
 
 // Admin verification & squad management
+router.post('/bulk-verify', protect, staffOnly, bulkVerifyRegistrations);
+router.put('/bulk-verify', protect, staffOnly, bulkVerifyRegistrations);
 router.put('/:id/verify', protect, staffOnly, verifyRegistration);
 router.put('/:id/admin-update', protect, staffOnly, updateRegistrationByAdmin);
 
