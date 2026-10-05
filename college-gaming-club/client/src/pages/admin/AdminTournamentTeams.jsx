@@ -23,6 +23,7 @@ import {
   Filter,
   Edit,
   Plus,
+  Trash2,
 } from 'lucide-react';
 
 const AdminTournamentTeams = () => {
@@ -217,6 +218,49 @@ const AdminTournamentTeams = () => {
     } catch (err) {
       console.error(err);
       addToast(err.response?.data?.message || 'Failed to reject selected teams', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteRegistration = async (reg) => {
+    if (!reg) return;
+    const confirmMsg = `Are you sure you want to delete team "${reg.teamName}" from this tournament? This will remove them from all lobbies/matches and free up the registration slot so other teams can register.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setSubmitting(true);
+      try {
+        await API.delete(`/tournaments/${tournamentId}/registrations/${reg._id}`);
+      } catch (err1) {
+        await API.delete(`/registrations/${reg._id}`);
+      }
+      addToast(`Team "${reg.teamName}" deleted from tournament. Slot freed up.`, 'success');
+      setSelectedRegIds((prev) => prev.filter((id) => id !== reg._id));
+      fetchRegistrations();
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to delete team', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRegIds.length === 0) return;
+    const count = selectedRegIds.length;
+    const confirmMsg = `Are you sure you want to delete ${count} selected team(s) from this tournament? This will free up ${count} registration slot(s) for other teams to register.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setSubmitting(true);
+      await API.post('/registrations/bulk-delete', { registrationIds: selectedRegIds });
+      addToast(`Successfully removed ${count} team(s) from tournament. Slots freed up.`, 'success');
+      setSelectedRegIds([]);
+      fetchRegistrations();
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to delete selected teams', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -503,6 +547,17 @@ const AdminTournamentTeams = () => {
             <button
               type="button"
               disabled={submitting}
+              onClick={handleBulkDelete}
+              className="px-3.5 py-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 disabled:opacity-50 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer"
+              title="Delete selected teams from tournament and free up slots"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Selected ({selectedRegIds.length})
+            </button>
+
+            <button
+              type="button"
+              disabled={submitting}
               onClick={() => setSelectedRegIds([])}
               className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-mono font-bold transition cursor-pointer"
             >
@@ -650,6 +705,18 @@ const AdminTournamentTeams = () => {
                         Reject
                       </button>
                     )}
+
+                    {/* Delete Team Button */}
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => handleDeleteRegistration(reg)}
+                      className="py-1.5 px-3 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200 text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-1 transition cursor-pointer"
+                      title="Delete team from tournament"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
                   </div>
                 </div>
               );
@@ -789,6 +856,17 @@ const AdminTournamentTeams = () => {
                             >
                               View Details
                             </Link>
+
+                            <button
+                              type="button"
+                              disabled={submitting}
+                              onClick={() => handleDeleteRegistration(reg)}
+                              className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200 text-[11px] font-bold uppercase flex items-center gap-1 transition cursor-pointer"
+                              title="Delete team from tournament"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Delete
+                            </button>
                           </div>
                         </td>
                       </tr>

@@ -157,8 +157,7 @@ exports.createTeamRegistration = async (req, res, next) => {
     }
 
     // Check max teams - only approved/verified active teams count towards tournament capacity
-    const approvedTeamsCount = await Tournamen
-    tRegistration.countDocuments({
+    const approvedTeamsCount = await TournamentRegistration.countDocuments({
       tournament: tournament._id,
       $or: [{ status: 'verified' }, { isVerified: true }],
     });
@@ -1421,27 +1420,40 @@ exports.bulkVerifyRegistrations = async (req, res, next) => {
       updateDoc
     );
 
-    // If rejecting: pull rejected teams from tournament lobbies and scheduled matches
-    if (!isApprove) {
-      const tournamentIds = Array.from(
-        new Set(
-          registrations
-            .map((r) => r.tournament?._id || r.tournament)
-            .filter(Boolean)
-            .map((id) => id.toString())
-        )
-      );
+    // Synchronize tournament registeredTeams and stage lobbies on approve/reject
+    const tournamentIds = Array.from(
+      new Set(
+        registrations
+          .map((r) => r.tournament?._id || r.tournament)
+          .filter(Boolean)
+          .map((id) => id.toString())
+      )
+    );
 
-      const Match = require('../models/Match');
-      for (const tId of tournamentIds) {
-        const tRegIds = registrations
-          .filter((r) => (r.tournament?._id || r.tournament)?.toString() === tId)
-          .map((r) => r._id);
+    const Match = require('../models/Match');
+    for (const tId of tournamentIds) {
+      const tRegIds = registrations
+        .filter((r) => (r.tournament?._id || r.tournament)?.toString() === tId)
+        .map((r) => r._id);
 
+      if (isApprove) {
+        await Tournament.updateOne(
+          { _id: tId },
+          {
+            $addToSet: {
+              registeredTeams: {
+                $each: tRegIds.map((id) => ({ team: id, registeredAt: now })),
+              },
+              'stages.0.qualifiedTeams': { $each: tRegIds },
+            },
+          }
+        ).catch((err) => console.error('Error adding approved teams to tournament:', err));
+      } else {
         await Tournament.updateOne(
           { _id: tId },
           {
             $pull: {
+              registeredTeams: { team: { $in: tRegIds } },
               'stages.$[].lobbies.$[].teams': { $in: tRegIds },
               'stages.$[].qualifiedTeams': { $in: tRegIds },
               'stages.$[].advancedTeams': { $in: tRegIds },
@@ -2410,6 +2422,128 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
         message: `Duplicate team name or code in this tournament. Please choose a different name.`,
       });
     }
+    next(error);
+  }
+};
+
+// @desc    Admin delete a team from tournament without requiring user de-registration
+// @route   DELETE /api/tournaments/:id/registrations/:registrationId
+//          DELETE /api/registrations/:id/admin-delete
+//          DELETE /api/registrations/:id
+// @access  Private (Admin / Staff)
+exports.adminDeleteTeamRegistration = async (req, res, next) => {
+  try {
+    const regId = req.params.registrationId || req.params.id;
+    const registration = await TournamentRegistration.findById(regId);
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team registration not found',
+      });
+    }
+
+    const tournamentId = registration.tournament;
+    const teamName = registration.teamName;
+
+    // 1. Delete the registration document
+    await TournamentRegistration.findByIdAndDelete(regId);
+
+    // 2. Delete invitations
+    await TournamentInvitation.deleteMany({ registration: regId });
+
+    // 3. Remove team from tournament registeredTeams, stages, lobbies, and matches
+    await Tournament.findByIdAndUpdate(tournamentId, {
+      $pull: {
+        registeredTeams: { team: regId },
+        'stages.$[].lobbies.$[].teams': regId,
+        'stages.$[].qualifiedTeams': regId,
+        'stages.$[].advancedTeams': regId,
+      },
+    });
+
+    const Match = require('../models/Match');
+    await Match.updateMany(
+      { tournament: tournamentId, status: 'scheduled' },
+      { $pull: { teams: regId } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Team "${teamName}" has been successfully deleted from the tournament. Slot is now free for other teams.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Admin bulk delete teams from tournament
+// @route   POST /api/registrations/bulk-delete
+//          DELETE /api/registrations/bulk-delete
+// @access  Private (Admin / Staff)
+exports.adminBulkDeleteRegistrations = async (req, res, next) => {
+  try {
+    const { registrationIds } = req.body;
+    if (!Array.isArray(registrationIds) || registrationIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'registrationIds array is required and must not be empty',
+      });
+    }
+
+    const registrations = await TournamentRegistration.find({
+      _id: { $in: registrationIds },
+    });
+
+    if (!registrations || registrations.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No matching registrations found',
+      });
+    }
+
+    const tournamentIds = Array.from(
+      new Set(
+        registrations
+          .map((r) => r.tournament?._id || r.tournament)
+          .filter(Boolean)
+          .map((id) => id.toString())
+      )
+    );
+
+    // 1. Delete registration docs
+    await TournamentRegistration.deleteMany({ _id: { $in: registrationIds } });
+
+    // 2. Delete invitations
+    await TournamentInvitation.deleteMany({ registration: { $in: registrationIds } });
+
+    // 3. Clean up tournament registeredTeams, lobbies, stages
+    const Match = require('../models/Match');
+    for (const tId of tournamentIds) {
+      await Tournament.updateOne(
+        { _id: tId },
+        {
+          $pull: {
+            registeredTeams: { team: { $in: registrationIds } },
+            'stages.$[].lobbies.$[].teams': { $in: registrationIds },
+            'stages.$[].qualifiedTeams': { $in: registrationIds },
+            'stages.$[].advancedTeams': { $in: registrationIds },
+          },
+        }
+      ).catch((e) => console.error('Bulk delete tournament cleanup error:', e));
+
+      await Match.updateMany(
+        { tournament: tId, status: 'scheduled' },
+        { $pull: { teams: { $in: registrationIds } } }
+      ).catch((e) => console.error('Bulk delete match cleanup error:', e));
+    }
+
+    res.status(200).json({
+      success: true,
+      count: registrations.length,
+      message: `Successfully deleted ${registrations.length} team(s) from the tournament. Slots are now free for other teams.`,
+    });
+  } catch (error) {
     next(error);
   }
 };

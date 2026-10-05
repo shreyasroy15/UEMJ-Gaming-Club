@@ -671,6 +671,49 @@ const AdminMatches = () => {
     }
   };
 
+  const handleDeleteTeamFromTournament = async (team) => {
+    if (!team) return;
+    const confirmMsg = `Are you sure you want to remove "${team.teamName}" from this tournament? This will unassign them from any lobbies and free up the registration slot so other teams can register.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setSubmitting(true);
+      try {
+        await API.delete(`/tournaments/${selectedTournamentId}/registrations/${team._id}`);
+      } catch (err1) {
+        await API.delete(`/registrations/${team._id}`);
+      }
+      addToast(`Team "${team.teamName}" deleted from tournament. Slot freed up.`, 'success');
+      setSelectedTeamIds((prev) => prev.filter((id) => id !== team._id.toString()));
+      fetchTournamentStructure(selectedTournamentId);
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to delete team from tournament', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBulkDeleteTeamsFromTournament = async () => {
+    if (selectedTeamIds.length === 0) return;
+    const count = selectedTeamIds.length;
+    const confirmMsg = `Are you sure you want to remove ${count} selected team(s) from this tournament? This will free up ${count} registration slot(s) for other teams to register.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setSubmitting(true);
+      await API.post('/registrations/bulk-delete', { registrationIds: selectedTeamIds });
+      addToast(`Successfully removed ${count} team(s) from tournament. Slots freed up.`, 'success');
+      setSelectedTeamIds([]);
+      fetchTournamentStructure(selectedTournamentId);
+    } catch (err) {
+      console.error(err);
+      addToast(err.response?.data?.message || 'Failed to delete selected teams', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ==========================================
   // SIDE-BY-SIDE LOBBIES TOP TEAMS QUALIFICATION
   // ==========================================
@@ -1705,15 +1748,25 @@ const AdminMatches = () => {
 
               <button
                 onClick={handleOpenCreateLobby}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase tracking-wider shadow-md transition flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase tracking-wider shadow-md transition flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 + Move to New Lobby
               </button>
 
               <button
+                disabled={submitting}
+                onClick={handleBulkDeleteTeamsFromTournament}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black uppercase tracking-wider shadow-md transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                title="Remove selected teams from tournament and free up slots"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Selected ({selectedTeamIds.length})
+              </button>
+
+              <button
                 onClick={clearTeamSelection}
-                className="p-2 text-slate-400 hover:text-white transition"
+                className="p-2 text-slate-400 hover:text-white transition cursor-pointer"
                 title="Cancel selection"
               >
                 ✕
@@ -1820,7 +1873,7 @@ const AdminMatches = () => {
                         setViewingTeam(team);
                         setRosterModalOpen(true);
                       }}
-                      className="text-cyan-600 hover:text-cyan-700 font-semibold"
+                      className="text-cyan-600 hover:text-cyan-700 font-semibold cursor-pointer"
                     >
                       View Roster
                     </button>
@@ -1832,9 +1885,21 @@ const AdminMatches = () => {
                         setTeamToEdit(team);
                         setEditingTeamModalOpen(true);
                       }}
-                      className="text-purple-600 hover:text-purple-700 font-semibold flex items-center gap-1"
+                      className="text-purple-600 hover:text-purple-700 font-semibold flex items-center gap-1 cursor-pointer"
                     >
                       <Edit className="w-3 h-3" /> Edit Team
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTeamFromTournament(team);
+                      }}
+                      className="text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1 cursor-pointer"
+                      title="Remove team from tournament and free up registration slot"
+                    >
+                      <Trash2 className="w-3 h-3" /> Delete
                     </button>
                   </div>
                 </div>

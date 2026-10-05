@@ -22,6 +22,8 @@ const {
   streamIdentityProofFile,
   updateRegistrationByAdmin,
   bulkVerifyRegistrations,
+  adminDeleteTeamRegistration,
+  adminBulkDeleteRegistrations,
 } = require('../controllers/registrationController');
 const { protect } = require('../middleware/authMiddleware');
 const { staffOnly } = require('../middleware/adminMiddleware');
@@ -88,5 +90,9 @@ router.post('/bulk-verify', protect, staffOnly, bulkVerifyRegistrations);
 router.put('/bulk-verify', protect, staffOnly, bulkVerifyRegistrations);
 router.put('/:id/verify', protect, staffOnly, verifyRegistration);
 router.put('/:id/admin-update', protect, staffOnly, updateRegistrationByAdmin);
+router.delete('/:id/admin-delete', protect, staffOnly, adminDeleteTeamRegistration);
+router.delete('/:id', protect, staffOnly, adminDeleteTeamRegistration);
+router.post('/bulk-delete', protect, staffOnly, adminBulkDeleteRegistrations);
+router.delete('/bulk-delete', protect, staffOnly, adminBulkDeleteRegistrations);
 
 module.exports = router;

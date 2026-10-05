@@ -469,152 +469,172 @@ const Leaderboard = () => {
                   description="Squad points will update automatically when match results are recorded."
                 />
               ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-2xl -mx-3.5 sm:mx-0 touch-pan-x">
-                  <table className="w-full min-w-[680px] text-left text-xs sm:text-sm text-slate-200">
-                    <thead className="bg-slate-950/90 text-[11px] uppercase font-mono text-slate-400 border-b border-slate-800">
-                      <tr>
-                        <th className="p-3.5 w-16 text-center">Rank</th>
-                        <th className="p-3.5 min-w-[170px]">Squad / Team</th>
+                <div className="space-y-2">
+                  {showRoundBreakdown && relevantMatches.length > 0 && (
+                    <div className="flex items-center gap-2 text-[11px] font-mono text-cyan-400/90 bg-cyan-950/50 border border-cyan-800/50 px-3 py-1.5 rounded-xl w-fit shadow-xs">
+                      <span className="text-cyan-300 font-bold">↔</span>
+                      <span>Swipe or scroll table horizontally to view all rounds and points</span>
+                    </div>
+                  )}
 
-                        {/* Dynamic Round Columns (Round 1, Round 2, Round 3...) */}
-                        {showRoundBreakdown && relevantMatches.length > 0 &&
-                          relevantMatches.map((m, mIdx) => {
-                            const rName = m.round || `Round ${m.matchNumber || mIdx + 1}`;
-                            return (
-                              <th
-                                key={m._id}
-                                className="p-3 text-center min-w-[85px] bg-slate-950/70 border-x border-slate-800/50"
-                              >
-                                <div className="text-cyan-300 font-bold tracking-normal">{rName}</div>
-                                {m.map && (
-                                  <div className="text-[9px] text-slate-400 font-normal tracking-wider uppercase">
-                                    {m.map}
-                                  </div>
-                                )}
-                              </th>
-                            );
-                          })}
+                  <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-2xl -mx-3.5 sm:mx-0 touch-pan-x custom-scrollbar">
+                    <table
+                      className="w-full text-left text-xs sm:text-sm text-slate-200"
+                      style={{
+                        minWidth:
+                          showRoundBreakdown && relevantMatches.length > 0
+                            ? `${Math.max(1020, 680 + relevantMatches.length * 110)}px`
+                            : '780px',
+                      }}
+                    >
+                      <thead className="bg-slate-950/90 text-[11px] uppercase font-mono text-slate-400 border-b border-slate-800">
+                        <tr>
+                          <th className="p-3.5 w-16 text-center whitespace-nowrap">Rank</th>
+                          <th className="p-3.5 min-w-[190px] whitespace-nowrap">Squad / Team</th>
 
-                        <th className="p-3.5 text-center">Wins 🍗</th>
-                        <th className="p-3.5 text-center">Kills 🎯</th>
-                        <th className="p-3.5 text-center">Pos Pts</th>
-                        <th className="p-3.5 text-center">Bonus</th>
-                        <th className="p-3.5 text-right font-black text-amber-400">Total Points</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/80 font-mono">
-                      {computedTournamentStandings
-                        .filter(
-                          (t) =>
-                            !tournSearch.trim() ||
-                            t.teamName.toLowerCase().includes(tournSearch.toLowerCase()) ||
-                            t.teamTag.toLowerCase().includes(tournSearch.toLowerCase())
-                        )
-                        .map((team, idx) => {
-                          const rank = idx + 1;
-                          const isExpanded = expandedTeamId === team.teamId;
-
-                          return (
-                            <React.Fragment key={team.teamId}>
-                              <tr
-                                onClick={() => setExpandedTeamId(isExpanded ? null : team.teamId)}
-                                className={`hover:bg-slate-800/40 transition-colors cursor-pointer select-none ${
-                                  rank === 1
-                                    ? 'bg-amber-950/20'
-                                    : rank === 2
-                                    ? 'bg-slate-800/20'
-                                    : rank === 3
-                                    ? 'bg-amber-900/10'
-                                    : ''
-                                } ${isExpanded ? 'bg-slate-800/60' : ''}`}
-                                title="Click to view round-by-round match breakdown"
-                              >
-                                <td className="p-3.5 text-center font-bold">
-                                  {rank === 1 ? (
-                                    <span className="text-amber-400 font-black">🥇 #1</span>
-                                  ) : rank === 2 ? (
-                                    <span className="text-slate-300 font-black">🥈 #2</span>
-                                  ) : rank === 3 ? (
-                                    <span className="text-amber-600 font-black">🥉 #3</span>
-                                  ) : (
-                                    <span className="text-slate-500">#{rank}</span>
-                                  )}
-                                </td>
-                                <td className="p-3.5">
-                                  <div className="flex items-center gap-2.5">
-                                    {team.teamLogo ? (
-                                      <img
-                                        src={team.teamLogo}
-                                        alt={team.teamName}
-                                        className="w-7 h-7 rounded-md object-cover border border-slate-700 shrink-0"
-                                      />
-                                    ) : (
-                                      <div className="w-7 h-7 rounded-md bg-slate-800 flex items-center justify-center text-[10px] font-bold text-cyan-400 shrink-0">
-                                        {team.teamName.substring(0, 2).toUpperCase()}
-                                      </div>
-                                    )}
-                                    <div className="min-w-0">
-                                      <div className="font-bold text-white flex items-center gap-1.5 truncate">
-                                        <span>{team.teamName}</span>
-                                        {team.teamTag && (
-                                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-950 text-indigo-300">
-                                            {team.teamTag}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <span className="text-[10px] text-slate-400 block truncate">
-                                        Cap: {team.captain}
-                                      </span>
+                          {/* Dynamic Round Columns (Round 1, Round 2, Round 3...) */}
+                          {showRoundBreakdown &&
+                            relevantMatches.length > 0 &&
+                            relevantMatches.map((m, mIdx) => {
+                              const rName = m.round || `Round ${m.matchNumber || mIdx + 1}`;
+                              return (
+                                <th
+                                  key={m._id}
+                                  className="p-3 text-center min-w-[100px] bg-slate-950/70 border-x border-slate-800/50 whitespace-nowrap"
+                                >
+                                  <div className="text-cyan-300 font-bold tracking-normal">{rName}</div>
+                                  {m.map && (
+                                    <div className="text-[9px] text-slate-400 font-normal tracking-wider uppercase">
+                                      {m.map}
                                     </div>
-                                  </div>
-                                </td>
+                                  )}
+                                </th>
+                              );
+                            })}
 
-                                {/* Dynamic Round Points Columns */}
-                                {showRoundBreakdown && relevantMatches.length > 0 &&
-                                  relevantMatches.map((m) => {
-                                    const sc = team.roundScores?.[m._id.toString()];
-                                    return (
-                                      <td
-                                        key={m._id}
-                                        className="p-3 text-center bg-slate-950/40 border-x border-slate-800/40"
-                                      >
-                                        {sc ? (
-                                          <div className="inline-flex flex-col items-center justify-center">
-                                            <span
-                                              className={`font-mono font-bold text-xs ${
-                                                sc.isWinner ? 'text-amber-400 font-black' : 'text-slate-100'
-                                              }`}
-                                            >
-                                              {sc.totalPoints}
-                                              {sc.isWinner && ' 🍗'}
-                                            </span>
-                                            <span className="text-[9px] text-slate-400 font-mono">
-                                              {sc.kills}k • {sc.positionPoints}p
-                                            </span>
-                                          </div>
-                                        ) : (
-                                          <span className="text-slate-600">-</span>
-                                        )}
-                                      </td>
-                                    );
-                                  })}
+                          <th className="p-3.5 text-center min-w-[80px] whitespace-nowrap">Wins 🍗</th>
+                          <th className="p-3.5 text-center min-w-[80px] whitespace-nowrap">Kills 🎯</th>
+                          <th className="p-3.5 text-center min-w-[85px] whitespace-nowrap">Pos Pts</th>
+                          <th className="p-3.5 text-center min-w-[75px] whitespace-nowrap">Bonus</th>
+                          <th className="p-3.5 text-right font-black text-amber-400 min-w-[110px] whitespace-nowrap">
+                            Total Points
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/80 font-mono">
+                        {computedTournamentStandings
+                          .filter(
+                            (t) =>
+                              !tournSearch.trim() ||
+                              t.teamName.toLowerCase().includes(tournSearch.toLowerCase()) ||
+                              t.teamTag.toLowerCase().includes(tournSearch.toLowerCase())
+                          )
+                          .map((team, idx) => {
+                            const rank = idx + 1;
+                            const isExpanded = expandedTeamId === team.teamId;
 
-                                <td className="p-3.5 text-center font-bold text-emerald-400">
-                                  {team.wins}
-                                </td>
-                                <td className="p-3.5 text-center font-bold text-cyan-300">
-                                  {team.kills}
-                                </td>
-                                <td className="p-3.5 text-center text-slate-300">
-                                  {team.positionPoints}
-                                </td>
-                                <td className="p-3.5 text-center text-slate-400">
-                                  {team.bonusPoints}
-                                </td>
-                                <td className="p-3.5 text-right font-black text-amber-400 text-sm">
-                                  {team.totalPoints} PTS
-                                </td>
-                              </tr>
+                            return (
+                              <React.Fragment key={team.teamId}>
+                                <tr
+                                  onClick={() => setExpandedTeamId(isExpanded ? null : team.teamId)}
+                                  className={`hover:bg-slate-800/40 transition-colors cursor-pointer select-none ${
+                                    rank === 1
+                                      ? 'bg-amber-950/20'
+                                      : rank === 2
+                                      ? 'bg-slate-800/20'
+                                      : rank === 3
+                                      ? 'bg-amber-900/10'
+                                      : ''
+                                  } ${isExpanded ? 'bg-slate-800/60' : ''}`}
+                                  title="Click to view round-by-round match breakdown"
+                                >
+                                  <td className="p-3.5 text-center font-bold whitespace-nowrap">
+                                    {rank === 1 ? (
+                                      <span className="text-amber-400 font-black">🥇 #1</span>
+                                    ) : rank === 2 ? (
+                                      <span className="text-slate-300 font-black">🥈 #2</span>
+                                    ) : rank === 3 ? (
+                                      <span className="text-amber-600 font-black">🥉 #3</span>
+                                    ) : (
+                                      <span className="text-slate-500">#{rank}</span>
+                                    )}
+                                  </td>
+                                  <td className="p-3.5 min-w-[190px] whitespace-nowrap">
+                                    <div className="flex items-center gap-2.5">
+                                      {team.teamLogo ? (
+                                        <img
+                                          src={team.teamLogo}
+                                          alt={team.teamName}
+                                          className="w-7 h-7 rounded-md object-cover border border-slate-700 shrink-0"
+                                        />
+                                      ) : (
+                                        <div className="w-7 h-7 rounded-md bg-slate-800 flex items-center justify-center text-[10px] font-bold text-cyan-400 shrink-0">
+                                          {team.teamName.substring(0, 2).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="min-w-0">
+                                        <div className="font-bold text-white flex items-center gap-1.5 truncate">
+                                          <span>{team.teamName}</span>
+                                          {team.teamTag && (
+                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-950 text-indigo-300">
+                                              {team.teamTag}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <span className="text-[10px] text-slate-400 block truncate">
+                                          Cap: {team.captain}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </td>
+
+                                  {/* Dynamic Round Points Columns */}
+                                  {showRoundBreakdown &&
+                                    relevantMatches.length > 0 &&
+                                    relevantMatches.map((m) => {
+                                      const sc = team.roundScores?.[m._id.toString()];
+                                      return (
+                                        <td
+                                          key={m._id}
+                                          className="p-3 text-center bg-slate-950/40 border-x border-slate-800/40 whitespace-nowrap"
+                                        >
+                                          {sc ? (
+                                            <div className="inline-flex flex-col items-center justify-center">
+                                              <span
+                                                className={`font-mono font-bold text-xs ${
+                                                  sc.isWinner ? 'text-amber-400 font-black' : 'text-slate-100'
+                                                }`}
+                                              >
+                                                {sc.totalPoints}
+                                                {sc.isWinner && ' 🍗'}
+                                              </span>
+                                              <span className="text-[9px] text-slate-400 font-mono">
+                                                {sc.kills}k • {sc.positionPoints}p
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <span className="text-slate-600">-</span>
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+
+                                  <td className="p-3.5 text-center font-bold text-emerald-400 whitespace-nowrap">
+                                    {team.wins}
+                                  </td>
+                                  <td className="p-3.5 text-center font-bold text-cyan-300 whitespace-nowrap">
+                                    {team.kills}
+                                  </td>
+                                  <td className="p-3.5 text-center text-slate-300 whitespace-nowrap">
+                                    {team.positionPoints}
+                                  </td>
+                                  <td className="p-3.5 text-center text-slate-400 whitespace-nowrap">
+                                    {team.bonusPoints}
+                                  </td>
+                                  <td className="p-3.5 text-right font-black text-amber-400 text-sm whitespace-nowrap">
+                                    {team.totalPoints} PTS
+                                  </td>
+                                </tr>
 
                               {/* Expandable Match-by-Match Breakdown */}
                               {isExpanded && (

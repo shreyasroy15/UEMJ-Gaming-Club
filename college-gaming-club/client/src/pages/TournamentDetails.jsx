@@ -1349,17 +1349,17 @@ const TournamentDetails = () => {
                 description="Squad points will update automatically when match results are recorded."
               />
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/70 -mx-3.5 sm:mx-0 touch-pan-x">
-                <table className="w-full min-w-[620px] text-left text-xs sm:text-sm text-slate-200">
+              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/70 -mx-3.5 sm:mx-0 touch-pan-x custom-scrollbar">
+                <table className="w-full min-w-[760px] text-left text-xs sm:text-sm text-slate-200">
                   <thead className="bg-slate-900/90 text-[11px] uppercase font-mono text-slate-400 border-b border-slate-800">
                     <tr>
-                      <th className="p-3 w-16 text-center">Rank</th>
-                      <th className="p-3">Squad / Team</th>
-                      <th className="p-3 text-center">Wins 🍗</th>
-                      <th className="p-3 text-center">Kills 🎯</th>
-                      <th className="p-3 text-center">Pos Pts</th>
-                      <th className="p-3 text-center">Bonus</th>
-                      <th className="p-3 text-right">Total Points</th>
+                      <th className="p-3 w-16 text-center whitespace-nowrap">Rank</th>
+                      <th className="p-3 min-w-[180px] whitespace-nowrap">Squad / Team</th>
+                      <th className="p-3 text-center min-w-[80px] whitespace-nowrap">Wins 🍗</th>
+                      <th className="p-3 text-center min-w-[80px] whitespace-nowrap">Kills 🎯</th>
+                      <th className="p-3 text-center min-w-[85px] whitespace-nowrap">Pos Pts</th>
+                      <th className="p-3 text-center min-w-[75px] whitespace-nowrap">Bonus</th>
+                      <th className="p-3 text-right min-w-[110px] whitespace-nowrap">Total Points</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/80 font-mono">
@@ -1424,11 +1424,11 @@ const TournamentDetails = () => {
                                 </div>
                               </div>
                             </td>
-                            <td className="p-3 text-center font-bold text-emerald-400">{team.wins}</td>
-                            <td className="p-3 text-center font-bold text-cyan-300">{team.kills}</td>
-                            <td className="p-3 text-center text-slate-300">{team.positionPoints}</td>
-                            <td className="p-3 text-center text-slate-400">{team.bonusPoints}</td>
-                            <td className="p-3 text-right font-black text-amber-400 text-sm">
+                            <td className="p-3 text-center font-bold text-emerald-400 whitespace-nowrap">{team.wins}</td>
+                            <td className="p-3 text-center font-bold text-cyan-300 whitespace-nowrap">{team.kills}</td>
+                            <td className="p-3 text-center text-slate-300 whitespace-nowrap">{team.positionPoints}</td>
+                            <td className="p-3 text-center text-slate-400 whitespace-nowrap">{team.bonusPoints}</td>
+                            <td className="p-3 text-right font-black text-amber-400 text-sm whitespace-nowrap">
                               {team.totalPoints} PTS
                             </td>
                           </tr>
