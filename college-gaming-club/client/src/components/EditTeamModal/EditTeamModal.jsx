@@ -123,34 +123,18 @@ const EditTeamModal = ({ isOpen, onClose, team, onSaved }) => {
             <span>Team Profile (Admin Override)</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
-                Team Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                placeholder="e.g. Soul Esports"
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-cyan-500 font-bold text-slate-800"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
-                Team Tag
-              </label>
-              <input
-                type="text"
-                maxLength={6}
-                value={teamTag}
-                onChange={(e) => setTeamTag(e.target.value.toUpperCase())}
-                placeholder="TAG"
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-cyan-500 font-mono uppercase text-slate-800"
-              />
-            </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+              Team Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder="e.g. Soul Esports"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-cyan-500 font-bold text-slate-800"
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

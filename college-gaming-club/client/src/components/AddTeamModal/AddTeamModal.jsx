@@ -17,9 +17,8 @@ const AddTeamModal = ({ isOpen, onClose, tournamentId, tournamentName, onTeamAdd
   const [submitting, setSubmitting] = useState(false);
 
   const [teamName, setTeamName] = useState('');
-  const [teamTag, setTeamTag] = useState('');
   const [teamType, setTeamType] = useState('UEM Student Team');
-  const [isVerified, setIsVerified] = useState(true);
+  const [isVerified, setIsVerified] = useState(false);
 
   // Initialize with 4 player slots (standard squad format)
   const [players, setPlayers] = useState([
@@ -57,9 +56,8 @@ const AddTeamModal = ({ isOpen, onClose, tournamentId, tournamentName, onTeamAdd
 
   const resetForm = () => {
     setTeamName('');
-    setTeamTag('');
     setTeamType('UEM Student Team');
-    setIsVerified(true);
+    setIsVerified(false);
     setPlayers([
       { name: '', inGameName: '', role: 'captain', inGameId: '' },
       { name: '', inGameName: '', role: 'starter', inGameId: '' },
@@ -91,13 +89,13 @@ const AddTeamModal = ({ isOpen, onClose, tournamentId, tournamentName, onTeamAdd
       setSubmitting(true);
       const res = await API.post(`/tournaments/${tournamentId}/admin-add-team`, {
         teamName: teamName.trim(),
-        teamTag: teamTag.trim().toUpperCase() || undefined,
         teamType,
+        status: isVerified ? 'verified' : 'rejected',
         isVerified,
         players: validPlayers,
       });
 
-      addToast(`Team "${teamName.trim()}" added successfully!`, 'success');
+      addToast(`Team "${teamName.trim()}" added (Initial: Rejected). Click Approve when ready!`, 'success');
       resetForm();
       if (onTeamAdded) onTeamAdded(res.data.registration);
       onClose();
@@ -133,35 +131,19 @@ const AddTeamModal = ({ isOpen, onClose, tournamentId, tournamentName, onTeamAdd
             <span>Team Profile Details</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
-                Team Name *
-              </label>
-              <input
-                type="text"
-                required
-                autoFocus
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                placeholder="e.g. Haryanvi Hunters"
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-cyan-500 font-bold text-slate-800"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
-                Team Tag
-              </label>
-              <input
-                type="text"
-                maxLength={6}
-                value={teamTag}
-                onChange={(e) => setTeamTag(e.target.value.toUpperCase())}
-                placeholder="e.g. HH"
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-cyan-500 font-mono uppercase text-slate-800"
-              />
-            </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+              Team Name *
+            </label>
+            <input
+              type="text"
+              required
+              autoFocus
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder="e.g. Haryanvi Hunters"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-cyan-500 font-bold text-slate-800"
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -190,11 +172,11 @@ const AddTeamModal = ({ isOpen, onClose, tournamentId, tournamentName, onTeamAdd
                 className={`w-full px-3 py-2 text-xs rounded-xl font-bold flex items-center justify-center gap-1.5 transition border cursor-pointer ${
                   isVerified
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                    : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                    : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100'
                 }`}
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                {isVerified ? 'Active / Verified' : 'Pending Verification'}
+                {isVerified ? 'Active / Verified' : 'Rejected (Approve to Activate)'}
               </button>
             </div>
           </div>

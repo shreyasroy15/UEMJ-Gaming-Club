@@ -1198,6 +1198,15 @@ exports.recordMatchResults = async (req, res, next) => {
       }).catch((e) => console.error('Results notification error:', e));
     }
 
+    // Clear live draft and broadcast SAVED to all editing admins
+    livePointsDrafts.delete(match._id.toString());
+    broadcastSSE(match._id.toString(), {
+      type: 'SAVED',
+      savedBy: req.user?.name || req.user?.username || 'Admin',
+      matchId: match._id.toString(),
+      results: formattedResults,
+    });
+
     res.status(200).json({
       success: true,
       message: `Results recorded for ${populatedMatch.title || 'Round'} successfully!`,
@@ -1207,5 +1216,106 @@ exports.recordMatchResults = async (req, res, next) => {
     next(error);
   }
 };
+
+// =========================================================================
+// REAL-TIME COLLABORATIVE POINTS EDITING (MULTI-ADMIN SYNC WITHOUT SAVING)
+// =========================================================================
+
+// In-memory live draft store: matchId -> { matchId, results, presetKey, customPositionPoints, customKillPoint, lastUpdatedBy, lastUpdatedAt }
+const livePointsDrafts = new Map();
+// SSE subscribers: matchId -> Set of res objects
+const liveSubscribers = new Map();
+
+const broadcastSSE = (matchId, data) => {
+  const subs = liveSubscribers.get(matchId.toString());
+  if (!subs || subs.size === 0) return;
+  const payload = `data: ${JSON.stringify(data)}\n\n`;
+  for (const res of subs) {
+    try {
+      res.write(payload);
+    } catch {
+      // client disconnected
+    }
+  }
+};
+
+// @desc    Live stream for points collaboration (Server-Sent Events)
+// @route   GET /api/tournaments/:id/matches/:matchId/points-stream
+// @access  Public or Auth
+exports.pointsStream = async (req, res) => {
+  const matchId = req.params.matchId.toString();
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': req.headers.origin || '*',
+    'Access-Control-Allow-Credentials': 'true',
+  });
+  res.write('\n');
+
+  if (!liveSubscribers.has(matchId)) {
+    liveSubscribers.set(matchId, new Set());
+  }
+  const subs = liveSubscribers.get(matchId);
+  subs.add(res);
+
+  // Send current live draft if any other admin has made unsaved updates
+  const existingDraft = livePointsDrafts.get(matchId);
+  if (existingDraft) {
+    res.write(`data: ${JSON.stringify({ type: 'INIT_DRAFT', draft: existingDraft })}\n\n`);
+  }
+
+  // Heartbeat to keep connection alive
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(': heartbeat\n\n');
+    } catch {
+      clearInterval(heartbeat);
+    }
+  }, 20000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    subs.delete(res);
+    if (subs.size === 0) {
+      liveSubscribers.delete(matchId);
+    }
+  });
+};
+
+// @desc    Broadcast live un-saved points update to all admins
+// @route   POST /api/tournaments/:id/matches/:matchId/points-live-update
+// @access  Private (Admin / Staff)
+exports.pointsLiveUpdate = async (req, res) => {
+  try {
+    const matchId = req.params.matchId.toString();
+    const { results, presetKey, customPositionPoints, customKillPoint, changedTeamId } = req.body;
+
+    const draft = {
+      matchId,
+      results,
+      presetKey,
+      customPositionPoints,
+      customKillPoint,
+      changedTeamId,
+      lastUpdatedBy: req.user?.name || req.user?.username || 'Admin',
+      lastUpdatedAt: new Date(),
+    };
+
+    livePointsDrafts.set(matchId, draft);
+
+    // Broadcast to all active admin subscribers
+    broadcastSSE(matchId, {
+      type: 'LIVE_UPDATE',
+      draft,
+    });
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
 

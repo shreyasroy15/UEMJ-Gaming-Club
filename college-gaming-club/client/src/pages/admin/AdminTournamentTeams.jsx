@@ -180,7 +180,7 @@ const AdminTournamentTeams = () => {
               {tournament.name}
             </h1>
             <p className="text-xs text-slate-500 font-mono">
-              {tournament.game} • {registrations.length} Teams Registered
+              {tournament.game} • {verifiedCount} Active Approved Teams ({registrations.length} Total Submissions)
             </p>
           </div>
         </div>
@@ -205,18 +205,21 @@ const AdminTournamentTeams = () => {
       {/* Stats Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          <p className="text-[10px] uppercase font-bold text-slate-400 font-mono">Registered Teams</p>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
-            {registrations.length}{' '}
+          <p className="text-[10px] uppercase font-bold text-slate-400 font-mono">Active Approved Teams</p>
+          <p className="text-xl sm:text-2xl font-black text-emerald-600 font-mono">
+            {verifiedCount}{' '}
             <span className="text-xs sm:text-sm font-normal text-slate-400">
-              / {tournament.maxTeams}
+              / {tournament.maxTeams} Slots Filled
             </span>
           </p>
         </div>
         <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          <p className="text-[10px] uppercase font-bold text-slate-400 font-mono">Active Verified Teams</p>
-          <p className="text-xl sm:text-2xl font-black text-emerald-600 font-mono">
-            {verifiedCount}
+          <p className="text-[10px] uppercase font-bold text-slate-400 font-mono">Total Submissions</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
+            {registrations.length}{' '}
+            <span className="text-xs sm:text-sm font-normal text-slate-400 font-mono">
+              ({pendingCount} Pending)
+            </span>
           </p>
         </div>
         <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm col-span-2 sm:col-span-1">

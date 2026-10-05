@@ -38,8 +38,10 @@ const Home = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Leaderboard active game tab
-  const [leaderboardGame, setLeaderboardGame] = useState('BGMI');
+  // Leaderboard / Points Table state
+  const [selectedLeaderboardTournamentId, setSelectedLeaderboardTournamentId] = useState('');
+  const [leaderboardStandings, setLeaderboardStandings] = useState([]);
+  const [standingsLoading, setStandingsLoading] = useState(false);
 
   useEffect(() => {
     fetchHomeData();
@@ -64,6 +66,19 @@ const Home = () => {
       setTeams(teamsList);
       setMatches(matchesList);
       setAnnouncements(announcementsList.slice(0, 3));
+
+      // Choose featured tournament for points table preview:
+      // Priority 1: Admin-toggled "showPointsTableOnUserSide"
+      // Priority 2: Running / live / ongoing tournament
+      // Priority 3: First available tournament
+      const featured =
+        tournamentsList.find((t) => t.showPointsTableOnUserSide) ||
+        tournamentsList.find((t) => t.status === 'live' || t.status === 'ongoing') ||
+        tournamentsList[0];
+
+      if (featured) {
+        setSelectedLeaderboardTournamentId(featured._id);
+      }
 
       // Filter active / live / ongoing tournaments
       const running = tournamentsList.filter(
@@ -94,13 +109,113 @@ const Home = () => {
     }
   };
 
-  // Top leaderboard teams filtered by active tab
-  const filteredLeaderboardTeams = useMemo(() => {
-    return teams
-      .filter((t) => t.game?.toLowerCase().includes(leaderboardGame.toLowerCase()))
-      .sort((a, b) => (b.points || 0) - (a.points || 0))
-      .slice(0, 5);
-  }, [teams, leaderboardGame]);
+  // Helper to compute standings from registered teams and match results
+  const computeStandings = (regTeams, tournMatches) => {
+    const teamMap = {};
+    (regTeams || []).forEach((t) => {
+      const tid = t._id?.toString();
+      if (!tid) return;
+      teamMap[tid] = {
+        teamId: tid,
+        teamName: t.teamName || t.name || 'Squad',
+        teamTag: t.teamTag || t.tag || '',
+        teamLogo: t.teamLogo || t.logo || null,
+        matchesPlayed: Number(t.matchesPlayed || 0),
+        wins: 0,
+        kills: 0,
+        positionPoints: 0,
+        killPoints: 0,
+        bonusPoints: 0,
+        totalPoints: Number(t.points || 0),
+      };
+    });
+
+    const completedMatches = (tournMatches || []).filter(
+      (m) => m.status === 'completed' || (m.results && m.results.length > 0)
+    );
+
+    let hasResults = false;
+    completedMatches.forEach((m) => {
+      if (m.winner) {
+        const wid = (m.winner._id || m.winner).toString();
+        if (teamMap[wid]) teamMap[wid].wins += 1;
+      }
+
+      if (m.results && m.results.length > 0) {
+        hasResults = true;
+        m.results.forEach((r) => {
+          const tid = (r.team?._id || r.team || r.teamId)?.toString();
+          if (tid && teamMap[tid]) {
+            teamMap[tid].kills += Number(r.kills || 0);
+            teamMap[tid].positionPoints += Number(r.positionPoints || 0);
+            teamMap[tid].killPoints += Number(r.killPoints || (r.kills || 0));
+            teamMap[tid].bonusPoints += Number(r.bonusPoints || 0);
+          } else if (tid) {
+            teamMap[tid] = {
+              teamId: tid,
+              teamName: r.teamName || r.team?.teamName || r.team?.name || 'Squad',
+              teamTag: r.teamTag || r.team?.teamTag || r.team?.tag || '',
+              teamLogo: r.team?.teamLogo || r.team?.logo || null,
+              matchesPlayed: 1,
+              wins: (m.winner?._id || m.winner)?.toString() === tid ? 1 : 0,
+              kills: Number(r.kills || 0),
+              positionPoints: Number(r.positionPoints || 0),
+              killPoints: Number(r.killPoints || (r.kills || 0)),
+              bonusPoints: Number(r.bonusPoints || 0),
+              totalPoints: Number(r.totalPoints || 0),
+            };
+          }
+        });
+      }
+    });
+
+    if (hasResults) {
+      Object.values(teamMap).forEach((t) => {
+        const sumPts = t.positionPoints + t.killPoints + (t.bonusPoints || 0);
+        if (sumPts > 0 || t.totalPoints === 0) {
+          t.totalPoints = sumPts;
+        }
+      });
+    }
+
+    return Object.values(teamMap).sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return b.kills - a.kills;
+    });
+  };
+
+  const loadTournamentLeaderboard = async (tournId) => {
+    if (!tournId) return;
+    try {
+      setStandingsLoading(true);
+      const [tRes, pRes] = await Promise.all([
+        API.get(`/tournaments/${tournId}`),
+        API.get(`/tournaments/${tournId}/public-teams`).catch(() => ({ data: { teams: [] } })),
+      ]);
+
+      if (tRes.data.success) {
+        const tMatches = tRes.data.matches || [];
+        const pTeams = pRes.data?.teams || [];
+        const computed = computeStandings(pTeams, tMatches);
+        setLeaderboardStandings(computed);
+      }
+    } catch (err) {
+      console.error('Failed to load tournament standings for home:', err);
+    } finally {
+      setStandingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedLeaderboardTournamentId) {
+      loadTournamentLeaderboard(selectedLeaderboardTournamentId);
+    }
+  }, [selectedLeaderboardTournamentId]);
+
+  const activeLeaderboardTournament = useMemo(() => {
+    return allTournaments.find((t) => t._id === selectedLeaderboardTournamentId) || allTournaments[0] || null;
+  }, [allTournaments, selectedLeaderboardTournamentId]);
 
   // Live or upcoming matches
   const activeMatches = useMemo(() => {
@@ -504,49 +619,59 @@ const Home = () => {
           )}
 
           {/* ========================================================= */}
-          {/* 7. LEADERBOARD PREVIEW (TOP SQUADS FROM BACKEND) */}
+          {/* 7. LEADERBOARD PREVIEW (REAL TOURNAMENT POINTS TABLE) */}
           {/* ========================================================= */}
           <section className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800/80">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2 text-white font-mono font-bold text-sm sm:text-base uppercase tracking-wide">
                   <BarChart3 className="w-4 h-4 text-cyan-400" />
-                  <span>Leaderboard Preview</span>
+                  <span>Points Table Overview</span>
+                  {activeLeaderboardTournament?.showPointsTableOnUserSide && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 animate-pulse">
+                      Featured
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-400 font-mono">
-                  Top Performing Campus Teams
+                  {activeLeaderboardTournament
+                    ? `${activeLeaderboardTournament.name} (${activeLeaderboardTournament.game}) - Official Standings`
+                    : 'Top Performing Campus Teams'}
                 </p>
               </div>
 
-              {/* Game Selector & Full Table Link */}
+              {/* Tournament Selector & Full Table Link */}
               <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
-                <div className="p-1 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-1 font-mono text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setLeaderboardGame('BGMI')}
-                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                      leaderboardGame === 'BGMI'
-                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    BGMI
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLeaderboardGame('Free Fire')}
-                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
-                      leaderboardGame === 'Free Fire'
-                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Free Fire
-                  </button>
-                </div>
+                {allTournaments.length > 1 && (
+                  <div className="p-1 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-1 font-mono text-xs overflow-x-auto max-w-full">
+                    {allTournaments.map((t) => {
+                      const isSelected = selectedLeaderboardTournamentId === t._id;
+                      return (
+                        <button
+                          key={t._id}
+                          type="button"
+                          onClick={() => setSelectedLeaderboardTournamentId(t._id)}
+                          className={`px-3 py-1.5 rounded-lg font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                            isSelected
+                              ? t.game === 'Free Fire'
+                                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-black'
+                                : 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-black'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span>{t.game === 'BGMI' ? '📱' : t.game === 'Free Fire' ? '🔥' : '🎯'}</span>
+                          <span>{t.game || t.name}</span>
+                          {t.showPointsTableOnUserSide && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <Link
-                  to="/points-table"
+                  to={`/points-table${activeLeaderboardTournament ? `?tournament=${activeLeaderboardTournament._id}` : ''}`}
                   className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-cyan-400 hover:text-cyan-300 font-mono flex items-center gap-1 transition-all"
                 >
                   <span>Full Table</span>
@@ -555,55 +680,102 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Standings Grid */}
+            {/* Standings Grid / Single Overview */}
             <div className="rounded-2xl bg-slate-900/70 border border-slate-800 p-4 sm:p-5 backdrop-blur-md">
-              {loading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map((i) => (
+              {standingsLoading ? (
+                <div className="space-y-2 py-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="h-12 bg-slate-950/70 border border-slate-800/60 rounded-xl animate-pulse" />
                   ))}
                 </div>
-              ) : filteredLeaderboardTeams.length === 0 ? (
+              ) : leaderboardStandings.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400 font-mono">
-                  No {leaderboardGame} team standings recorded yet. Points update as varsity matches conclude.
+                  No match results or standings recorded yet for {activeLeaderboardTournament?.name || 'this tournament'}. Points update as tournament rounds conclude.
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {filteredLeaderboardTeams.map((team, idx) => {
+                  {/* Standings Table Header */}
+                  <div className="grid grid-cols-12 gap-2 px-3 py-2 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800/60">
+                    <div className="col-span-1 text-center">#</div>
+                    <div className="col-span-5 sm:col-span-5">Squad / Team</div>
+                    <div className="col-span-2 text-center">Matches</div>
+                    <div className="col-span-2 hidden sm:block text-center">Kills</div>
+                    <div className="col-span-1 hidden sm:block text-center">Wins</div>
+                    <div className="col-span-4 sm:col-span-3 text-right">Total PTS</div>
+                  </div>
+
+                  {/* Top Squads Rows */}
+                  {leaderboardStandings.slice(0, 6).map((team, idx) => {
                     const rank = idx + 1;
                     const badgeStyle =
                       rank === 1
-                        ? 'text-amber-400 bg-amber-500/10 border-amber-500/30'
+                        ? 'text-amber-400 bg-amber-500/10 border-amber-500/40 shadow-xs shadow-amber-500/10 font-black'
                         : rank === 2
-                        ? 'text-slate-300 bg-slate-400/10 border-slate-400/30'
+                        ? 'text-slate-300 bg-slate-400/10 border-slate-400/40 font-bold'
                         : rank === 3
-                        ? 'text-amber-600 bg-amber-600/10 border-amber-600/30'
-                        : 'text-slate-400 bg-slate-800/40 border-slate-800';
+                        ? 'text-amber-600 bg-amber-600/10 border-amber-600/40 font-bold'
+                        : 'text-slate-400 bg-slate-800/40 border-slate-800 font-medium';
 
                     return (
                       <div
-                        key={team._id}
-                        className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs font-mono hover:border-slate-700 transition-colors"
+                        key={team.teamId || idx}
+                        className={`grid grid-cols-12 gap-2 items-center px-3 py-2.5 rounded-xl border text-xs font-mono transition-colors ${
+                          rank === 1
+                            ? 'bg-slate-950/90 border-amber-500/30 hover:border-amber-500/50'
+                            : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                        }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className={`w-7 h-7 rounded-lg border flex items-center justify-center font-bold text-xs shrink-0 ${badgeStyle}`}>
-                            {rank === 1 ? <Crown className="w-4 h-4 text-amber-400" /> : rank}
+                        {/* Rank */}
+                        <div className="col-span-1 flex justify-center">
+                          <span className={`w-6 h-6 rounded-lg border flex items-center justify-center font-bold text-xs shrink-0 ${badgeStyle}`}>
+                            {rank === 1 ? <Crown className="w-3.5 h-3.5 text-amber-400" /> : rank}
                           </span>
+                        </div>
+
+                        {/* Squad Name */}
+                        <div className="col-span-5 sm:col-span-5 min-w-0 flex items-center gap-2">
                           <div className="min-w-0">
-                            <div className="text-white font-bold truncate">{team.name}</div>
-                            {team.tag && (
-                              <span className="text-[10px] text-slate-400 font-normal">[{team.tag}]</span>
+                            <div className="text-white font-bold truncate text-xs">{team.teamName}</div>
+                            {team.teamTag && (
+                              <span className="text-[10px] text-slate-400 font-normal">[{team.teamTag}]</span>
                             )}
                           </div>
                         </div>
 
-                        <div className="text-right shrink-0">
-                          <span className="font-black text-amber-400 text-sm">{team.points || 0}</span>
+                        {/* Matches */}
+                        <div className="col-span-2 text-center text-slate-300 font-semibold text-xs">
+                          {team.matchesPlayed || (team.totalPoints > 0 ? 1 : 0)}
+                        </div>
+
+                        {/* Kills */}
+                        <div className="col-span-2 hidden sm:block text-center text-red-400 font-semibold text-xs">
+                          {team.kills || 0}
+                        </div>
+
+                        {/* Wins / Chicken Dinners */}
+                        <div className="col-span-1 hidden sm:block text-center text-amber-400 font-semibold text-xs">
+                          {team.wins || 0}
+                        </div>
+
+                        {/* Total Points */}
+                        <div className="col-span-4 sm:col-span-3 text-right">
+                          <span className="font-black text-amber-400 text-sm sm:text-base">{team.totalPoints || 0}</span>
                           <span className="text-[10px] text-slate-500 ml-1">pts</span>
                         </div>
                       </div>
                     );
                   })}
+
+                  {/* Footer link to full points table */}
+                  <div className="pt-3 text-center border-t border-slate-800/40">
+                    <Link
+                      to={`/points-table${activeLeaderboardTournament ? `?tournament=${activeLeaderboardTournament._id}` : ''}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 transition-colors"
+                    >
+                      <span>View Complete Points Table & All Lobbies ({leaderboardStandings.length} Teams)</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>

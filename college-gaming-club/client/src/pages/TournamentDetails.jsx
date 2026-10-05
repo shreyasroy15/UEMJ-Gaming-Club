@@ -431,7 +431,7 @@ const TournamentDetails = () => {
     { id: 'overview', label: 'Overview' },
     { id: 'rules', label: 'Rules' },
     { id: 'teams', label: `Teams (${publicTeams.length || tournament.registeredTeams?.length || 0})` },
-    { id: 'matches', label: `Lobbies & Matches (${matches.length})` },
+    { id: 'matches', label: 'Lobbies & Matches' },
     { id: 'leaderboard', label: 'Points Table' },
   ];
 
@@ -872,14 +872,9 @@ const TournamentDetails = () => {
                       : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
                   }`}
                 >
-                  All Matches ({matches.length})
+                  All Matches
                 </button>
                 {lobbies.map((lob) => {
-                  const lobMatchCount = matches.filter(
-                    (m) =>
-                      (m.lobbyId || m.lobby?._id || m.lobby)?.toString() === lob._id?.toString() ||
-                      (m.lobbyName || '').toLowerCase().trim() === lob.name.toLowerCase().trim()
-                  ).length;
                   return (
                     <button
                       key={lob._id}
@@ -902,7 +897,7 @@ const TournamentDetails = () => {
                         </span>
                       ) : null}
                       <span className="text-[10px] opacity-75">
-                        ({lobMatchCount} matches • {lob.teams?.length || 0} teams)
+                        ({lob.teams?.length || 0} teams)
                       </span>
                     </button>
                   );
@@ -1360,7 +1355,6 @@ const TournamentDetails = () => {
                     <tr>
                       <th className="p-3 w-16 text-center">Rank</th>
                       <th className="p-3">Squad / Team</th>
-                      <th className="p-3 text-center">Matches</th>
                       <th className="p-3 text-center">Wins 🍗</th>
                       <th className="p-3 text-center">Kills 🎯</th>
                       <th className="p-3 text-center">Pos Pts</th>
@@ -1430,7 +1424,6 @@ const TournamentDetails = () => {
                                 </div>
                               </div>
                             </td>
-                            <td className="p-3 text-center">{team.matchesPlayed}</td>
                             <td className="p-3 text-center font-bold text-emerald-400">{team.wins}</td>
                             <td className="p-3 text-center font-bold text-cyan-300">{team.kills}</td>
                             <td className="p-3 text-center text-slate-300">{team.positionPoints}</td>

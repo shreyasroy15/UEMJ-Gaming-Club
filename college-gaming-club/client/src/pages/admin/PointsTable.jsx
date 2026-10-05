@@ -18,6 +18,8 @@ import {
   Medal,
   Award,
   Sparkles,
+  Eye,
+  BarChart3,
 } from 'lucide-react';
 
 const AdminPointsTable = () => {
@@ -29,6 +31,8 @@ const AdminPointsTable = () => {
   const [selectedTournamentId, setSelectedTournamentId] = useState(queryTournament);
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
+  const [togglingPointsVisibility, setTogglingPointsVisibility] = useState(false);
+  const [showRoundBreakdown, setShowRoundBreakdown] = useState(true);
 
   const [structure, setStructure] = useState({
     tournament: null,
@@ -135,34 +139,49 @@ const AdminPointsTable = () => {
         bonusPoints: 0,
         totalPoints: 0,
         lobbies: new Set(),
+        roundScores: {},
       };
     });
 
     // Aggregate points from match results
     completedMatches.forEach((m) => {
       const lobbyId = m.lobbyId?.toString();
+      const mid = m._id?.toString();
       const isOverall = activeTab === 'overall';
       const isCurrentLobby = lobbyId === activeTab;
 
       if (!isOverall && !isCurrentLobby) return;
 
-      if (m.winner) {
-        const wid = m.winner._id ? m.winner._id.toString() : m.winner.toString();
-        if (teamMap[wid]) {
-          teamMap[wid].wins += 1;
-        }
+      const wid = m.winner?._id ? m.winner._id.toString() : m.winner?.toString();
+      if (m.winner && teamMap[wid]) {
+        teamMap[wid].wins += 1;
       }
 
       if (m.results && m.results.length > 0) {
         m.results.forEach((r) => {
           const tid = r.team?._id ? r.team._id.toString() : r.team?.toString() || r.teamId;
+          const rPts =
+            Number(r.totalPoints) ||
+            Number(r.positionPoints || 0) + Number(r.killPoints || (r.kills || 0)) + Number(r.bonusPoints || 0);
+
           if (tid && teamMap[tid]) {
             teamMap[tid].matchesPlayed += 1;
             teamMap[tid].kills += Number(r.kills || 0);
             teamMap[tid].positionPoints += Number(r.positionPoints || 0);
             teamMap[tid].bonusPoints += Number(r.bonusPoints || 0);
-            teamMap[tid].totalPoints += Number(r.totalPoints || 0);
+            teamMap[tid].totalPoints += rPts;
             if (lobbyId) teamMap[tid].lobbies.add(lobbyId);
+            teamMap[tid].roundScores[mid] = {
+              matchId: mid,
+              matchNumber: m.matchNumber || 1,
+              round: m.round || `Round ${m.matchNumber || 1}`,
+              map: m.map || '',
+              position: Number(r.position || (wid === tid ? 1 : 0)),
+              kills: Number(r.kills || 0),
+              positionPoints: Number(r.positionPoints || 0),
+              totalPoints: rPts,
+              isWinner: wid === tid || r.position === 1,
+            };
           }
         });
       } else {
@@ -196,6 +215,22 @@ const AdminPointsTable = () => {
       return b.kills - a.kills;
     });
   }, [structure, activeTab, allLobbies]);
+
+  // Matches relevant to current lobby tab with recorded results
+  const relevantMatches = useMemo(() => {
+    const matches = structure.matches || [];
+    return matches
+      .filter((m) => {
+        const hasResults = m.status === 'completed' || (m.results && m.results.length > 0);
+        if (!hasResults) return false;
+        if (activeTab !== 'overall') {
+          const mLobbyId = m.lobbyId?.toString();
+          return mLobbyId === activeTab.toString();
+        }
+        return true;
+      })
+      .sort((a, b) => (a.matchNumber || 0) - (b.matchNumber || 0));
+  }, [structure.matches, activeTab]);
 
   // Filter by search query
   const filteredStandings = useMemo(() => {
@@ -247,6 +282,34 @@ const AdminPointsTable = () => {
     addToast('Standings CSV exported successfully!', 'success');
   };
 
+  const handleTogglePointsTableVisibility = async () => {
+    if (!selectedTournamentId) return;
+    try {
+      setTogglingPointsVisibility(true);
+      const res = await API.patch(`/tournaments/${selectedTournamentId}/toggle-points-table-visibility`);
+      if (res.data.success) {
+        addToast(res.data.message, 'success');
+        const nextVal = res.data.showPointsTableOnUserSide;
+        setTournaments((prev) =>
+          prev.map((t) => {
+            if (t._id === selectedTournamentId) {
+              return { ...t, showPointsTableOnUserSide: nextVal };
+            }
+            if (nextVal) {
+              return { ...t, showPointsTableOnUserSide: false };
+            }
+            return t;
+          })
+        );
+        fetchStructure(selectedTournamentId);
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to toggle points table visibility', 'error');
+    } finally {
+      setTogglingPointsVisibility(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
@@ -286,10 +349,29 @@ const AdminPointsTable = () => {
             >
               {tournaments.map((t) => (
                 <option key={t._id} value={t._id}>
-                  {t.name} ({t.game})
+                  {t.name} ({t.game}) {t.showPointsTableOnUserSide ? '★ [Public Points]' : ''}
                 </option>
               ))}
             </select>
+
+            <button
+              type="button"
+              onClick={handleTogglePointsTableVisibility}
+              disabled={togglingPointsVisibility}
+              className={`px-3.5 py-2.5 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer border flex items-center gap-1.5 shadow-sm ${
+                selectedTournament?.showPointsTableOnUserSide
+                  ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20 font-black'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+              title="Toggle whether this tournament's points table is featured on the public website"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>
+                {selectedTournament?.showPointsTableOnUserSide
+                  ? '● Showing on User Side'
+                  : 'Show on User Side'}
+              </span>
+            </button>
 
             <button
               onClick={() => fetchStructure(selectedTournamentId)}
@@ -389,6 +471,25 @@ const AdminPointsTable = () => {
               Export CSV
             </button>
 
+            {relevantMatches.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowRoundBreakdown((prev) => !prev)}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold font-mono transition flex items-center gap-1.5 shadow-sm cursor-pointer border ${
+                  showRoundBreakdown
+                    ? 'bg-cyan-50 text-cyan-800 border-cyan-300 font-bold'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+                title="Toggle per-round point columns (Round 1, Round 2, etc.)"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>{showRoundBreakdown ? 'Round Points: ON' : 'Round Points: OFF'}</span>
+                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 text-[10px] text-slate-700 font-bold">
+                  {relevantMatches.length} {relevantMatches.length === 1 ? 'Rd' : 'Rds'}
+                </span>
+              </button>
+            )}
+
             <Link
               to={`/admin/matches?tournament=${selectedTournamentId}`}
               className="px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-xs font-bold transition flex items-center gap-1 shadow-sm"
@@ -417,6 +518,26 @@ const AdminPointsTable = () => {
                   <th className="p-3.5 text-center w-16">Rank</th>
                   <th className="p-3.5">Team</th>
                   <th className="p-3.5">Captain</th>
+
+                  {/* Dynamic Round Columns (Round 1, Round 2, etc.) */}
+                  {showRoundBreakdown && relevantMatches.length > 0 &&
+                    relevantMatches.map((m, mIdx) => {
+                      const rName = m.round || `Round ${m.matchNumber || mIdx + 1}`;
+                      return (
+                        <th
+                          key={m._id}
+                          className="p-3.5 text-center bg-slate-100/70 border-x border-slate-200 min-w-[80px]"
+                        >
+                          <div className="text-slate-900 font-bold tracking-normal">{rName}</div>
+                          {m.map && (
+                            <div className="text-[9px] text-slate-500 font-normal uppercase tracking-wider">
+                              {m.map}
+                            </div>
+                          )}
+                        </th>
+                      );
+                    })}
+
                   <th className="p-3.5 text-center">Matches</th>
                   <th className="p-3.5 text-center">Wins (🍗)</th>
                   <th className="p-3.5 text-center">Total Kills</th>
@@ -428,7 +549,6 @@ const AdminPointsTable = () => {
               <tbody className="divide-y divide-slate-100 bg-white font-medium">
                 {filteredStandings.map((st, idx) => {
                   const isTop1 = idx === 0;
-                  const isTop3 = idx < 3;
 
                   return (
                     <tr
@@ -470,6 +590,35 @@ const AdminPointsTable = () => {
 
                       {/* Captain */}
                       <td className="p-3.5 text-slate-600">{st.captain}</td>
+
+                      {/* Dynamic Round Columns */}
+                      {showRoundBreakdown && relevantMatches.length > 0 &&
+                        relevantMatches.map((m) => {
+                          const sc = st.roundScores?.[m._id?.toString()];
+                          return (
+                            <td
+                              key={m._id}
+                              className="p-3 text-center bg-slate-50/60 border-x border-slate-100 font-mono"
+                            >
+                              {sc ? (
+                                <div className="inline-flex flex-col items-center justify-center">
+                                  <span
+                                    className={`font-mono font-bold text-xs ${
+                                      sc.isWinner ? 'text-amber-600 font-black' : 'text-slate-800'
+                                    }`}
+                                  >
+                                    {sc.totalPoints} {sc.isWinner && '🍗'}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">
+                                    {sc.kills}k • {sc.positionPoints}p
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </td>
+                          );
+                        })}
 
                       {/* Matches */}
                       <td className="p-3.5 text-center font-mono text-slate-700">

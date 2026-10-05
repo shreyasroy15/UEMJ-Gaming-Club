@@ -156,12 +156,15 @@ exports.createTeamRegistration = async (req, res, next) => {
       });
     }
 
-    // Check max teams
-    const currentTeamsCount = await TournamentRegistration.countDocuments({ tournament: tournament._id });
-    if (currentTeamsCount >= (tournament.maxTeams || 16)) {
+    // Check max teams - only approved/verified active teams count towards tournament capacity
+    const approvedTeamsCount = await TournamentRegistration.countDocuments({
+      tournament: tournament._id,
+      $or: [{ status: 'verified' }, { isVerified: true }],
+    });
+    if (approvedTeamsCount >= (tournament.maxTeams || 16)) {
       return res.status(400).json({
         success: false,
-        message: 'Tournament has reached maximum team capacity',
+        message: 'Tournament has reached maximum approved team capacity',
       });
     }
 
@@ -2087,6 +2090,32 @@ exports.updateRegistrationByAdmin = async (req, res, next) => {
 
     await registration.save();
 
+    // Synchronize tournament registeredTeams and stage qualification on approve/reject
+    if (registration.isVerified || registration.status === 'verified') {
+      await Tournament.updateOne(
+        { _id: registration.tournament },
+        {
+          $addToSet: {
+            registeredTeams: {
+              team: registration._id,
+              registeredAt: new Date(),
+            },
+            'stages.0.qualifiedTeams': registration._id,
+          },
+        }
+      );
+    } else if (registration.status === 'rejected') {
+      await Tournament.updateOne(
+        { _id: registration.tournament },
+        {
+          $pull: {
+            registeredTeams: { team: registration._id },
+            'stages.0.qualifiedTeams': registration._id,
+          },
+        }
+      );
+    }
+
     const updated = await TournamentRegistration.findById(registration._id)
       .populate('captain', 'name username email avatar college studentId phone')
       .populate('players.user', 'name username email avatar college studentId');
@@ -2193,6 +2222,9 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
 
     const teamResponsesMap = new Map([['team_type', resolvedTeamType]]);
 
+    const initialStatus = req.body.status || (isVerified ? 'verified' : 'rejected');
+    const isApproved = initialStatus === 'verified' || initialStatus === 'approved';
+
     const registration = await TournamentRegistration.create({
       tournament: tournament._id,
       teamName: teamName.trim(),
@@ -2203,28 +2235,30 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
       leader: req.user._id,
       identityProof: {
         url: '',
-        status: isVerified ? 'verified' : 'pending',
+        status: isApproved ? 'verified' : 'rejected',
       },
       players: formattedPlayers,
       teamResponses: teamResponsesMap,
-      status: isVerified ? 'verified' : 'complete',
-      isVerified: Boolean(isVerified),
-      verifiedAt: isVerified ? new Date() : undefined,
+      status: initialStatus,
+      isVerified: Boolean(isApproved),
+      verifiedAt: isApproved ? new Date() : undefined,
     });
 
-    // Synchronize tournament registeredTeams and stages using direct MongoDB update
-    await Tournament.updateOne(
-      { _id: tournament._id },
-      {
-        $addToSet: {
-          registeredTeams: {
-            team: registration._id,
-            registeredAt: new Date(),
+    // Only add to registeredTeams and stage qualification if approved!
+    if (isApproved) {
+      await Tournament.updateOne(
+        { _id: tournament._id },
+        {
+          $addToSet: {
+            registeredTeams: {
+              team: registration._id,
+              registeredAt: new Date(),
+            },
+            'stages.0.qualifiedTeams': registration._id,
           },
-          'stages.0.qualifiedTeams': registration._id,
-        },
-      }
-    );
+        }
+      );
+    }
 
     const populated = await TournamentRegistration.findById(registration._id)
       .populate('captain', 'name username email avatar college studentId phone')

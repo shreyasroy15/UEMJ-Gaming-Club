@@ -8,6 +8,7 @@ const {
   updateTournamentStatus,
   deleteTournament,
   toggleRegistration,
+  togglePointsTableVisibility,
   registerTeam,
   generateBracket,
   verifyLobbyAccess,
@@ -45,6 +46,8 @@ const {
   createDirectLobbyMatch,
   createLobbyFromSelectedTeams,
   recordMatchResults,
+  pointsStream,
+  pointsLiveUpdate,
 } = require('../controllers/tournamentStageController');
 
 // Nested form routes: /api/tournaments/:id/form
@@ -82,6 +85,8 @@ router.post('/:id/stages/:stageId/advance-teams', protect, staffOnly, manualAdva
 router.put('/:id/stages/:stageId/override-teams', protect, staffOnly, overrideStageTeams);
 
 router.post('/:id/stages/:stageId/lobbies/:lobbyId/matches', protect, staffOnly, createLobbyMatch);
+router.get('/:id/matches/:matchId/points-stream', pointsStream);
+router.post('/:id/matches/:matchId/points-live-update', protect, staffOnly, pointsLiveUpdate);
 router.post('/:id/matches/:matchId/results', protect, staffOnly, recordMatchResults);
 router.put('/:id/matches/:matchId', protect, staffOnly, updateLobbyMatch);
 router.delete('/:id/matches/:matchId', protect, staffOnly, deleteLobbyMatch);
@@ -101,6 +106,7 @@ router
 
 router.patch('/:id/status', protect, staffOnly, updateTournamentStatus);
 router.patch('/:id/toggle-registration', protect, staffOnly, toggleRegistration);
+router.patch('/:id/toggle-points-table-visibility', protect, staffOnly, togglePointsTableVisibility);
 
 router.post('/:id/register', protect, registerTeam);
 

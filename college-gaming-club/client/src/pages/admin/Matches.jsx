@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import API from '../../services/api';
 import Loading from '../../components/Loading/Loading';
@@ -154,6 +154,14 @@ const AdminMatches = () => {
   const [pointsSearchQuery, setPointsSearchQuery] = useState('');
   const [standingsSearchQuery, setStandingsSearchQuery] = useState('');
   const [qualifySearchQuery, setQualifySearchQuery] = useState('');
+
+  // Live collaborative editing states & refs for real-time multi-admin sync without saving
+  const [liveCollaborator, setLiveCollaborator] = useState(null);
+  const [flashingTeamId, setFlashingTeamId] = useState(null);
+  const eventSourceRef = useRef(null);
+  const isRemoteSyncingRef = useRef(false);
+  const liveSyncDebounceRef = useRef(null);
+  const [togglingPointsVisibility, setTogglingPointsVisibility] = useState(false);
 
   // Quick Room Credentials Drawer / Inline editing
   const [quickCredsMatch, setQuickCredsMatch] = useState(null);
@@ -568,6 +576,39 @@ const AdminMatches = () => {
     }
   };
 
+  const handleTogglePointsTableVisibility = async () => {
+    if (!selectedTournamentId) return;
+    try {
+      setTogglingPointsVisibility(true);
+      const res = await API.patch(`/tournaments/${selectedTournamentId}/toggle-points-table-visibility`);
+      if (res.data.success) {
+        addToast(res.data.message, 'success');
+        const nextVal = res.data.showPointsTableOnUserSide;
+        setTournaments((prev) =>
+          prev.map((t) => {
+            if (t._id === selectedTournamentId) {
+              return { ...t, showPointsTableOnUserSide: nextVal };
+            }
+            if (nextVal) {
+              return { ...t, showPointsTableOnUserSide: false };
+            }
+            return t;
+          })
+        );
+        setStructure((prev) => ({
+          ...prev,
+          tournament: prev.tournament
+            ? { ...prev.tournament, showPointsTableOnUserSide: nextVal }
+            : prev.tournament,
+        }));
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to toggle points table visibility', 'error');
+    } finally {
+      setTogglingPointsVisibility(false);
+    }
+  };
+
   const handleSetLobbyStatus = async (lobby, newStatus) => {
     try {
       await API.put(`/tournaments/${selectedTournamentId}/lobbies/${lobby._id}`, {
@@ -926,11 +967,27 @@ const AdminMatches = () => {
       const killPts = foundRes?.killPoints !== undefined ? foundRes.killPoints : getKillPointsValue(kills);
       const total = foundRes?.totalPoints !== undefined ? foundRes.totalPoints : posPts + killPts + bonus;
 
+      // Extract players list with real name and in-game name (IGN)
+      const rawPlayers = fullTeam.players || [];
+      const playersList = rawPlayers
+        .map((p) => {
+          const resp = p.responses instanceof Map ? Object.fromEntries(p.responses) : (p.responses || {});
+          const pName = p.name || resp.player_name || p.user?.name || '';
+          const pIgn = p.inGameName || resp.in_game_name || resp.game_ign || resp.ign || p.user?.username || '';
+          return {
+            name: pName,
+            inGameName: pIgn,
+            role: p.role || 'starter',
+          };
+        })
+        .filter((p) => p.name || p.inGameName);
+
       return {
         teamId: tid,
         teamName: fullTeam.teamName || 'Team',
         teamTag: fullTeam.teamTag || '',
         captain: fullTeam.captain?.name || fullTeam.leader || 'N/A',
+        players: playersList,
         position: pos,
         kills,
         bonusPoints: bonus,
@@ -945,6 +1002,110 @@ const AdminMatches = () => {
     setPointsModalOpen(true);
   };
 
+  // Broadcast live unsaved points updates to other admins via SSE stream
+  const broadcastLivePointsUpdate = (newResults, changedTeamId = null, overridePreset = null) => {
+    if (isRemoteSyncingRef.current || !selectedRoundForPoints || !selectedTournamentId) return;
+
+    if (liveSyncDebounceRef.current) {
+      clearTimeout(liveSyncDebounceRef.current);
+    }
+
+    liveSyncDebounceRef.current = setTimeout(async () => {
+      try {
+        await API.post(
+          `/tournaments/${selectedTournamentId}/matches/${selectedRoundForPoints._id}/points-live-update`,
+          {
+            results: newResults,
+            presetKey: overridePreset || selectedPresetKey,
+            customPositionPoints,
+            customKillPoint,
+            changedTeamId,
+          }
+        );
+      } catch (err) {
+        console.debug('Live sync broadcast error:', err);
+      }
+    }, 60);
+  };
+
+  // Real-time collaborative SSE stream connection
+  useEffect(() => {
+    if (!pointsModalOpen || !selectedRoundForPoints || !selectedTournamentId) {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      return;
+    }
+
+    const apiBase = API.defaults.baseURL || '/api';
+    const streamUrl = `${apiBase}/tournaments/${selectedTournamentId}/matches/${selectedRoundForPoints._id}/points-stream`;
+    const es = new EventSource(streamUrl, { withCredentials: true });
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      try {
+        if (!event.data || event.data.trim() === ': heartbeat') return;
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'INIT_DRAFT' && data.draft) {
+          isRemoteSyncingRef.current = true;
+          if (Array.isArray(data.draft.results) && data.draft.results.length > 0) {
+            setRoundResultsData(data.draft.results);
+          }
+          if (data.draft.presetKey) setSelectedPresetKey(data.draft.presetKey);
+          if (data.draft.customPositionPoints) setCustomPositionPoints(data.draft.customPositionPoints);
+          if (data.draft.customKillPoint !== undefined) setCustomKillPoint(data.draft.customKillPoint);
+          setLiveCollaborator({
+            name: data.draft.lastUpdatedBy || 'Another Admin',
+            time: new Date(),
+          });
+          setTimeout(() => {
+            isRemoteSyncingRef.current = false;
+          }, 60);
+        } else if (data.type === 'LIVE_UPDATE' && data.draft) {
+          isRemoteSyncingRef.current = true;
+          if (Array.isArray(data.draft.results) && data.draft.results.length > 0) {
+            setRoundResultsData(data.draft.results);
+          }
+          if (data.draft.presetKey) setSelectedPresetKey(data.draft.presetKey);
+          if (data.draft.customPositionPoints) setCustomPositionPoints(data.draft.customPositionPoints);
+          if (data.draft.customKillPoint !== undefined) setCustomKillPoint(data.draft.customKillPoint);
+
+          if (data.draft.changedTeamId) {
+            setFlashingTeamId(data.draft.changedTeamId);
+            setTimeout(() => setFlashingTeamId(null), 1800);
+          }
+
+          setLiveCollaborator({
+            name: data.draft.lastUpdatedBy || 'Another Admin',
+            time: new Date(),
+          });
+          setTimeout(() => {
+            isRemoteSyncingRef.current = false;
+          }, 60);
+        } else if (data.type === 'SAVED') {
+          addToast(`Results were officially saved by ${data.savedBy || 'Admin'}!`, 'info');
+          setLiveCollaborator(null);
+          fetchTournamentStructure(selectedTournamentId);
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+    };
+
+    es.onerror = () => {
+      // EventSource automatically retries
+    };
+
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [pointsModalOpen, selectedRoundForPoints?._id, selectedTournamentId]);
+
   // Next available sequential position for Tap-to-Rank
   const nextAvailablePosition = useMemo(() => {
     const used = new Set(roundResultsData.map((r) => Number(r.position)).filter((p) => p > 0));
@@ -955,7 +1116,7 @@ const AdminMatches = () => {
     return next;
   }, [roundResultsData]);
 
-  // Filtered teams list for points entry modal by team name, tag, or captain
+  // Filtered teams list for points entry modal by team name, player name, IGN, tag, or captain
   const filteredResultsData = useMemo(() => {
     if (!pointsSearchQuery.trim()) return roundResultsData;
     const q = pointsSearchQuery.toLowerCase().trim();
@@ -963,14 +1124,20 @@ const AdminMatches = () => {
       const name = (item.teamName || '').toLowerCase();
       const tag = (item.teamTag || '').toLowerCase();
       const cap = (item.captain || '').toLowerCase();
-      return name.includes(q) || tag.includes(q) || cap.includes(q);
+      const playerMatch = (item.players || []).some(
+        (p) =>
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.inGameName && p.inGameName.toLowerCase().includes(q))
+      );
+      return name.includes(q) || tag.includes(q) || cap.includes(q) || playerMatch;
     });
   }, [roundResultsData, pointsSearchQuery]);
 
   // Sequential Tap-to-Rank on a team card
   const handleTapTeamRank = (teamId) => {
+    let updated = [];
     setRoundResultsData((prev) => {
-      return prev.map((item) => {
+      updated = prev.map((item) => {
         if (item.teamId !== teamId) return item;
 
         // If currently unranked (0), assign next available rank
@@ -988,14 +1155,17 @@ const AdminMatches = () => {
           totalPoints: total,
         };
       });
+      return updated;
     });
+    broadcastLivePointsUpdate(updated, teamId);
   };
 
   // Manual Override of Position Number (e.g. if mistakenly ranked)
   const handleOverridePosition = (teamId, newPosVal) => {
     const parsedPos = Math.max(0, Number(newPosVal) || 0);
+    let updated = [];
     setRoundResultsData((prev) => {
-      return prev.map((item) => {
+      updated = prev.map((item) => {
         if (item.teamId !== teamId) return item;
         const posPts = getPositionPointsForRank(parsedPos);
         const killPts = getKillPointsValue(item.kills);
@@ -1008,13 +1178,16 @@ const AdminMatches = () => {
           totalPoints: total,
         };
       });
+      return updated;
     });
+    broadcastLivePointsUpdate(updated, teamId);
   };
 
   // Update Kills for a team
   const handleUpdateKills = (teamId, deltaOrValue) => {
+    let updated = [];
     setRoundResultsData((prev) => {
-      return prev.map((item) => {
+      updated = prev.map((item) => {
         if (item.teamId !== teamId) return item;
         let newKills = typeof deltaOrValue === 'number' ? Math.max(0, item.kills + deltaOrValue) : Math.max(0, Number(deltaOrValue) || 0);
         const killPts = getKillPointsValue(newKills);
@@ -1026,13 +1199,16 @@ const AdminMatches = () => {
           totalPoints: total,
         };
       });
+      return updated;
     });
+    broadcastLivePointsUpdate(updated, teamId);
   };
 
   // Update Bonus Points for a team
   const handleUpdateBonus = (teamId, deltaOrValue) => {
+    let updated = [];
     setRoundResultsData((prev) => {
-      return prev.map((item) => {
+      updated = prev.map((item) => {
         if (item.teamId !== teamId) return item;
         let newBonus = typeof deltaOrValue === 'number' ? item.bonusPoints + deltaOrValue : Number(deltaOrValue) || 0;
         const total = item.positionPoints + item.killPoints + newBonus;
@@ -1042,15 +1218,17 @@ const AdminMatches = () => {
           totalPoints: total,
         };
       });
+      return updated;
     });
+    broadcastLivePointsUpdate(updated, teamId);
   };
 
   // Change scoring system preset
   const handlePresetChange = (presetKey) => {
     setSelectedPresetKey(presetKey);
-    // Recalculate points for all teams under new preset
+    let updated = [];
     setRoundResultsData((prev) => {
-      return prev.map((item) => {
+      updated = prev.map((item) => {
         const posPts = getPositionPointsForRank(item.position, presetKey);
         const killPts = getKillPointsValue(item.kills, presetKey);
         const total = posPts + killPts + item.bonusPoints;
@@ -1061,7 +1239,9 @@ const AdminMatches = () => {
           totalPoints: total,
         };
       });
+      return updated;
     });
+    broadcastLivePointsUpdate(updated, null, presetKey);
     addToast(`Switched to ${SCORING_PRESETS[presetKey]?.name}`, 'info');
   };
 
@@ -1330,7 +1510,27 @@ const AdminMatches = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Show on User Side Points Table Toggle */}
+            <button
+              type="button"
+              onClick={handleTogglePointsTableVisibility}
+              disabled={togglingPointsVisibility}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer border flex items-center gap-1.5 shadow-xs ${
+                selectedTournament?.showPointsTableOnUserSide
+                  ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20 font-black'
+                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
+              }`}
+              title="When enabled, this tournament's points table is featured on the public user side"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>
+                {selectedTournament?.showPointsTableOnUserSide
+                  ? '● Showing on User Side'
+                  : 'Show on User Side'}
+              </span>
+            </button>
+
             <select
               value={selectedTournamentId}
               onChange={(e) => setSelectedTournamentId(e.target.value)}
@@ -1338,7 +1538,7 @@ const AdminMatches = () => {
             >
               {tournaments.map((t) => (
                 <option key={t._id} value={t._id}>
-                  {t.name} ({t.game})
+                  {t.name} ({t.game}) {t.showPointsTableOnUserSide ? '★ [Public Points]' : ''}
                 </option>
               ))}
             </select>
@@ -2679,6 +2879,16 @@ const AdminMatches = () => {
                 </div>
               </div>
 
+              {/* Real-time Multi-Admin Sync Indicator */}
+              {liveCollaborator && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-mono font-bold shadow-xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                  <span>
+                    ⚡ Multi-Admin Sync: <strong>{liveCollaborator.name}</strong> editing live
+                  </span>
+                </div>
+              )}
+
               {/* Close Button */}
               <button
                 type="button"
@@ -2734,16 +2944,19 @@ const AdminMatches = () => {
                         onChange={(e) => {
                           const val = Number(e.target.value);
                           setCustomKillPoint(val);
-                          setRoundResultsData((prev) =>
-                            prev.map((item) => {
+                          let updated = [];
+                          setRoundResultsData((prev) => {
+                            updated = prev.map((item) => {
                               const killPts = item.kills * val;
                               return {
                                 ...item,
                                 killPoints: killPts,
                                 totalPoints: item.positionPoints + killPts + item.bonusPoints,
                               };
-                            })
-                          );
+                            });
+                            return updated;
+                          });
+                          broadcastLivePointsUpdate(updated);
                         }}
                         className="w-14 bg-white border border-slate-200 rounded px-2 py-0.5 text-xs text-slate-900 text-center font-bold focus:outline-none focus:border-cyan-500"
                       />
@@ -2761,16 +2974,19 @@ const AdminMatches = () => {
                           onChange={(e) => {
                             const val = Number(e.target.value);
                             setCustomPositionPoints((prev) => ({ ...prev, [pos]: val }));
-                            setRoundResultsData((prev) =>
-                              prev.map((item) => {
+                            let updated = [];
+                            setRoundResultsData((prev) => {
+                              updated = prev.map((item) => {
                                 if (item.position !== pos) return item;
                                 return {
                                   ...item,
                                   positionPoints: val,
                                   totalPoints: val + item.killPoints + item.bonusPoints,
                                 };
-                              })
-                            );
+                              });
+                              return updated;
+                            });
+                            broadcastLivePointsUpdate(updated);
                           }}
                           className="w-full bg-white border border-slate-200 rounded px-1 py-1 text-xs text-center font-bold text-cyan-700 focus:outline-none focus:border-cyan-500"
                         />
@@ -2800,14 +3016,17 @@ const AdminMatches = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setRoundResultsData((prev) =>
-                    prev.map((i) => ({
+                  let updated = [];
+                  setRoundResultsData((prev) => {
+                    updated = prev.map((i) => ({
                       ...i,
                       position: 0,
                       positionPoints: 0,
                       totalPoints: i.killPoints + i.bonusPoints,
-                    }))
-                  );
+                    }));
+                    return updated;
+                  });
+                  broadcastLivePointsUpdate(updated);
                   addToast('Cleared all team ranks', 'info');
                 }}
                 className="px-3 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-slate-200 text-xs font-semibold whitespace-nowrap flex-shrink-0 cursor-pointer shadow-xs"
@@ -2879,13 +3098,16 @@ const AdminMatches = () => {
                 {filteredResultsData.map((item) => {
                 const isRanked = item.position > 0;
                 const isWinner = item.position === 1;
+                const isFlashing = flashingTeamId === item.teamId;
 
                 return (
                   <div
                     key={item.teamId}
                     onClick={() => handleTapTeamRank(item.teamId)}
-                    className={`group relative rounded-xl p-4 transition-all duration-200 cursor-pointer border flex flex-col justify-between select-none ${
-                      isWinner
+                    className={`group relative rounded-xl p-4 transition-all duration-300 cursor-pointer border flex flex-col justify-between select-none ${
+                      isFlashing
+                        ? 'ring-2 ring-emerald-500 bg-emerald-50/90 shadow-lg scale-[1.01]'
+                        : isWinner
                         ? 'bg-amber-50/90 border-amber-300 shadow-sm'
                         : isRanked
                         ? 'bg-sky-50/90 border-sky-300 shadow-xs'
@@ -2912,15 +3134,13 @@ const AdminMatches = () => {
                               className="w-8 bg-transparent text-center text-xs font-black text-slate-900 focus:outline-none focus:text-cyan-600"
                             />
                           </div>
-
-                          {item.teamTag && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-cyan-700 border border-slate-200 truncate">
-                              [{item.teamTag}]
-                            </span>
-                          )}
                         </div>
 
-                        {isWinner ? (
+                        {isFlashing ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500 text-white animate-pulse flex-shrink-0 whitespace-nowrap shadow-xs">
+                            ● Live Sync
+                          </span>
+                        ) : isWinner ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
                             <Crown className="w-3 h-3 text-amber-600" />
                             1st
@@ -2934,12 +3154,35 @@ const AdminMatches = () => {
                         )}
                       </div>
 
-                      <h4 className="text-sm font-black text-slate-900 group-hover:text-cyan-600 transition-colors truncate mb-1">
+                      <h4 className="text-sm font-black text-slate-900 group-hover:text-cyan-600 transition-colors truncate mb-0.5">
                         {item.teamName}
                       </h4>
-                      <p className="text-[11px] text-slate-500 truncate">
+                      <p className="text-[11px] text-slate-500 truncate mb-1">
                         Captain: {item.captain}
                       </p>
+
+                      {/* Squad Members & In-Game Names (IGN) for quick identification */}
+                      {item.players && item.players.length > 0 && (
+                        <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-1">
+                          <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                            Players & IGN:
+                          </div>
+                          <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto custom-scrollbar">
+                            {item.players.map((pl, pIdx) => (
+                              <span
+                                key={pIdx}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-mono border border-slate-200"
+                                title={`Player: ${pl.name} | IGN: ${pl.inGameName || 'N/A'}`}
+                              >
+                                <span className="font-bold">{pl.name || 'Player'}</span>
+                                {pl.inGameName && (
+                                  <span className="text-cyan-700 font-semibold">({pl.inGameName})</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Kills & Bonus Controls */}

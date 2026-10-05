@@ -104,6 +104,10 @@ const tournamentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    showPointsTableOnUserSide: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ['upcoming', 'registration-open', 'registration-closed', 'ongoing', 'live', 'on-hold', 'completed', 'cancelled'],

@@ -443,6 +443,43 @@ exports.updateTournamentStatus = async (req, res, next) => {
   }
 };
 
+// @desc    Toggle whether this tournament's Points Table is featured/shown on the public user side
+// @route   PATCH /api/tournaments/:id/toggle-points-table-visibility
+// @access  Private (Admin / Staff)
+exports.togglePointsTableVisibility = async (req, res, next) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+
+    const nextVisibility =
+      req.body.show !== undefined ? Boolean(req.body.show) : !tournament.showPointsTableOnUserSide;
+
+    // If making this points table active on the user side, unset others so this one is featured
+    if (nextVisibility) {
+      await Tournament.updateMany(
+        { _id: { $ne: tournament._id } },
+        { $set: { showPointsTableOnUserSide: false } }
+      );
+    }
+
+    tournament.showPointsTableOnUserSide = nextVisibility;
+    await tournament.save();
+
+    res.status(200).json({
+      success: true,
+      message: nextVisibility
+        ? `Points Table for "${tournament.name}" is now LIVE on the user side!`
+        : `Points Table for "${tournament.name}" is no longer featured on the user side`,
+      showPointsTableOnUserSide: tournament.showPointsTableOnUserSide,
+      tournament,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Delete tournament
 // @route   DELETE /api/tournaments/:id
 // @access  Private (Admin)
