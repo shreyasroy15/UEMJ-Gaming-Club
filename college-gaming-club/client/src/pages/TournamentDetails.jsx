@@ -421,6 +421,8 @@ const TournamentDetails = () => {
     (tournament.status !== 'registration-open' && new Date() >= new Date(tournament.registrationDeadline)) ||
     ((tournament.registeredTeams?.length || 0) >= tournament.maxTeams);
 
+  const isRegistrationClosed = isTeamRegistrationClosed;
+
   const isRegistrationOpen =
     !isTeamRegistrationClosed &&
     (tournament.status === 'upcoming' || tournament.status === 'registration-open');
