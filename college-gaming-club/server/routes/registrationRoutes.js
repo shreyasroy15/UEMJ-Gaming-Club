@@ -20,6 +20,7 @@ const {
   declineInvitation,
   getIdentityProofSecureUrl,
   streamIdentityProofFile,
+  updateRegistrationByAdmin,
 } = require('../controllers/registrationController');
 const { protect } = require('../middleware/authMiddleware');
 const { staffOnly } = require('../middleware/adminMiddleware');
@@ -81,7 +82,8 @@ router.put('/:id/transfer-leader', protect, transferLeadership);
 router.delete('/:id/members/:userId', protect, removeTeamMember);
 router.post('/:id/leave', protect, leaveSquad);
 
-// Admin verification
+// Admin verification & squad management
 router.put('/:id/verify', protect, staffOnly, verifyRegistration);
+router.put('/:id/admin-update', protect, staffOnly, updateRegistrationByAdmin);
 
 module.exports = router;

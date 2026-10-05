@@ -5,16 +5,27 @@ const playerSlotSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
+    },
+    name: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    inGameName: {
+      type: String,
+      trim: true,
+      default: '',
     },
     role: {
       type: String,
-      enum: ['captain', 'starter', 'substitute'],
+      enum: ['captain', 'starter', 'substitute', 'member'],
       default: 'starter',
     },
     slotNumber: {
       type: Number,
-      required: true,
+      required: false,
+      default: 1,
     },
     status: {
       type: String,

@@ -1990,3 +1990,269 @@ exports.streamIdentityProofFile = async (req, res, next) => {
   }
 };
 
+// @desc    Admin update team details and squad members/players for any tournament
+// @route   PUT /api/registrations/:id/admin-update
+// @access  Private (Admin / Staff)
+exports.updateRegistrationByAdmin = async (req, res, next) => {
+  try {
+    const registrationId = req.params.registrationId || req.params.id;
+    const registration = await TournamentRegistration.findById(registrationId);
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament team registration not found',
+      });
+    }
+
+    const { teamName, teamTag, teamType, status, isVerified, players, verificationNotes } = req.body;
+
+    // Check duplicate team name in this tournament if name changed
+    if (teamName && teamName.trim() && teamName.trim().toLowerCase() !== (registration.teamName || '').toLowerCase()) {
+      const duplicate = await TournamentRegistration.findOne({
+        tournament: registration.tournament,
+        _id: { $ne: registration._id },
+        teamName: { $regex: `^${teamName.trim()}$`, $options: 'i' },
+      });
+      if (duplicate) {
+        return res.status(400).json({
+          success: false,
+          message: `Team name "${teamName.trim()}" is already taken in this tournament.`,
+        });
+      }
+      registration.teamName = teamName.trim();
+    }
+
+    if (teamTag !== undefined) {
+      registration.teamTag = (teamTag || '').trim().toUpperCase();
+    }
+
+    if (teamType) {
+      registration.teamType = teamType;
+    }
+
+    if (verificationNotes !== undefined) {
+      registration.verificationNotes = verificationNotes;
+    }
+
+    if (status) {
+      registration.status = status;
+      if (status === 'verified') {
+        registration.isVerified = true;
+        registration.verifiedAt = registration.verifiedAt || new Date();
+      } else if (status === 'rejected') {
+        registration.isVerified = false;
+      }
+    }
+
+    if (isVerified !== undefined) {
+      registration.isVerified = Boolean(isVerified);
+      if (registration.isVerified) {
+        registration.status = 'verified';
+        registration.verifiedAt = registration.verifiedAt || new Date();
+      }
+    }
+
+    // Update players/members if provided
+    if (Array.isArray(players)) {
+      registration.players = players.map((p, idx) => {
+        const slotNumber = p.slotNumber || idx + 1;
+        const role = p.role || (slotNumber === 1 ? 'captain' : 'starter');
+        const pName = (p.name || p.user?.name || '').trim();
+        const inGameName = (p.inGameName || p.ign || '').trim();
+        const pUserId = p.user?._id || p.user || registration.captain;
+
+        const currentResponses = p.responses
+          ? (p.responses instanceof Map ? Object.fromEntries(p.responses) : p.responses)
+          : {};
+
+        if (pName) currentResponses.player_name = pName;
+        if (inGameName) currentResponses.in_game_name = inGameName;
+        if (p.inGameId) currentResponses.in_game_id = p.inGameId;
+
+        return {
+          _id: p._id || new mongoose.Types.ObjectId(),
+          user: pUserId,
+          name: pName,
+          inGameName,
+          role,
+          slotNumber,
+          status: p.status || 'completed',
+          responses: currentResponses,
+          completedAt: p.completedAt || new Date(),
+          joinedAt: p.joinedAt || new Date(),
+        };
+      });
+      registration.markModified('players');
+    }
+
+    await registration.save();
+
+    const updated = await TournamentRegistration.findById(registration._id)
+      .populate('captain', 'name username email avatar college studentId phone')
+      .populate('players.user', 'name username email avatar college studentId');
+
+    res.status(200).json({
+      success: true,
+      message: 'Team details and squad members updated successfully',
+      registration: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Admin manually create/add a team into any tournament (even if registration closed or running)
+// @route   POST /api/tournaments/:id/admin-add-team
+// @access  Private (Admin / Staff)
+exports.adminCreateTeamRegistration = async (req, res, next) => {
+  try {
+    const tournamentId = req.params.id;
+    const query = tournamentId.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: tournamentId }
+      : { slug: tournamentId };
+    const tournament = await Tournament.findOne(query);
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament not found',
+      });
+    }
+
+    const { teamName, teamTag, teamType, players, isVerified = true, captainName } = req.body;
+
+    if (!teamName || !teamName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team name is required',
+      });
+    }
+
+    // Check duplicate team name in this tournament
+    const duplicate = await TournamentRegistration.findOne({
+      tournament: tournament._id,
+      teamName: { $regex: `^${teamName.trim()}$`, $options: 'i' },
+    });
+    if (duplicate) {
+      return res.status(400).json({
+        success: false,
+        message: `Team name "${teamName.trim()}" is already registered in this tournament (${duplicate.status})`,
+      });
+    }
+
+    const teamCode = await generateUniqueCode(tournament.game);
+    const resolvedTeamType = teamType || 'UEM Student Team';
+    const tag = (teamTag || teamName.trim().substring(0, 4)).toUpperCase().trim().substring(0, 6);
+
+    // Prepare players array
+    let formattedPlayers = [];
+    const validList = Array.isArray(players)
+      ? players.filter((p) => p && (p.name?.trim() || p.inGameName?.trim()))
+      : [];
+
+    if (validList.length > 0) {
+      formattedPlayers = validList.map((p, idx) => {
+        const slotNumber = p.slotNumber || idx + 1;
+        const role = p.role || (idx === 0 ? 'captain' : 'starter');
+        const pName = (p.name || '').trim() || (idx === 0 ? (captainName || req.user.name || 'Captain') : `Player ${idx + 1}`);
+        const inGameName = (p.inGameName || p.ign || '').trim();
+        const responsesMap = new Map();
+        if (pName) responsesMap.set('player_name', pName);
+        if (inGameName) responsesMap.set('in_game_name', inGameName);
+        if (p.inGameId) responsesMap.set('in_game_id', p.inGameId);
+
+        return {
+          user: req.user._id,
+          name: pName,
+          inGameName,
+          role,
+          slotNumber,
+          status: 'completed',
+          responses: responsesMap,
+          joinedAt: new Date(),
+          completedAt: new Date(),
+        };
+      });
+    } else {
+      const pName = (captainName || req.user.name || 'Captain').trim();
+      const responsesMap = new Map([['player_name', pName]]);
+      formattedPlayers = [
+        {
+          user: req.user._id,
+          name: pName,
+          inGameName: '',
+          role: 'captain',
+          slotNumber: 1,
+          status: 'completed',
+          responses: responsesMap,
+          joinedAt: new Date(),
+          completedAt: new Date(),
+        },
+      ];
+    }
+
+    const teamResponsesMap = new Map([['team_type', resolvedTeamType]]);
+
+    const registration = await TournamentRegistration.create({
+      tournament: tournament._id,
+      teamName: teamName.trim(),
+      teamType: resolvedTeamType,
+      teamTag: tag,
+      teamCode,
+      captain: req.user._id,
+      leader: req.user._id,
+      identityProof: {
+        url: '',
+        status: isVerified ? 'verified' : 'pending',
+      },
+      players: formattedPlayers,
+      teamResponses: teamResponsesMap,
+      status: isVerified ? 'verified' : 'complete',
+      isVerified: Boolean(isVerified),
+      verifiedAt: isVerified ? new Date() : undefined,
+    });
+
+    // Synchronize tournament registeredTeams and stages using direct MongoDB update
+    await Tournament.updateOne(
+      { _id: tournament._id },
+      {
+        $addToSet: {
+          registeredTeams: {
+            team: registration._id,
+            registeredAt: new Date(),
+          },
+          'stages.0.qualifiedTeams': registration._id,
+        },
+      }
+    );
+
+    const populated = await TournamentRegistration.findById(registration._id)
+      .populate('captain', 'name username email avatar college studentId phone')
+      .populate('players.user', 'name username email avatar college studentId');
+
+    res.status(201).json({
+      success: true,
+      message: `Team "${registration.teamName}" added successfully to ${tournament.name}!`,
+      registration: populated,
+    });
+  } catch (error) {
+    console.error('Error in adminCreateTeamRegistration:', error);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors || {}).map((e) => e.message).join(', ');
+      return res.status(400).json({
+        success: false,
+        message: messages || error.message,
+      });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: `Duplicate team name or code in this tournament. Please choose a different name.`,
+      });
+    }
+    next(error);
+  }
+};
+
+
+

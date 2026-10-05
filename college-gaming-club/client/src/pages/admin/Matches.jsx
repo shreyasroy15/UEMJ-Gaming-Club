@@ -4,6 +4,8 @@ import API from '../../services/api';
 import Loading from '../../components/Loading/Loading';
 import EmptyState from '../../components/EmptyState/EmptyState';
 import Modal from '../../components/Modal/Modal';
+import EditTeamModal from '../../components/EditTeamModal/EditTeamModal';
+import AddTeamModal from '../../components/AddTeamModal/AddTeamModal';
 import { useToast } from '../../context/ToastContext';
 import {
   Trophy,
@@ -163,6 +165,13 @@ const AdminMatches = () => {
   const [rosterModalOpen, setRosterModalOpen] = useState(false);
   const [viewingTeam, setViewingTeam] = useState(null);
 
+  // Edit Team & Members Modal
+  const [editingTeamModalOpen, setEditingTeamModalOpen] = useState(false);
+  const [teamToEdit, setTeamToEdit] = useState(null);
+
+  // Add Team Modal
+  const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
 
   // 1. Fetch Tournaments on load
@@ -310,10 +319,19 @@ const AdminMatches = () => {
   // Filtered registered teams according to search & assignment status
   const displayedTeams = useMemo(() => {
     return registeredTeams.filter((team) => {
+      const q = teamSearchQuery.toLowerCase().trim();
+      const playerNames = (team.players || [])
+        .map((p) => `${p.name || ''} ${p.inGameName || ''} ${p.ign || ''} ${p.user?.name || ''} ${p.user?.username || ''}`)
+        .join(' ')
+        .toLowerCase();
+
       const matchesSearch =
-        team.teamName?.toLowerCase().includes(teamSearchQuery.toLowerCase()) ||
-        team.teamTag?.toLowerCase().includes(teamSearchQuery.toLowerCase()) ||
-        team.captain?.name?.toLowerCase().includes(teamSearchQuery.toLowerCase());
+        !q ||
+        team.teamName?.toLowerCase().includes(q) ||
+        team.teamTag?.toLowerCase().includes(q) ||
+        team.captain?.name?.toLowerCase().includes(q) ||
+        team.captain?.username?.toLowerCase().includes(q) ||
+        playerNames.includes(q);
 
       if (!matchesSearch) return false;
 
@@ -1380,6 +1398,12 @@ const AdminMatches = () => {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={() => setAddTeamModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold font-mono uppercase bg-cyan-600 hover:bg-cyan-500 text-white shadow-xs flex items-center gap-1.5 cursor-pointer transition"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[3]" /> Add Team
+            </button>
+            <button
               onClick={selectAllUnassigned}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition"
             >
@@ -1560,10 +1584,35 @@ const AdminMatches = () => {
                       <span className="text-slate-400">Captain:</span>{' '}
                       {team.captain?.name || team.leader || 'N/A'}
                     </p>
+
+                    {/* Member names display */}
+                    <div className="mt-2.5 pt-2 border-t border-slate-100">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center justify-between">
+                        <span>Squad Members</span>
+                        <span className="font-mono text-slate-500 font-bold">{team.players?.length || 1}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 max-h-12 overflow-hidden">
+                        {(team.players || []).length > 0 ? (
+                          (team.players || []).map((p, idx) => {
+                            const pName = p.inGameName || p.name || p.user?.name || p.user?.username || `P${idx + 1}`;
+                            return (
+                              <span
+                                key={idx}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium truncate max-w-[100px] border border-slate-200/70"
+                                title={pName}
+                              >
+                                {pName}
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">No members listed</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                    <span>{team.players?.length || 1} Players</span>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1574,6 +1623,18 @@ const AdminMatches = () => {
                       className="text-cyan-600 hover:text-cyan-700 font-semibold"
                     >
                       View Roster
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTeamToEdit(team);
+                        setEditingTeamModalOpen(true);
+                      }}
+                      className="text-purple-600 hover:text-purple-700 font-semibold flex items-center gap-1"
+                    >
+                      <Edit className="w-3 h-3" /> Edit Team
                     </button>
                   </div>
                 </div>
@@ -3125,7 +3186,19 @@ const AdminMatches = () => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setRosterModalOpen(false);
+                  setTeamToEdit(viewingTeam);
+                  setEditingTeamModalOpen(true);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
+              >
+                <Edit className="w-3.5 h-3.5" /> Edit Team & Members
+              </button>
+
               <button
                 onClick={() => setRosterModalOpen(false)}
                 className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition-colors"
@@ -3136,6 +3209,31 @@ const AdminMatches = () => {
           </div>
         )}
       </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL 7: EDIT TEAM & MEMBERS */}
+      {/* ========================================================================= */}
+      <EditTeamModal
+        isOpen={editingTeamModalOpen}
+        onClose={() => setEditingTeamModalOpen(false)}
+        team={teamToEdit}
+        onSaved={() => {
+          fetchTournamentStructure(selectedTournamentId);
+        }}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL 8: ADD TEAM TO TOURNAMENT */}
+      {/* ========================================================================= */}
+      <AddTeamModal
+        isOpen={addTeamModalOpen}
+        onClose={() => setAddTeamModalOpen(false)}
+        tournamentId={selectedTournamentId}
+        tournamentName={selectedTournament?.name}
+        onTeamAdded={() => {
+          fetchTournamentStructure(selectedTournamentId);
+        }}
+      />
     </div>
   );
 };

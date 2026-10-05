@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import API from '../../services/api';
 import Loading from '../../components/Loading/Loading';
 import { useToast } from '../../context/ToastContext';
-import { ChevronLeft, FileText, CheckCircle2, User, X, ExternalLink, XCircle, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, FileText, CheckCircle2, User, X, ExternalLink, XCircle, AlertTriangle, Edit } from 'lucide-react';
 import RejectionModal from '../../components/RejectionModal/RejectionModal';
+import EditTeamModal from '../../components/EditTeamModal/EditTeamModal';
 
 const AdminTeamDetails = () => {
   const { tournamentId, registrationId } = useParams();
@@ -14,6 +15,7 @@ const AdminTeamDetails = () => {
   const [identityProofUrl, setIdentityProofUrl] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -123,8 +125,17 @@ const AdminTeamDetails = () => {
           </div>
         </div>
 
-        {/* Verification Actions */}
+        {/* Verification & Edit Actions */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setEditModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+          >
+            <Edit className="w-4 h-4" />
+            Edit Squad & Members
+          </button>
+
           {registration.status !== 'verified' ? (
             <button
               disabled={submitting}
@@ -317,6 +328,14 @@ const AdminTeamDetails = () => {
         onConfirm={handleConfirmRejection}
         teamName={registration?.teamName}
         tournamentName={tournament.name}
+      />
+
+      {/* Edit Squad & Members Modal */}
+      <EditTeamModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        team={registration}
+        onSaved={() => fetchRegistration()}
       />
     </div>
   );

@@ -335,7 +335,7 @@ exports.updateTournament = async (req, res, next) => {
     }
 
     tournament = await Tournament.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
 
@@ -426,7 +426,7 @@ exports.updateTournamentStatus = async (req, res, next) => {
     const tournament = await Tournament.findByIdAndUpdate(
       req.params.id,
       { $set: { status } },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!tournament) {

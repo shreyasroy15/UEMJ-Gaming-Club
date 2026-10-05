@@ -20,6 +20,8 @@ const {
   getPublicTeams,
   getAdminRegistrations,
   deregisterFromTournament,
+  updateRegistrationByAdmin,
+  adminCreateTeamRegistration,
 } = require('../controllers/registrationController');
 const {
   getTournamentStructure,
@@ -53,6 +55,8 @@ router.post('/:id/registrations/create-team', protect, createTeamRegistration);
 router.post('/:id/deregister', protect, deregisterFromTournament);
 router.get('/:id/public-teams', getPublicTeams);
 router.get('/:id/admin-registrations', protect, staffOnly, getAdminRegistrations);
+router.post('/:id/admin-add-team', protect, staffOnly, adminCreateTeamRegistration);
+router.put('/:id/registrations/:registrationId/admin-update', protect, staffOnly, updateRegistrationByAdmin);
 
 // Direct Tournament Lobby Routes (Esports Manager Flow)
 router.post('/:id/lobbies/:lobbyId/access', protect, verifyLobbyAccess);

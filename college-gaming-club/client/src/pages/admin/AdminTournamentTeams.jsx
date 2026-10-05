@@ -4,6 +4,8 @@ import API from '../../services/api';
 import Loading from '../../components/Loading/Loading';
 import EmptyState from '../../components/EmptyState/EmptyState';
 import RejectionModal from '../../components/RejectionModal/RejectionModal';
+import EditTeamModal from '../../components/EditTeamModal/EditTeamModal';
+import AddTeamModal from '../../components/AddTeamModal/AddTeamModal';
 import { useToast } from '../../context/ToastContext';
 import {
   Users,
@@ -19,6 +21,8 @@ import {
   Search,
   X,
   Filter,
+  Edit,
+  Plus,
 } from 'lucide-react';
 
 const AdminTournamentTeams = () => {
@@ -36,6 +40,12 @@ const AdminTournamentTeams = () => {
   // Rejection modal state
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRegForReject, setSelectedRegForReject] = useState(null);
+
+  // Edit team modal state
+  const [editingTeam, setEditingTeam] = useState(null);
+
+  // Add team modal state
+  const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
 
   useEffect(() => {
     fetchRegistrations();
@@ -175,8 +185,18 @@ const AdminTournamentTeams = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => setAddTeamModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 shadow-sm hover:shadow-cyan-500/25 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            Add Team
+          </button>
+
+          <span className="px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             {verifiedCount} Active / Verified
           </span>
         </div>
@@ -397,6 +417,15 @@ const AdminTournamentTeams = () => {
 
                   {/* Verification & Action Buttons */}
                   <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingTeam(reg)}
+                      className="py-1.5 px-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-1 transition cursor-pointer"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+
                     <Link
                       to={`/admin/teams/${tournamentId}/${reg._id}`}
                       className="flex-1 min-w-[90px] py-1.5 px-3 rounded-xl bg-cyan-50 text-cyan-700 hover:bg-cyan-100 border border-cyan-200 text-center text-xs font-bold font-mono transition"
@@ -522,6 +551,16 @@ const AdminTournamentTeams = () => {
                               </button>
                             )}
 
+                            <button
+                              type="button"
+                              onClick={() => setEditingTeam(reg)}
+                              className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[11px] font-bold uppercase flex items-center gap-1 transition cursor-pointer"
+                              title="Edit Team & Members"
+                            >
+                              <Edit className="w-3 h-3" />
+                              Edit
+                            </button>
+
                             <Link
                               to={`/admin/teams/${tournamentId}/${reg._id}`}
                               className="px-3 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors text-[11px] font-bold"
@@ -550,6 +589,23 @@ const AdminTournamentTeams = () => {
         onConfirm={handleConfirmReject}
         teamName={selectedRegForReject?.teamName}
         tournamentName={tournament?.name}
+      />
+
+      {/* Edit Team & Members Modal */}
+      <EditTeamModal
+        isOpen={Boolean(editingTeam)}
+        onClose={() => setEditingTeam(null)}
+        team={editingTeam}
+        onSaved={() => fetchRegistrations()}
+      />
+
+      {/* Add Team Modal */}
+      <AddTeamModal
+        isOpen={addTeamModalOpen}
+        onClose={() => setAddTeamModalOpen(false)}
+        tournamentId={tournamentId}
+        tournamentName={tournament?.name}
+        onTeamAdded={() => fetchRegistrations()}
       />
     </div>
   );
