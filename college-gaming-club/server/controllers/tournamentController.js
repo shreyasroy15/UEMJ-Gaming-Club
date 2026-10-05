@@ -324,6 +324,16 @@ exports.updateTournament = async (req, res, next) => {
       req.body.startDate = new Date(req.body.startDate);
     }
 
+    if (req.body.isRegistrationClosed === false || req.body.status === 'registration-open') {
+      const now = new Date();
+      if (!req.body.registrationDeadline && tournament.registrationDeadline && new Date(tournament.registrationDeadline) <= now) {
+        const extDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+        req.body.registrationDeadline = tournament.startDate && new Date(tournament.startDate) > now
+          ? new Date(tournament.startDate)
+          : extDate;
+      }
+    }
+
     tournament = await Tournament.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
@@ -364,6 +374,19 @@ exports.toggleRegistration = async (req, res, next) => {
       tournament.status = 'registration-closed';
     } else {
       tournament.status = 'registration-open';
+      // When admin reopens registration, extend deadline if it has passed so all users can register and join
+      const now = new Date();
+      if (!tournament.registrationDeadline || new Date(tournament.registrationDeadline) <= now) {
+        const extDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+        tournament.registrationDeadline = tournament.startDate && new Date(tournament.startDate) > now
+          ? new Date(tournament.startDate)
+          : extDate;
+      }
+      if (!tournament.identityProofDeadline || new Date(tournament.identityProofDeadline) <= now) {
+        const idExtDate = new Date(tournament.registrationDeadline);
+        idExtDate.setDate(idExtDate.getDate() + 1);
+        tournament.identityProofDeadline = idExtDate;
+      }
     }
 
     await tournament.save();

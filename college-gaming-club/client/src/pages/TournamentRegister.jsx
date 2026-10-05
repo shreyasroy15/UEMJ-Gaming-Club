@@ -98,6 +98,14 @@ const TournamentRegister = () => {
         fetchedTournament = formRes.data.tournament;
         setTournament(fetchedTournament);
         setForm(formRes.data.form);
+        const isClosed =
+          Boolean(fetchedTournament.isRegistrationClosed) ||
+          fetchedTournament.status === 'registration-closed' ||
+          (fetchedTournament.status !== 'registration-open' && new Date() >= new Date(fetchedTournament.registrationDeadline)) ||
+          ((fetchedTournament.registeredTeams?.length || 0) >= (fetchedTournament.maxTeams || 16));
+        if (isClosed && !codeParam) {
+          setMode('join');
+        }
       }
 
       // 2. If logged in, check if user is already in a team for this tournament
@@ -1463,12 +1471,14 @@ const TournamentRegister = () => {
     );
   }
 
-  const isRegistrationClosed =
+  const isTournamentEnded =
+    tournament?.status === 'completed' || tournament?.status === 'cancelled';
+
+  const isTeamRegistrationClosed =
     Boolean(tournament?.isRegistrationClosed) ||
     tournament?.status === 'registration-closed' ||
-    tournament?.status === 'completed' ||
-    tournament?.status === 'cancelled' ||
-    new Date() >= new Date(tournament?.registrationDeadline) ||
+    isTournamentEnded ||
+    (tournament?.status !== 'registration-open' && new Date() >= new Date(tournament?.registrationDeadline)) ||
     ((tournament?.registeredTeams?.length || 0) >= tournament?.maxTeams);
 
   // Registration Hub (Create Squad vs Join with Code)
@@ -1499,25 +1509,17 @@ const TournamentRegister = () => {
         </Link>
       </div>
 
-      {isRegistrationClosed ? (
+      {isTournamentEnded ? (
         <div className="p-8 sm:p-12 rounded-3xl bg-slate-900/90 border border-slate-800 text-center space-y-5 shadow-2xl">
           <div className="w-16 h-16 rounded-2xl bg-rose-950/80 border border-rose-600/40 text-rose-400 flex items-center justify-center mx-auto shadow-lg shadow-rose-950/50">
             <Lock className="w-8 h-8" />
           </div>
           <div className="space-y-2 max-w-md mx-auto">
             <h2 className="text-xl sm:text-2xl font-black text-white font-mono uppercase tracking-wide">
-              Registrations Are Closed
+              Tournament Concluded
             </h2>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Registrations for <strong>{tournament.name}</strong> are currently closed. No new squads can be created or joined at this time.
-              {tournament.registrationDeadline && (
-                <span className="block mt-1.5 font-mono text-slate-400">
-                  Registration Deadline:{' '}
-                  <span className="text-rose-400 font-bold">
-                    {formatTournamentDateTime(tournament.registrationDeadline)}
-                  </span>
-                </span>
-              )}
+              This tournament has been completed or concluded. Registrations are no longer active.
             </p>
           </div>
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
@@ -1537,6 +1539,30 @@ const TournamentRegister = () => {
         </div>
       ) : (
         <>
+          {isTeamRegistrationClosed && (
+            <div className="p-4 rounded-2xl bg-amber-950/60 border border-amber-600/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-200">
+              <div className="flex items-center gap-3">
+                <Lock className="w-5 h-5 text-amber-400 shrink-0" />
+                <div className="text-xs">
+                  <p className="font-bold font-mono uppercase tracking-wide text-white">
+                    Team Registration Closed • Existing Squad Joining Available
+                  </p>
+                  <p className="text-amber-300/80 mt-0.5">
+                    New team registrations are closed. However, you can still join an existing squad if you have their team invite code!
+                  </p>
+                </div>
+              </div>
+              {mode !== 'join' && (
+                <button
+                  type="button"
+                  onClick={() => setMode('join')}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs font-mono uppercase tracking-wider shrink-0 transition-all cursor-pointer shadow-md"
+                >
+                  Join with Code
+                </button>
+              )}
+            </div>
+          )}
           {/* Mode Switcher Tabs */}
           <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-mono font-bold">
             <button
@@ -1565,11 +1591,33 @@ const TournamentRegister = () => {
 
           {/* 1. CREATE SQUAD FORM (Contains ONLY Team Name + Team Type) */}
           {mode === 'create' ? (
-        <form onSubmit={handleCreateTeam} className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
-              <Shield className="w-5 h-5 text-cyan-400" /> Create Team
-            </h2>
+            isTeamRegistrationClosed ? (
+              <div className="p-8 sm:p-12 rounded-3xl bg-slate-900/80 border border-amber-600/30 shadow-xl space-y-4 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-amber-950/80 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto shadow-lg shadow-amber-950/40">
+                  <Lock className="w-7 h-7" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-lg font-bold text-white font-mono uppercase">
+                    New Squad Creation is Closed
+                  </h3>
+                  <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                    New team registrations have been closed by the tournament administrator. However, you can still join any registered squad using their team invite code!
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMode('join')}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider font-mono shadow-lg shadow-indigo-500/20 transition-all cursor-pointer"
+                >
+                  🎯 Switch to Join with Team Code
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateTeam} className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">
+                <div>
+                  <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-cyan-400" /> Create Team
+                  </h2>
             <p className="text-xs text-slate-400 mt-1">
               Enter your team name and select your team type to register. You will automatically become the Team Leader.
             </p>
@@ -1623,6 +1671,7 @@ const TournamentRegister = () => {
             </button>
           </div>
         </form>
+        )
       ) : (
         /* 2. JOIN SQUAD FORM */
         <form onSubmit={handleJoinTeam} className="p-6 sm:p-8 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-6">

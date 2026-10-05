@@ -144,12 +144,12 @@ exports.createTeamRegistration = async (req, res, next) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: 'Registrations are currently closed for this tournament',
+        message: 'Team registrations are currently closed for this tournament. You can still join an existing squad with an invite code.',
       });
     }
 
-    // Check deadline
-    if (new Date() > new Date(tournament.registrationDeadline)) {
+    // Check deadline (only if registration is not explicitly kept open by admin)
+    if (tournament.status !== 'registration-open' && new Date() > new Date(tournament.registrationDeadline)) {
       return res.status(400).json({
         success: false,
         message: 'Registration deadline has passed for this tournament',
@@ -306,23 +306,15 @@ exports.joinTeamByCode = async (req, res, next) => {
 
     const tournament = registration.tournament;
 
-    // Check tournament status & close flag
+    // Check tournament status (existing teams can accept joins unless tournament is completed/cancelled)
     if (
-      tournament.isRegistrationClosed ||
-      tournament.status === 'registration-closed' ||
       tournament.status === 'completed' ||
-      tournament.status === 'cancelled'
+      tournament.status === 'cancelled' ||
+      (tournament.endDate && new Date() > new Date(tournament.endDate))
     ) {
       return res.status(400).json({
         success: false,
-        message: 'Tournament registration is closed',
-      });
-    }
-
-    if (new Date() > new Date(tournament.registrationDeadline)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Registration deadline has passed for this tournament',
+        message: 'Tournament is no longer active',
       });
     }
 
@@ -1562,11 +1554,15 @@ exports.sendTournamentInvitation = async (req, res, next) => {
       });
     }
 
-    // Check deadline
-    if (new Date() > new Date(tournament.registrationDeadline)) {
+    // Check tournament active status
+    if (
+      tournament.status === 'completed' ||
+      tournament.status === 'cancelled' ||
+      (tournament.endDate && new Date() > new Date(tournament.endDate))
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Tournament registration deadline has passed',
+        message: 'Tournament is no longer active',
       });
     }
 
@@ -1748,11 +1744,15 @@ exports.acceptInvitation = async (req, res, next) => {
       });
     }
 
-    // Check registration deadline
-    if (new Date() > new Date(tournament.registrationDeadline)) {
+    // Check tournament status
+    if (
+      tournament.status === 'completed' ||
+      tournament.status === 'cancelled' ||
+      (tournament.endDate && new Date() > new Date(tournament.endDate))
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Registration deadline has passed for this tournament',
+        message: 'Tournament is no longer active',
       });
     }
 

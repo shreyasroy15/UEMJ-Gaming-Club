@@ -121,8 +121,15 @@ exports.saveTournamentForm = async (req, res, next) => {
       tournament.isRegistrationClosed = closedState;
       if (closedState) {
         tournament.status = 'registration-closed';
-      } else if (tournament.status === 'registration-closed') {
+      } else if (tournament.status === 'registration-closed' || !closedState) {
         tournament.status = 'registration-open';
+        const now = new Date();
+        if (!tournament.registrationDeadline || new Date(tournament.registrationDeadline) <= now) {
+          const extDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+          tournament.registrationDeadline = tournament.startDate && new Date(tournament.startDate) > now
+            ? new Date(tournament.startDate)
+            : extDate;
+        }
       }
     }
 

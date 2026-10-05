@@ -156,7 +156,7 @@ const TournamentDetails = () => {
     setNewTeamName('');
     setNewTeamType('UEM Student Team');
     setJoinTeamCode('');
-    setRegisterModalTab('create');
+    setRegisterModalTab(isTeamRegistrationClosed ? 'join' : 'create');
     setRegisterModalOpen(true);
   };
 
@@ -411,16 +411,18 @@ const TournamentDetails = () => {
   if (loading) return <Loading message="Loading tournament specifications..." />;
   if (!tournament) return <EmptyState title="Tournament Not Found" description="The requested tournament does not exist." />;
 
-  const isRegistrationClosed =
+  const isTournamentEnded =
+    tournament.status === 'completed' || tournament.status === 'cancelled';
+
+  const isTeamRegistrationClosed =
     Boolean(tournament.isRegistrationClosed) ||
     tournament.status === 'registration-closed' ||
-    tournament.status === 'completed' ||
-    tournament.status === 'cancelled' ||
-    new Date() >= new Date(tournament.registrationDeadline) ||
+    isTournamentEnded ||
+    (tournament.status !== 'registration-open' && new Date() >= new Date(tournament.registrationDeadline)) ||
     ((tournament.registeredTeams?.length || 0) >= tournament.maxTeams);
 
   const isRegistrationOpen =
-    !isRegistrationClosed &&
+    !isTeamRegistrationClosed &&
     (tournament.status === 'upcoming' || tournament.status === 'registration-open');
 
   const tabs = [
@@ -545,10 +547,24 @@ const TournamentDetails = () => {
                   <UserPlus className="w-4 h-4" /> JOIN WITH TEAM CODE
                 </button>
               </div>
+            ) : !isTournamentEnded ? (
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-950/60 border border-amber-600/40 text-amber-300 font-mono text-xs font-bold uppercase tracking-wider shadow-sm">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Team Creation Closed</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenJoinCode}
+                  className="w-full sm:w-auto px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/20 transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4" /> JOIN EXISTING SQUAD WITH CODE
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-slate-400 font-mono text-xs font-bold uppercase tracking-wider shadow-md">
                 <Lock className="w-4 h-4 text-rose-400" />
-                <span>Registration Closed</span>
+                <span>Tournament Ended</span>
               </div>
             )}
           </div>
@@ -1465,6 +1481,26 @@ const TournamentDetails = () => {
           </div>
 
           {registerModalTab === 'create' ? (
+            isTeamRegistrationClosed ? (
+              <div className="p-5 rounded-2xl bg-slate-900/90 border border-amber-600/40 text-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-950/80 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h4 className="text-sm font-bold text-white font-mono uppercase">
+                  New Squad Registration is Closed
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  New squad registration has been closed by the tournament administration. However, existing registered squads are actively accepting teammates!
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setRegisterModalTab('join')}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-xs font-mono transition-all cursor-pointer shadow-md"
+                >
+                  🎯 Join an Existing Squad with Invite Code
+                </button>
+              </div>
+            ) : (
             <form onSubmit={handleCreateTeamSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono font-bold text-slate-300 mb-1.5">
@@ -1513,6 +1549,7 @@ const TournamentDetails = () => {
                 </button>
               </div>
             </form>
+            )
           ) : (
             <form onSubmit={handleJoinTeamSubmit} className="space-y-4">
               <p className="text-xs text-slate-400">
