@@ -893,7 +893,7 @@ const TournamentDetails = () => {
                           )}
                         </div>
                         <p className="text-xs text-slate-400 truncate">
-                          Captain: <strong>{team.captain?.name}</strong>
+                          Captain: <strong>{team.players?.find(p => p.role === 'captain')?.name || team.captain?.name || 'N/A'}</strong>
                         </p>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
                           <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase font-mono bg-emerald-950 text-emerald-300 border border-emerald-800/60">
@@ -967,7 +967,7 @@ const TournamentDetails = () => {
                           )}
                         </div>
                         <p className="text-xs text-slate-400 truncate">
-                          Captain: {team.captain?.name || team.captain?.username || 'Active'}
+                          Captain: {team.players?.find(p => p.role === 'captain')?.name || team.captain?.name || team.captain?.username || 'Active'}
                         </p>
                         <p className="text-[10px] text-slate-500 mt-1">
                           Registered {new Date(reg.registeredAt).toLocaleDateString()}

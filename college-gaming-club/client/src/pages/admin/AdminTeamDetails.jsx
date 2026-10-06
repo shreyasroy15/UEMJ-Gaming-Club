@@ -190,7 +190,7 @@ const AdminTeamDetails = () => {
           <p><span className="text-slate-500">Code:</span> <span className="text-slate-900 font-mono font-semibold">{registration.teamCode}</span></p>
           <p><span className="text-slate-500">Type:</span> <span className="text-slate-900 font-semibold">{registration.teamType}</span></p>
           <p><span className="text-slate-500">Status:</span> <span className="text-cyan-600 uppercase font-bold">{registration.status}</span></p>
-          <p><span className="text-slate-500">Captain:</span> <span className="text-slate-900 font-semibold">{registration.captain?.name || registration.captain?.username || 'N/A'}</span></p>
+          <p><span className="text-slate-500">Captain:</span> <span className="text-slate-900 font-semibold">{registration.players?.find(p => p.role === 'captain')?.name || registration.captain?.name || registration.captain?.username || 'N/A'}</span></p>
           <p><span className="text-slate-500">Players:</span> <span className="text-slate-900 font-semibold">{registration.players?.length || 0}</span></p>
         </div>
       </div>

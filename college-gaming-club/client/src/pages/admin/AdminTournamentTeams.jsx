@@ -630,7 +630,7 @@ const AdminTournamentTeams = () => {
                           {reg.teamName}
                         </h3>
                         <p className="text-xs text-slate-500 font-mono truncate mt-0.5">
-                          Captain: {reg.captain?.name || reg.captain?.username || 'N/A'}
+                          Captain: {reg.players?.find(p => p.role === 'captain')?.name || reg.captain?.name || reg.captain?.username || 'N/A'}
                         </p>
                       </div>
                     </div>

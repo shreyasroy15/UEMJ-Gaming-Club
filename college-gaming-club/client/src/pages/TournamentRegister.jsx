@@ -594,7 +594,7 @@ const TournamentRegister = () => {
                 {activeRegistration.teamName}
               </h1>
               <p className="text-xs text-slate-300">
-                Team Type: <span className="font-semibold text-cyan-400">{activeRegistration.teamType || 'UEM Student Team'}</span> • Captain: <strong>{activeRegistration.captain?.name}</strong> • Competing in{' '}
+                Team Type: <span className="font-semibold text-cyan-400">{activeRegistration.teamType || 'UEM Student Team'}</span> • Captain: <strong>{activeRegistration.players?.find(p => p.role === 'captain')?.name || activeRegistration.captain?.name || 'N/A'}</strong> • Competing in{' '}
                 <strong>{tournament.name}</strong>
               </p>
             </div>

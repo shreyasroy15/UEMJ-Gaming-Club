@@ -1918,7 +1918,7 @@ const AdminMatches = () => {
 
                     <p className="text-xs text-slate-600 mt-1 truncate">
                       <span className="text-slate-400">Captain:</span>{' '}
-                      {team.captain?.name || team.leader || 'N/A'}
+                      {team.players?.find(p => p.role === 'captain')?.name || team.captain?.name || team.leader || 'N/A'}
                     </p>
 
                     {/* Member names display */}
@@ -3607,7 +3607,7 @@ const AdminMatches = () => {
           <div className="space-y-4">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-700">
               <span>
-                Captain: <strong className="text-slate-900">{viewingTeam.captain?.name || viewingTeam.leader || 'N/A'}</strong>
+                Captain: <strong className="text-slate-900">{viewingTeam.players?.find(p => p.role === 'captain')?.name || viewingTeam.captain?.name || viewingTeam.leader || 'N/A'}</strong>
               </span>
               <span>
                 Phone: <strong className="text-slate-900">{viewingTeam.captain?.phone || 'N/A'}</strong>

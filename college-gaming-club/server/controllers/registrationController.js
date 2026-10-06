@@ -2321,7 +2321,7 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
       formattedPlayers = validList.map((p, idx) => {
         const slotNumber = p.slotNumber || idx + 1;
         const role = p.role || (idx === 0 ? 'captain' : 'starter');
-        const pName = (p.name || '').trim() || (idx === 0 ? (captainName || req.user.name || 'Captain') : `Player ${idx + 1}`);
+        const pName = (p.name || '').trim() || (idx === 0 ? (captainName || 'Captain') : `Player ${idx + 1}`);
         const inGameName = (p.inGameName || p.ign || '').trim();
         const responsesMap = new Map();
         if (pName) responsesMap.set('player_name', pName);
@@ -2329,7 +2329,6 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
         if (p.inGameId) responsesMap.set('in_game_id', p.inGameId);
 
         return {
-          user: idx === 0 ? req.user._id : undefined,
           name: pName,
           inGameName,
           role,
@@ -2341,11 +2340,10 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
         };
       });
     } else {
-      const pName = (captainName || req.user.name || 'Captain').trim();
+      const pName = (captainName || 'Captain').trim();
       const responsesMap = new Map([['player_name', pName]]);
       formattedPlayers = [
         {
-          user: req.user._id,
           name: pName,
           inGameName: '',
           role: 'captain',
@@ -2370,8 +2368,6 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
       teamType: resolvedTeamType,
       teamTag: tag,
       teamCode,
-      captain: req.user._id,
-      leader: req.user._id,
       identityProof: {
         url: '',
         status: isApproved ? 'verified' : 'pending',
