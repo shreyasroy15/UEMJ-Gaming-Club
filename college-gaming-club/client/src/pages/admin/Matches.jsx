@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import API from '../../services/api';
 import Loading from '../../components/Loading/Loading';
 import EmptyState from '../../components/EmptyState/EmptyState';
@@ -308,11 +308,18 @@ const AdminMatches = () => {
     return map;
   }, [allLobbies]);
 
-  // Registered teams enriched with assignment status (STRICTLY EXCLUDE REJECTED TEAMS)
+  // Approved teams enriched with assignment status (STRICTLY ONLY APPROVED/VERIFIED TEAMS)
   const registeredTeams = useMemo(() => {
-    const list = (structure.allRegistrations || []).filter(
-      (team) => team.status !== 'rejected' && team.identityProof?.status !== 'rejected'
-    );
+    const list = (structure.allRegistrations || []).filter((team) => {
+      if (!team) return false;
+      if (team.status === 'rejected') return false;
+      if (team.identityProof?.status === 'rejected') return false;
+      const isApproved =
+        team.status === 'verified' ||
+        team.status === 'approved' ||
+        Boolean(team.isVerified);
+      return isApproved;
+    });
     return list.map((team) => {
       const id = team._id.toString();
       const assignment = teamLobbyMap[id];
@@ -1599,7 +1606,7 @@ const AdminMatches = () => {
         {/* Tournament Fast Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-100 text-center">
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-xs text-slate-500 block mb-1 font-medium">Registered Teams</span>
+            <span className="text-xs text-slate-500 block mb-1 font-medium">Approved Teams</span>
             <span className="text-xl font-black text-slate-900">{registeredTeams.length}</span>
           </div>
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -1622,7 +1629,7 @@ const AdminMatches = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION 1: REGISTERED TEAMS ROSTER (CARD FORMAT IN ROWS: 2, 3, OR 4 CARDS) */}
+      {/* SECTION 1: APPROVED TEAMS ROSTER (CARD FORMAT IN ROWS: 2, 3, OR 4 CARDS) */}
       {/* ========================================================================= */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1630,13 +1637,24 @@ const AdminMatches = () => {
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-cyan-600" />
               <h2 className="text-lg font-black text-slate-900 font-gaming tracking-wide">
-                REGISTERED TEAMS ({registeredTeams.length})
+                APPROVED TEAMS ({registeredTeams.length})
               </h2>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                ✓ Approved Only
+              </span>
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Select teams below to assign them into a lobby (e.g., select first 10 teams for Lobby
+              Select approved teams below to assign them into a lobby (e.g., select first 10 teams for Lobby
               1, then select remaining 10 teams for Lobby 2).
             </p>
+            <div className="mt-1">
+              <Link
+                to={`/admin/teams/${selectedTournamentId}`}
+                className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 hover:underline inline-flex items-center gap-1"
+              >
+                Review & Approve Pending Teams →
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -1694,7 +1712,7 @@ const AdminMatches = () => {
               onChange={(e) => setTeamFilterStatus(e.target.value)}
               className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xl px-3 py-2 outline-none focus:border-cyan-500 font-medium"
             >
-              <option value="all">All Teams ({registeredTeams.length})</option>
+              <option value="all">All Approved Teams ({registeredTeams.length})</option>
               <option value="unassigned">
                 Unassigned Only ({registeredTeams.filter((t) => !t.assignedLobbyId).length})
               </option>
@@ -1778,7 +1796,13 @@ const AdminMatches = () => {
         {/* Teams Grid: 2, 3, or 4 per row */}
         {displayedTeams.length === 0 ? (
           <div className="py-12 text-center text-slate-500 text-xs">
-            No registered teams found matching your filter criteria.
+            <p className="font-medium text-slate-600">No approved teams found matching your filter criteria.</p>
+            <Link
+              to={`/admin/teams/${selectedTournamentId}`}
+              className="inline-block mt-2 text-xs font-bold text-cyan-600 hover:underline"
+            >
+              Go to Teams Management to review and approve registrations →
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2 max-h-[580px] overflow-y-auto pr-1.5 custom-scrollbar">
@@ -2355,7 +2379,7 @@ const AdminMatches = () => {
 
                 {activeLobby.teams?.length === 0 ? (
                   <div className="text-center py-10 text-slate-500 text-xs">
-                    No teams assigned to this lobby yet. Select teams from the Registered Teams section above.
+                    No teams assigned to this lobby yet. Select teams from the Approved Teams section above.
                   </div>
                 ) : (
                   <div className="space-y-3">

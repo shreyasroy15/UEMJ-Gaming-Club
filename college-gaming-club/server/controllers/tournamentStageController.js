@@ -21,19 +21,29 @@ exports.getTournamentStructure = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Tournament not found' });
     }
 
+    // Helper to identify strictly approved/verified teams
+    const isApprovedTeam = (t) =>
+      Boolean(
+        t &&
+          t.status !== 'rejected' &&
+          (t.isVerified || t.status === 'verified' || t.status === 'approved') &&
+          (!t.identityProof || t.identityProof.status !== 'rejected')
+      );
+
     // Populate stages, lobbies, and teams
     await tournament.populate({
       path: 'stages.qualifiedTeams stages.advancedTeams stages.lobbies.teams stages.winner',
-      select: 'teamName teamTag teamType captain players status leader createdAt',
+      select: 'teamName teamTag teamType captain players status isVerified identityProof leader createdAt',
       populate: [
         { path: 'captain', select: 'name username email avatar college studentId phone' },
         { path: 'players.user', select: 'name username email avatar college studentId' },
       ],
     });
 
-    // Get all registered teams in the tournament (EXCLUDE REJECTED TEAMS)
+    // Get ONLY approved / verified registered teams in the tournament
     const allRegistrations = await TournamentRegistration.find({
       tournament: tournament._id,
+      $or: [{ status: 'verified' }, { status: 'approved' }, { isVerified: true }],
       status: { $ne: 'rejected' },
       'identityProof.status': { $ne: 'rejected' },
     })
@@ -64,21 +74,15 @@ exports.getTournamentStructure = async (req, res, next) => {
       await tournament.save();
     }
 
-    // Flatten all lobbies for direct lobby-first navigation (Filter out any rejected teams)
+    // Flatten all lobbies for direct lobby-first navigation (Filter out unapproved/rejected teams)
     const allLobbies = [];
     (tournament.stages || []).forEach((stage) => {
-      // Filter out rejected teams from stage qualified/advanced
-      stage.qualifiedTeams = (stage.qualifiedTeams || []).filter(
-        (t) => t && t.status !== 'rejected' && (!t.identityProof || t.identityProof.status !== 'rejected')
-      );
-      stage.advancedTeams = (stage.advancedTeams || []).filter(
-        (t) => t && t.status !== 'rejected' && (!t.identityProof || t.identityProof.status !== 'rejected')
-      );
+      // Filter out non-approved or rejected teams from stage qualified/advanced
+      stage.qualifiedTeams = (stage.qualifiedTeams || []).filter(isApprovedTeam);
+      stage.advancedTeams = (stage.advancedTeams || []).filter(isApprovedTeam);
 
       (stage.lobbies || []).forEach((lobby) => {
-        const activeTeamsInLobby = (lobby.teams || []).filter(
-          (t) => t && t.status !== 'rejected' && (!t.identityProof || t.identityProof.status !== 'rejected')
-        );
+        const activeTeamsInLobby = (lobby.teams || []).filter(isApprovedTeam);
 
         allLobbies.push({
           _id: lobby._id,
@@ -135,7 +139,9 @@ exports.createStage = async (req, res, next) => {
     if (!tournament.stages || tournament.stages.length === 0) {
       const existingTeams = await TournamentRegistration.find({
         tournament: tournament._id,
-        status: { $in: ['verified', 'complete', 'incomplete'] },
+        $or: [{ status: 'verified' }, { status: 'approved' }, { isVerified: true }],
+        status: { $ne: 'rejected' },
+        'identityProof.status': { $ne: 'rejected' },
       }).select('_id');
       defaultQualified = existingTeams.map((t) => t._id);
     }
@@ -376,7 +382,17 @@ exports.assignTeamsToLobby = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'teamIds array is required' });
     }
 
-    lobby.teams = teamIds;
+    // Ensure only approved/verified teams can be assigned to the lobby
+    const validApprovedRegistrations = await TournamentRegistration.find({
+      _id: { $in: teamIds },
+      tournament: tournament._id,
+      $or: [{ status: 'verified' }, { status: 'approved' }, { isVerified: true }],
+      status: { $ne: 'rejected' },
+      'identityProof.status': { $ne: 'rejected' },
+    }).select('_id');
+    const validApprovedIds = validApprovedRegistrations.map((r) => r._id);
+
+    lobby.teams = validApprovedIds;
     await tournament.save();
 
     // Also update any scheduled matches for this lobby to have the latest team list
@@ -903,13 +919,21 @@ exports.assignTeamsToDirectLobby = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'teamIds array required' });
     }
 
-
+    // Ensure only approved/verified teams can be assigned to the lobby
+    const validApprovedRegistrations = await TournamentRegistration.find({
+      _id: { $in: teamIds },
+      tournament: tournament._id,
+      $or: [{ status: 'verified' }, { status: 'approved' }, { isVerified: true }],
+      status: { $ne: 'rejected' },
+      'identityProof.status': { $ne: 'rejected' },
+    }).select('_id');
+    const validApprovedIds = validApprovedRegistrations.map((r) => r._id.toString());
 
     if (mode === 'append') {
       const current = (foundLobby.teams || []).map(String);
-      foundLobby.teams = Array.from(new Set([...current, ...teamIds.map(String)]));
+      foundLobby.teams = Array.from(new Set([...current, ...validApprovedIds]));
     } else {
-      foundLobby.teams = teamIds;
+      foundLobby.teams = validApprovedIds;
     }
 
     await tournament.save();
@@ -1061,7 +1085,15 @@ exports.createLobbyFromSelectedTeams = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Lobby name is required' });
     }
 
-    const uniqueTeamIds = Array.from(new Set(selectedTeamIds.map(String)));
+    // Ensure only approved/verified teams can be added to the new lobby
+    const validApprovedRegistrations = await TournamentRegistration.find({
+      _id: { $in: selectedTeamIds },
+      tournament: tournament._id,
+      $or: [{ status: 'verified' }, { status: 'approved' }, { isVerified: true }],
+      status: { $ne: 'rejected' },
+      'identityProof.status': { $ne: 'rejected' },
+    }).select('_id');
+    const uniqueTeamIds = Array.from(new Set(validApprovedRegistrations.map((r) => r._id.toString())));
 
 
 
