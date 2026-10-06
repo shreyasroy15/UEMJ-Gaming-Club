@@ -4,6 +4,7 @@ const Match = require('../models/Match');
 const TournamentRegistration = require('../models/TournamentRegistration');
 const TournamentForm = require('../models/TournamentForm');
 const { getBgmiDefaultQuestions, getFreeFireDefaultQuestions } = require('../utils/defaultForms');
+const { deduplicateTournamentLobbyTeams } = require('./tournamentStageController');
 
 // Helper to slugify tournament name
 const slugify = (text) => {
@@ -201,10 +202,29 @@ exports.getTournamentById = async (req, res, next) => {
       return matchObj;
     });
 
-    // Extract unified allLobbies (Filter out rejected teams)
+    // Auto-heal and strictly deduplicate teams across all lobbies in the tournament
+    if (tournament.stages && tournament.stages.length > 0) {
+      const modified = deduplicateTournamentLobbyTeams(tournament.stages, matches);
+      if (modified) {
+        tournament.markModified('stages');
+        await tournament.save();
+      }
+    }
+
+    // Extract unified allLobbies (Filter out rejected teams and enforce strict uniqueness)
     const allLobbies = [];
+    const seenTeamIds = new Set();
     (tournament.stages || []).forEach((stage) => {
       (stage.lobbies || []).forEach((l) => {
+        const uniqueTeams = (l.teams || []).filter((t) => {
+          if (!t) return false;
+          if (t.status === 'rejected' || (t.identityProof && t.identityProof.status === 'rejected')) return false;
+          const tid = (t._id || t).toString();
+          if (seenTeamIds.has(tid)) return false;
+          seenTeamIds.add(tid);
+          return true;
+        });
+
         allLobbies.push({
           _id: l._id,
           stageId: stage._id,
@@ -213,9 +233,7 @@ exports.getTournamentById = async (req, res, next) => {
           maxTeams: l.maxTeams || 25,
           status: l.status || 'upcoming',
           order: l.order || 1,
-          teams: (l.teams || []).filter(
-            (t) => t && t.status !== 'rejected' && (!t.identityProof || t.identityProof.status !== 'rejected')
-          ),
+          teams: uniqueTeams,
         });
       });
     });

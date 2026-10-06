@@ -522,7 +522,11 @@ const AdminPointsTable = () => {
                   {/* Dynamic Round Columns (Round 1, Round 2, etc.) */}
                   {showRoundBreakdown && relevantMatches.length > 0 &&
                     relevantMatches.map((m, mIdx) => {
-                      const rName = m.round || `Round ${m.matchNumber || mIdx + 1}`;
+                      const customRound = (m.round || '').trim();
+                      const rName =
+                        customRound && !/^round\s*1$/i.test(customRound)
+                          ? customRound
+                          : `Round ${m.roundIndex && m.roundIndex > 1 ? m.roundIndex : mIdx + 1}`;
                       return (
                         <th
                           key={m._id}

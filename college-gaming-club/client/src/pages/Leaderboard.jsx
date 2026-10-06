@@ -94,6 +94,7 @@ const Leaderboard = () => {
 
   // Compute Tournament Standings
   const computedTournamentStandings = useMemo(() => {
+    const isSpecificLobby = Boolean(tournamentLobbyFilter && tournamentLobbyFilter !== 'all');
     const teamMap = {};
     (publicTeams || []).forEach((t) => {
       const tid = t._id?.toString();
@@ -104,13 +105,13 @@ const Leaderboard = () => {
         teamTag: t.teamTag || '',
         teamLogo: t.teamLogo || null,
         captain: t.captain?.name || t.leader?.name || 'N/A',
-        matchesPlayed: Number(t.matchesPlayed || 0),
+        matchesPlayed: isSpecificLobby ? 0 : Number(t.matchesPlayed || 0),
         wins: 0,
         kills: 0,
         positionPoints: 0,
         killPoints: 0,
         bonusPoints: 0,
-        totalPoints: Number(t.points || 0),
+        totalPoints: isSpecificLobby ? 0 : Number(t.points || 0),
         lobbies: new Set(),
         roundScores: {},
       };
@@ -133,6 +134,11 @@ const Leaderboard = () => {
       const mid = m._id?.toString();
       const lid = (m.lobbyId || m.lobby?._id || m.lobby)?.toString();
       const wid = (m.winner?._id || m.winner)?.toString();
+
+      // Only aggregate matches for this lobby if a specific lobby is filtered
+      const isOverall = !tournamentLobbyFilter || tournamentLobbyFilter === 'all';
+      const isThisLobby = lid === tournamentLobbyFilter?.toString();
+      if (!isOverall && !isThisLobby) return;
 
       if (m.winner && teamMap[wid]) {
         teamMap[wid].wins += 1;
@@ -203,7 +209,15 @@ const Leaderboard = () => {
     let list = Object.values(teamMap);
 
     if (tournamentLobbyFilter && tournamentLobbyFilter !== 'all') {
-      list = list.filter((t) => t.lobbies.has(tournamentLobbyFilter));
+      const currentLobbyObj = lobbies.find((l) => l._id?.toString() === tournamentLobbyFilter.toString());
+      if (currentLobbyObj) {
+        const allowedIds = new Set(
+          (currentLobbyObj.teams || []).map((t) => (t._id ? t._id.toString() : t.toString()))
+        );
+        list = list.filter((t) => allowedIds.has(t.teamId));
+      } else {
+        list = list.filter((t) => t.lobbies.has(tournamentLobbyFilter));
+      }
     }
 
     return list.sort((a, b) => {
@@ -496,7 +510,11 @@ const Leaderboard = () => {
                           {showRoundBreakdown &&
                             relevantMatches.length > 0 &&
                             relevantMatches.map((m, mIdx) => {
-                              const rName = m.round || `Round ${m.matchNumber || mIdx + 1}`;
+                              const customRound = (m.round || '').trim();
+                              const rName =
+                                customRound && !/^round\s*1$/i.test(customRound)
+                                  ? customRound
+                                  : `Round ${m.roundIndex && m.roundIndex > 1 ? m.roundIndex : mIdx + 1}`;
                               return (
                                 <th
                                   key={m._id}
@@ -672,7 +690,9 @@ const Leaderboard = () => {
                                             >
                                               <div className="flex items-center justify-between font-bold mb-1.5 pb-1 border-b border-slate-800/80">
                                                 <span className="text-white">
-                                                  {m.round || `Round ${mIdx + 1}`} {m.map ? `(${m.map})` : ''}
+                                                  {(m.round && !/^round\s*1$/i.test(m.round.trim())
+                                                    ? m.round
+                                                    : `Round ${m.roundIndex && m.roundIndex > 1 ? m.roundIndex : mIdx + 1}`)} {m.map ? `(${m.map})` : ''}
                                                 </span>
                                                 {sc?.isWinner && (
                                                   <span className="text-amber-400 font-black text-[11px]">

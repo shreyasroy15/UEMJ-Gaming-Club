@@ -454,6 +454,14 @@ const AdminMatches = () => {
   // SELECTION HELPERS FOR REGISTERED TEAMS
   // ==========================================
   const toggleTeamSelection = (teamId) => {
+    const team = registeredTeams.find((t) => t._id.toString() === teamId.toString());
+    if (team?.assignedLobbyId) {
+      addToast(
+        `"${team.teamName}" is already assigned to ${team.assignedLobbyName}. A team cannot be placed in multiple lobbies.`,
+        'warning'
+      );
+      return;
+    }
     setSelectedTeamIds((prev) =>
       prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
     );
@@ -1813,13 +1821,22 @@ const AdminMatches = () => {
               return (
                 <div
                   key={team._id}
-                  onClick={() => toggleTeamSelection(team._id.toString())}
-                  className={`group relative rounded-xl p-4 transition-all duration-200 cursor-pointer border select-none flex flex-col justify-between ${
-                    isSelected
-                      ? 'bg-cyan-50/70 border-cyan-400 shadow-sm'
-                      : isAssigned
-                      ? 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
-                      : 'bg-white border-slate-200/90 hover:border-cyan-400 shadow-sm'
+                  onClick={() => {
+                    if (isAssigned) {
+                      addToast(
+                        `"${team.teamName}" is already assigned to ${team.assignedLobbyName}. Teams can only be assigned to one lobby.`,
+                        'warning'
+                      );
+                      return;
+                    }
+                    toggleTeamSelection(team._id.toString());
+                  }}
+                  className={`group relative rounded-xl p-4 transition-all duration-200 border select-none flex flex-col justify-between ${
+                    isAssigned
+                      ? 'bg-slate-50/80 border-slate-200 opacity-75 cursor-not-allowed'
+                      : isSelected
+                      ? 'bg-cyan-50/70 border-cyan-400 shadow-sm cursor-pointer'
+                      : 'bg-white border-slate-200/90 hover:border-cyan-400 shadow-sm cursor-pointer'
                   }`}
                 >
                   <div>
@@ -1827,12 +1844,18 @@ const AdminMatches = () => {
                       <div className="flex items-center gap-2">
                         <div
                           className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${
-                            isSelected
+                            isAssigned
+                              ? 'border-slate-300 bg-slate-200 text-slate-500'
+                              : isSelected
                               ? 'bg-cyan-600 border-cyan-600 text-white'
                               : 'border-slate-300 bg-white group-hover:border-cyan-500'
                           }`}
                         >
-                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          {isAssigned ? (
+                            <Lock className="w-2.5 h-2.5 text-slate-500" />
+                          ) : isSelected ? (
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          ) : null}
                         </div>
 
                         {team.teamTag && (

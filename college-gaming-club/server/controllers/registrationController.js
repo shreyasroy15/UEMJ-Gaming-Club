@@ -2329,7 +2329,7 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
         if (p.inGameId) responsesMap.set('in_game_id', p.inGameId);
 
         return {
-          user: req.user._id,
+          user: idx === 0 ? req.user._id : undefined,
           name: pName,
           inGameName,
           role,
@@ -2360,8 +2360,9 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
 
     const teamResponsesMap = new Map([['team_type', resolvedTeamType]]);
 
-    const initialStatus = req.body.status || (isVerified ? 'verified' : 'rejected');
-    const isApproved = initialStatus === 'verified' || initialStatus === 'approved';
+    const requestedStatus = req.body.status;
+    const isApproved = Boolean(isVerified || requestedStatus === 'verified' || requestedStatus === 'approved');
+    const finalStatus = isApproved ? 'verified' : 'rejected';
 
     const registration = await TournamentRegistration.create({
       tournament: tournament._id,
@@ -2373,12 +2374,12 @@ exports.adminCreateTeamRegistration = async (req, res, next) => {
       leader: req.user._id,
       identityProof: {
         url: '',
-        status: isApproved ? 'verified' : 'rejected',
+        status: isApproved ? 'verified' : 'pending',
       },
       players: formattedPlayers,
       teamResponses: teamResponsesMap,
-      status: initialStatus,
-      isVerified: Boolean(isApproved),
+      status: finalStatus,
+      isVerified: isApproved,
       verifiedAt: isApproved ? new Date() : undefined,
     });
 
