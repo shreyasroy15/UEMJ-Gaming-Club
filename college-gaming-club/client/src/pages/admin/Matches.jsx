@@ -121,8 +121,10 @@ const AdminMatches = () => {
 
   // Qualify Top Teams across side-by-side lobbies modal
   const [qualifyModalOpen, setQualifyModalOpen] = useState(false);
+  const [qualifyMode, setQualifyMode] = useState('existing'); // 'existing' | 'new'
+  const [qualifyTargetLobbyId, setQualifyTargetLobbyId] = useState('');
   const [qualifyLobbyName, setQualifyLobbyName] = useState('Finals Lobby');
-  const [qualifyMaxTeams, setQualifyMaxTeams] = useState(16);
+  const [qualifyMaxTeams, setQualifyMaxTeams] = useState(12);
   const [selectedQualifyTeamIds, setSelectedQualifyTeamIds] = useState([]);
 
   // Round / Match Modal
@@ -296,13 +298,14 @@ const AdminMatches = () => {
     return allLobbies.find((l) => l._id === activeLobbyId) || allLobbies[0] || null;
   }, [allLobbies, activeLobbyId]);
 
-  // Mapping of teamId -> Lobby Name
-  const teamLobbyMap = useMemo(() => {
+  // Mapping of teamId -> array of lobbies
+  const teamLobbiesMap = useMemo(() => {
     const map = {};
     allLobbies.forEach((lobby) => {
       (lobby.teams || []).forEach((t) => {
         const id = t._id ? t._id.toString() : t.toString();
-        map[id] = { lobbyId: lobby._id, lobbyName: lobby.name };
+        if (!map[id]) map[id] = [];
+        map[id].push({ lobbyId: lobby._id, lobbyName: lobby.name });
       });
     });
     return map;
@@ -322,14 +325,16 @@ const AdminMatches = () => {
     });
     return list.map((team) => {
       const id = team._id.toString();
-      const assignment = teamLobbyMap[id];
+      const lobbies = teamLobbiesMap[id] || [];
       return {
         ...team,
-        assignedLobbyId: assignment ? assignment.lobbyId : null,
-        assignedLobbyName: assignment ? assignment.lobbyName : null,
+        assignedLobbies: lobbies,
+        assignedLobbyId: lobbies[0]?.lobbyId || null,
+        assignedLobbyName: lobbies.map((l) => l.lobbyName).join(', ') || null,
+        isAssigned: lobbies.length > 0,
       };
     });
-  }, [structure.allRegistrations, teamLobbyMap]);
+  }, [structure.allRegistrations, teamLobbiesMap]);
 
   // Filtered registered teams according to search & assignment status
   const displayedTeams = useMemo(() => {
@@ -637,7 +642,7 @@ const AdminMatches = () => {
     }
   };
 
-  const handleAssignSelectedToLobby = async (targetLobbyId) => {
+  const handleAssignSelectedToLobby = async (targetLobbyId, removeFromOtherLobbies = false) => {
     if (!targetLobbyId) {
       addToast('Please select a target lobby', 'warning');
       return;
@@ -655,8 +660,14 @@ const AdminMatches = () => {
       await API.post(`/tournaments/${selectedTournamentId}/lobbies/${targetLobbyId}/assign-teams`, {
         teamIds: selectedTeamIds,
         mode: 'append',
+        removeFromOtherLobbies,
       });
-      addToast(`Assigned ${selectedTeamIds.length} teams to ${targetLobby.name}`, 'success');
+      addToast(
+        removeFromOtherLobbies
+          ? `Moved ${selectedTeamIds.length} teams to ${targetLobby.name}`
+          : `Added ${selectedTeamIds.length} teams to ${targetLobby.name}`,
+        'success'
+      );
       setSelectedTeamIds([]);
       setTargetLobbyToAssign('');
       fetchTournamentStructure(selectedTournamentId);
@@ -733,8 +744,18 @@ const AdminMatches = () => {
   // SIDE-BY-SIDE LOBBIES TOP TEAMS QUALIFICATION
   // ==========================================
   const handleOpenQualifyModal = () => {
+    const matchingLobby = allLobbies.find((l) => /qualifier|final/i.test(l.name) && l._id !== activeLobbyId);
+    if (matchingLobby) {
+      setQualifyMode('existing');
+      setQualifyTargetLobbyId(matchingLobby._id);
+    } else if (allLobbies.length > 0) {
+      setQualifyMode('existing');
+      setQualifyTargetLobbyId(allLobbies[0]._id);
+    } else {
+      setQualifyMode('new');
+    }
     setQualifyLobbyName('Finals Lobby');
-    setQualifyMaxTeams(16);
+    setQualifyMaxTeams(12);
     setSelectedQualifyTeamIds([]);
     setQualifyModalOpen(true);
   };
@@ -755,36 +776,56 @@ const AdminMatches = () => {
     addToast(`Selected Top ${Math.min(topCount, standings.length)} teams from lobby`, 'info');
   };
 
-  const handleCreateLobbyFromTopTeams = async (e) => {
+  const handleQualifyTopTeams = async (e) => {
     e.preventDefault();
-    if (!qualifyLobbyName.trim()) {
-      addToast('Please enter a name for the new lobby', 'error');
-      return;
-    }
     if (selectedQualifyTeamIds.length === 0) {
-      addToast('Please select at least one team to qualify for the new lobby', 'warning');
+      addToast('Please select at least one team to qualify for the lobby', 'warning');
       return;
     }
 
     try {
       setSubmitting(true);
-      const res = await API.post(`/tournaments/${selectedTournamentId}/lobbies/create-from-teams`, {
-        name: qualifyLobbyName.trim(),
-        maxTeams: Number(qualifyMaxTeams),
-        selectedTeamIds: selectedQualifyTeamIds,
-      });
-      addToast(
-        `Successfully created "${qualifyLobbyName}" with ${selectedQualifyTeamIds.length} qualified teams!`,
-        'success'
-      );
-      setQualifyModalOpen(false);
-      if (res.data?.lobby?._id) {
-        setActiveLobbyId(res.data.lobby._id);
+      if (qualifyMode === 'existing') {
+        if (!qualifyTargetLobbyId) {
+          addToast('Please select a target destination lobby', 'warning');
+          return;
+        }
+        const targetLobby = allLobbies.find((l) => l._id.toString() === qualifyTargetLobbyId.toString());
+        await API.post(`/tournaments/${selectedTournamentId}/lobbies/${qualifyTargetLobbyId}/assign-teams`, {
+          teamIds: selectedQualifyTeamIds,
+          mode: 'append',
+          removeFromOtherLobbies: false,
+        });
+        addToast(
+          `Successfully qualified ${selectedQualifyTeamIds.length} teams into "${targetLobby?.name || 'lobby'}"!`,
+          'success'
+        );
+        setQualifyModalOpen(false);
+        setActiveLobbyId(qualifyTargetLobbyId);
+        fetchTournamentStructure(selectedTournamentId);
+      } else {
+        if (!qualifyLobbyName.trim()) {
+          addToast('Please enter a name for the new lobby', 'error');
+          return;
+        }
+        const res = await API.post(`/tournaments/${selectedTournamentId}/lobbies/create-from-teams`, {
+          name: qualifyLobbyName.trim(),
+          maxTeams: Number(qualifyMaxTeams),
+          selectedTeamIds: selectedQualifyTeamIds,
+        });
+        addToast(
+          `Successfully created "${qualifyLobbyName}" with ${selectedQualifyTeamIds.length} qualified teams!`,
+          'success'
+        );
+        setQualifyModalOpen(false);
+        if (res.data?.lobby?._id) {
+          setActiveLobbyId(res.data.lobby._id);
+        }
+        fetchTournamentStructure(selectedTournamentId);
       }
-      fetchTournamentStructure(selectedTournamentId);
     } catch (err) {
       console.error(err);
-      addToast(err.response?.data?.message || 'Failed to create lobby with qualified teams', 'error');
+      addToast(err.response?.data?.message || 'Failed to qualify teams', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -1764,10 +1805,20 @@ const AdminMatches = () => {
 
                   <button
                     disabled={!targetLobbyToAssign || submitting}
-                    onClick={() => handleAssignSelectedToLobby(targetLobbyToAssign)}
-                    className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 text-xs font-black uppercase tracking-wider shadow-md disabled:opacity-50 transition"
+                    onClick={() => handleAssignSelectedToLobby(targetLobbyToAssign, false)}
+                    className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-md disabled:opacity-50 transition cursor-pointer"
+                    title="Add selected teams to this lobby (keeps them in their current lobby for qualifier/finals progression)"
                   >
-                    Move to Lobby
+                    + Add to Lobby
+                  </button>
+
+                  <button
+                    disabled={!targetLobbyToAssign || submitting}
+                    onClick={() => handleAssignSelectedToLobby(targetLobbyToAssign, true)}
+                    className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold uppercase tracking-wider shadow-xs disabled:opacity-50 transition cursor-pointer"
+                    title="Move selected teams exclusively (removes from other lobbies)"
+                  >
+                    Move Exclusively
                   </button>
                 </div>
               )}
@@ -1816,27 +1867,18 @@ const AdminMatches = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-2 max-h-[580px] overflow-y-auto pr-1.5 custom-scrollbar">
             {displayedTeams.map((team) => {
               const isSelected = selectedTeamIds.includes(team._id.toString());
-              const isAssigned = Boolean(team.assignedLobbyId);
+              const isAssigned = Boolean(team.assignedLobbies && team.assignedLobbies.length > 0);
 
               return (
                 <div
                   key={team._id}
-                  onClick={() => {
-                    if (isAssigned) {
-                      addToast(
-                        `"${team.teamName}" is already assigned to ${team.assignedLobbyName}. Teams can only be assigned to one lobby.`,
-                        'warning'
-                      );
-                      return;
-                    }
-                    toggleTeamSelection(team._id.toString());
-                  }}
-                  className={`group relative rounded-xl p-4 transition-all duration-200 border select-none flex flex-col justify-between ${
-                    isAssigned
-                      ? 'bg-slate-50/80 border-slate-200 opacity-75 cursor-not-allowed'
-                      : isSelected
-                      ? 'bg-cyan-50/70 border-cyan-400 shadow-sm cursor-pointer'
-                      : 'bg-white border-slate-200/90 hover:border-cyan-400 shadow-sm cursor-pointer'
+                  onClick={() => toggleTeamSelection(team._id.toString())}
+                  className={`group relative rounded-xl p-4 transition-all duration-200 border select-none flex flex-col justify-between cursor-pointer ${
+                    isSelected
+                      ? 'bg-cyan-50/70 border-cyan-400 shadow-sm'
+                      : isAssigned
+                      ? 'bg-white border-slate-200/90 hover:border-cyan-400 shadow-xs'
+                      : 'bg-white border-slate-200/90 hover:border-cyan-400 shadow-sm'
                   }`}
                 >
                   <div>
@@ -1844,18 +1886,12 @@ const AdminMatches = () => {
                       <div className="flex items-center gap-2">
                         <div
                           className={`w-4 h-4 rounded flex items-center justify-center transition-colors border ${
-                            isAssigned
-                              ? 'border-slate-300 bg-slate-200 text-slate-500'
-                              : isSelected
+                            isSelected
                               ? 'bg-cyan-600 border-cyan-600 text-white'
                               : 'border-slate-300 bg-white group-hover:border-cyan-500'
                           }`}
                         >
-                          {isAssigned ? (
-                            <Lock className="w-2.5 h-2.5 text-slate-500" />
-                          ) : isSelected ? (
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          ) : null}
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                         </div>
 
                         {team.teamTag && (
@@ -1866,9 +1902,17 @@ const AdminMatches = () => {
                       </div>
 
                       {isAssigned ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-[120px]">
-                          ● {team.assignedLobbyName}
-                        </span>
+                        <div className="flex flex-wrap gap-1 justify-end max-w-[140px]">
+                          {team.assignedLobbies.map((alb) => (
+                            <span
+                              key={alb.lobbyId}
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-[110px]"
+                              title={alb.lobbyName}
+                            >
+                              ● {alb.lobbyName}
+                            </span>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                           ○ Unassigned
@@ -1983,7 +2027,7 @@ const AdminMatches = () => {
                   className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase tracking-wider shadow-sm transition flex items-center gap-1.5"
                 >
                   <Award className="w-4 h-4" />
-                  Qualify Top Teams to New Lobby
+                  Qualify Top Teams to Lobby
                 </button>
               )}
 
@@ -2638,43 +2682,99 @@ const AdminMatches = () => {
       <Modal
         isOpen={qualifyModalOpen}
         onClose={() => setQualifyModalOpen(false)}
-        title="Qualify Top Teams into a New Lobby (e.g. Finals)"
+        title="Qualify Top Teams to Lobby (e.g. Qualifiers / Finals)"
         size="xl"
       >
-        <form onSubmit={handleCreateLobbyFromTopTeams} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                New Lobby Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={qualifyLobbyName}
-                onChange={(e) => setQualifyLobbyName(e.target.value)}
-                placeholder="e.g. Finals Lobby, Grand Finale"
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
-              />
+        <form onSubmit={handleQualifyTopTeams} className="space-y-6">
+          <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            {/* Qualification Mode Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Destination Target:
+              </span>
+              <div className="inline-flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setQualifyMode('existing')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    qualifyMode === 'existing'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Add to Existing Lobby
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQualifyMode('new')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    qualifyMode === 'new'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Create New Lobby
+                </button>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                Max Capacity
-              </label>
-              <input
-                type="number"
-                min="2"
-                max="100"
-                value={qualifyMaxTeams}
-                onChange={(e) => setQualifyMaxTeams(Number(e.target.value))}
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-sky-500 font-medium"
-              />
-            </div>
+            {qualifyMode === 'existing' ? (
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Select Existing Destination Lobby *
+                </label>
+                <select
+                  value={qualifyTargetLobbyId}
+                  onChange={(e) => setQualifyTargetLobbyId(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 font-bold focus:outline-none focus:border-purple-500 shadow-2xs"
+                >
+                  <option value="">Choose Existing Lobby...</option>
+                  {allLobbies.map((l) => (
+                    <option key={l._id} value={l._id}>
+                      {l.name} ({l.teams?.length || 0} / {l.maxTeams} Teams) [{l.status?.toUpperCase()}]
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1.5">
+                  Teams will be added into this lobby while preserving their standings and match history in earlier lobbies.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    New Lobby Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={qualifyLobbyName}
+                    onChange={(e) => setQualifyLobbyName(e.target.value)}
+                    placeholder="e.g. Finals Lobby, Qualifier for final (1+2)"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-purple-500 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Max Capacity
+                  </label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="100"
+                    value={qualifyMaxTeams}
+                    onChange={(e) => setQualifyMaxTeams(Number(e.target.value))}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-purple-500 font-medium"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-xs text-slate-600">
-              Select top qualifying teams from each lobby column below. The selected teams will be merged into your new lobby:
+              Select top qualifying teams from each lobby below (e.g. Top 6 from Lobby 1 & Lobby 2):
             </p>
             <div className="relative w-full sm:w-64 shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
@@ -2683,7 +2783,7 @@ const AdminMatches = () => {
                 placeholder="Search team in lobbies..."
                 value={qualifySearchQuery}
                 onChange={(e) => setQualifySearchQuery(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-8 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 font-mono shadow-xs"
+                className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-8 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-purple-500 font-mono shadow-xs"
               />
               {qualifySearchQuery && (
                 <button
@@ -2731,6 +2831,13 @@ const AdminMatches = () => {
                         </button>
                         <button
                           type="button"
+                          onClick={() => selectTopNFromLobby(lobby._id, 6)}
+                          className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors cursor-pointer"
+                        >
+                          Top 6
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => selectTopNFromLobby(lobby._id, 8)}
                           className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer"
                         >
@@ -2754,7 +2861,7 @@ const AdminMatches = () => {
                               onClick={() => toggleQualifyTeam(st.teamId)}
                               className={`p-2 rounded-lg border text-xs cursor-pointer transition flex items-center justify-between ${
                                 isChecked
-                                  ? 'bg-sky-50 border-sky-400 text-slate-900 shadow-2xs'
+                                  ? 'bg-purple-50 border-purple-400 text-slate-900 shadow-2xs'
                                   : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
                               }`}
                             >
@@ -2772,7 +2879,7 @@ const AdminMatches = () => {
                                 <div
                                   className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${
                                     isChecked
-                                      ? 'bg-sky-600 border-sky-600 text-white'
+                                      ? 'bg-purple-600 border-purple-600 text-white'
                                       : 'border-slate-300 bg-white'
                                   }`}
                                 >
@@ -2791,7 +2898,7 @@ const AdminMatches = () => {
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-            <span className="text-xs text-sky-700 font-bold">
+            <span className="text-xs text-purple-700 font-bold">
               Total Teams Selected: {selectedQualifyTeamIds.length}
             </span>
 
@@ -2809,7 +2916,9 @@ const AdminMatches = () => {
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-sm disabled:opacity-50 cursor-pointer"
               >
                 {submitting
-                  ? 'Creating...'
+                  ? 'Processing...'
+                  : qualifyMode === 'existing'
+                  ? `Qualify & Add ${selectedQualifyTeamIds.length} Teams to "${allLobbies.find((l) => l._id === qualifyTargetLobbyId)?.name || 'Lobby'}"`
                   : `Create "${qualifyLobbyName}" with ${selectedQualifyTeamIds.length} Teams`}
               </button>
             </div>

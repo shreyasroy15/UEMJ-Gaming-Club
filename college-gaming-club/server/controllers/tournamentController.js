@@ -202,26 +202,17 @@ exports.getTournamentById = async (req, res, next) => {
       return matchObj;
     });
 
-    // Auto-heal and strictly deduplicate teams across all lobbies in the tournament
-    if (tournament.stages && tournament.stages.length > 0) {
-      const modified = deduplicateTournamentLobbyTeams(tournament.stages, matches);
-      if (modified) {
-        tournament.markModified('stages');
-        await tournament.save();
-      }
-    }
-
-    // Extract unified allLobbies (Filter out rejected teams and enforce strict uniqueness)
+    // Extract unified allLobbies (Filter out rejected teams, ensure uniqueness within each individual lobby)
     const allLobbies = [];
-    const seenTeamIds = new Set();
     (tournament.stages || []).forEach((stage) => {
       (stage.lobbies || []).forEach((l) => {
+        const seenInThisLobby = new Set();
         const uniqueTeams = (l.teams || []).filter((t) => {
           if (!t) return false;
           if (t.status === 'rejected' || (t.identityProof && t.identityProof.status === 'rejected')) return false;
           const tid = (t._id || t).toString();
-          if (seenTeamIds.has(tid)) return false;
-          seenTeamIds.add(tid);
+          if (seenInThisLobby.has(tid)) return false;
+          seenInThisLobby.add(tid);
           return true;
         });
 

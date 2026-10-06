@@ -20,91 +20,10 @@ const findTournament = async (paramId) => {
  * Returns true if any modification was made to stage lobbies.
  */
 const deduplicateTournamentLobbyTeams = (stages = [], matches = []) => {
-  if (!Array.isArray(stages) || stages.length === 0) return false;
-
-  const teamLobbyMatchCount = new Map();
-
-  (matches || []).forEach((m) => {
-    const lid = (m.lobbyId || m.lobby?._id || m.lobby)?.toString();
-    if (!lid) return;
-
-    const teamIdsInMatch = new Set();
-    (m.teams || []).forEach((t) => {
-      const tid = (t._id || t)?.toString();
-      if (tid) teamIdsInMatch.add(tid);
-    });
-    (m.results || []).forEach((r) => {
-      const tid = (r.team?._id || r.team || r.teamId)?.toString();
-      if (tid) teamIdsInMatch.add(tid);
-    });
-    if (m.winner) {
-      const wid = (m.winner?._id || m.winner)?.toString();
-      if (wid) teamIdsInMatch.add(wid);
-    }
-
-    teamIdsInMatch.forEach((tid) => {
-      const key = `${tid}__${lid}`;
-      teamLobbyMatchCount.set(key, (teamLobbyMatchCount.get(key) || 0) + 1);
-    });
-  });
-
-  const allLobbiesList = [];
-  stages.forEach((stg, sIdx) => {
-    (stg.lobbies || []).forEach((lob, lIdx) => {
-      allLobbiesList.push({
-        lobby: lob,
-        lobbyId: lob._id?.toString(),
-        order: lob.order || (sIdx * 100 + lIdx + 1),
-      });
-    });
-  });
-
-  const teamLobbiesMap = new Map();
-  allLobbiesList.forEach((entry) => {
-    (entry.lobby.teams || []).forEach((t) => {
-      const tid = (t._id || t)?.toString();
-      if (!tid) return;
-      if (!teamLobbiesMap.has(tid)) {
-        teamLobbiesMap.set(tid, []);
-      }
-      teamLobbiesMap.get(tid).push(entry);
-    });
-  });
-
-  let modified = false;
-
-  teamLobbiesMap.forEach((entries, tid) => {
-    if (entries.length <= 1) return;
-
-    let bestEntry = entries[0];
-    let bestScore = teamLobbyMatchCount.get(`${tid}__${bestEntry.lobbyId}`) || 0;
-
-    for (let i = 1; i < entries.length; i++) {
-      const currEntry = entries[i];
-      const currScore = teamLobbyMatchCount.get(`${tid}__${currEntry.lobbyId}`) || 0;
-
-      if (currScore > bestScore) {
-        bestEntry = currEntry;
-        bestScore = currScore;
-      } else if (currScore === bestScore) {
-        if ((currEntry.order || 0) >= (bestEntry.order || 0)) {
-          bestEntry = currEntry;
-          bestScore = currScore;
-        }
-      }
-    }
-
-    entries.forEach((entry) => {
-      if (entry.lobbyId !== bestEntry.lobbyId) {
-        entry.lobby.teams = (entry.lobby.teams || []).filter(
-          (t) => (t._id || t)?.toString() !== tid
-        );
-        modified = true;
-      }
-    });
-  });
-
-  return modified;
+  // Tournaments support multi-stage progression where qualified teams
+  // advance from qualifier lobbies to finals lobbies while preserving match history.
+  // Cross-lobby removal is intentionally disabled.
+  return false;
 };
 
 exports.deduplicateTournamentLobbyTeams = deduplicateTournamentLobbyTeams;
@@ -180,14 +99,15 @@ exports.getTournamentStructure = async (req, res, next) => {
       stage.advancedTeams = (stage.advancedTeams || []).filter(isApprovedTeam);
 
       (stage.lobbies || []).forEach((lobby) => {
-        // Enforce strict uniqueness: A team can only belong to ONE lobby in a stage/tournament
-        const activeTeamsInLobby = [];
-        (lobby.teams || []).filter(isApprovedTeam).forEach((t) => {
-          const tid = (t._id || t).toString();
-          if (!allLobbies.some((otherL) => otherL.teams.some((ot) => (ot._id || ot).toString() === tid))) {
-            activeTeamsInLobby.push(t);
-          }
-        });
+        const seenInThisLobby = new Set();
+        const activeTeamsInLobby = (lobby.teams || [])
+          .filter(isApprovedTeam)
+          .filter((t) => {
+            const tid = (t._id || t).toString();
+            if (seenInThisLobby.has(tid)) return false;
+            seenInThisLobby.add(tid);
+            return true;
+          });
 
         allLobbies.push({
           _id: lobby._id,
@@ -499,13 +419,15 @@ exports.assignTeamsToLobby = async (req, res, next) => {
 
     lobby.teams = validApprovedIds;
 
-    // Uniqueness rule: Remove these assigned teams from all other lobbies in the stage
-    const assignedIdsSet = new Set(validApprovedIds.map((id) => id.toString()));
-    for (const otherLobby of stage.lobbies || []) {
-      if (otherLobby._id.toString() !== lobby._id.toString()) {
-        otherLobby.teams = (otherLobby.teams || []).filter(
-          (t) => !assignedIdsSet.has((t._id || t).toString())
-        );
+    // Only remove from other lobbies if explicitly instructed
+    if (req.body.removeFromOtherLobbies === true) {
+      const assignedIdsSet = new Set(validApprovedIds.map((id) => id.toString()));
+      for (const otherLobby of stage.lobbies || []) {
+        if (otherLobby._id.toString() !== lobby._id.toString()) {
+          otherLobby.teams = (otherLobby.teams || []).filter(
+            (t) => !assignedIdsSet.has((t._id || t).toString())
+          );
+        }
       }
     }
 
@@ -1059,7 +981,7 @@ exports.assignTeamsToDirectLobby = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Lobby not found' });
     }
 
-    const { teamIds, mode = 'set' } = req.body;
+    const { teamIds, mode = 'set', removeFromOtherLobbies = false } = req.body;
     if (!Array.isArray(teamIds)) {
       return res.status(400).json({ success: false, message: 'teamIds array required' });
     }
@@ -1075,20 +997,22 @@ exports.assignTeamsToDirectLobby = async (req, res, next) => {
     const validApprovedIds = validApprovedRegistrations.map((r) => r._id.toString());
 
     if (mode === 'append') {
-      const current = (foundLobby.teams || []).map(String);
+      const current = (foundLobby.teams || []).map((t) => (t._id || t).toString());
       foundLobby.teams = Array.from(new Set([...current, ...validApprovedIds]));
     } else {
       foundLobby.teams = validApprovedIds;
     }
 
-    // Uniqueness rule: Remove these assigned teams from all other lobbies in all stages
-    const assignedIdsSet = new Set(foundLobby.teams.map((id) => id.toString()));
-    for (const stg of tournament.stages || []) {
-      for (const otherLobby of stg.lobbies || []) {
-        if (otherLobby._id.toString() !== foundLobby._id.toString()) {
-          otherLobby.teams = (otherLobby.teams || []).filter(
-            (t) => !assignedIdsSet.has((t._id || t).toString())
-          );
+    // Only remove from other lobbies if caller explicitly sets removeFromOtherLobbies: true
+    if (removeFromOtherLobbies === true) {
+      const assignedIdsSet = new Set(foundLobby.teams.map((id) => id.toString()));
+      for (const stg of tournament.stages || []) {
+        for (const otherLobby of stg.lobbies || []) {
+          if (otherLobby._id.toString() !== foundLobby._id.toString()) {
+            otherLobby.teams = (otherLobby.teams || []).filter(
+              (t) => !assignedIdsSet.has((t._id || t).toString())
+            );
+          }
         }
       }
     }
@@ -1284,17 +1208,7 @@ exports.createLobbyFromSelectedTeams = async (req, res, next) => {
 
     stage.lobbies.push(newLobby);
 
-    // Uniqueness rule: Remove these teams from all other lobbies across all stages
-    const assignedIdsSet = new Set(uniqueTeamIds.map(String));
-    for (const stg of tournament.stages || []) {
-      for (const otherLobby of stg.lobbies || []) {
-        if (otherLobby._id.toString() !== newLobby._id?.toString()) {
-          otherLobby.teams = (otherLobby.teams || []).filter(
-            (t) => !assignedIdsSet.has((t._id || t).toString())
-          );
-        }
-      }
-    }
+    // Retain teams in previous lobbies so qualifier round standings are preserved
 
     await tournament.save();
 
