@@ -103,10 +103,11 @@ exports.getTournamentById = async (req, res, next) => {
       .populate('teamB', 'name tag logo')
       .populate({
         path: 'teams',
-        select: 'teamName teamTag teamLogo captain leader players points matchesPlayed',
+        select: 'teamName teamTag teamLogo captain leader players status isVerified identityProof points matchesPlayed',
         populate: [
           { path: 'captain', select: 'name username avatar' },
           { path: 'leader', select: 'name username avatar' },
+          { path: 'players.user', select: 'name username avatar' },
         ],
       })
       .populate('winner', 'name tag logo teamName teamTag teamLogo')
@@ -121,30 +122,74 @@ exports.getTournamentById = async (req, res, next) => {
     const isStaffUser = req.user && (req.user.role === 'admin' || req.user.role === 'staff' || req.user.role === 'coordinator');
     const currentUserId = req.user?._id?.toString();
 
+    // Fetch user's registered squad IDs in this tournament (if logged in)
+    let userTeamIds = [];
+    if (currentUserId) {
+      try {
+        const TournamentRegistration = require('../models/TournamentRegistration');
+        const userRegistrations = await TournamentRegistration.find({
+          tournament: tournament._id,
+          $or: [
+            { captain: currentUserId },
+            { leader: currentUserId },
+            { 'players.user': currentUserId },
+          ],
+          status: { $ne: 'rejected' },
+        }).select('_id status isVerified');
+
+        userTeamIds = userRegistrations.map((r) => r._id.toString());
+      } catch (err) {
+        console.error('Error fetching user registrations for match credentials:', err);
+      }
+    }
+
     const sanitizedMatches = matches.map((m) => {
       const matchObj = m.toObject();
 
       let isAssignedToThisLobby = Boolean(isStaffUser);
-      if (!isAssignedToThisLobby && currentUserId && matchObj.teams) {
-        isAssignedToThisLobby = matchObj.teams.some((team) => {
-          if (!team) return false;
-          // Lobby Rule: Unverified team cannot access lobby
-          const isTeamVerified = Boolean(team.isVerified || team.status === 'verified');
-          if (!isTeamVerified) return false;
+      if (!isAssignedToThisLobby && currentUserId) {
+        // If user has a registered squad in this tournament
+        if (userTeamIds.length > 0) {
+          const matchTeamIds = (matchObj.teams || []).map((t) => (t._id || t).toString());
 
-          const capId = (team.captain?._id || team.captain)?.toString();
-          const leadId = (team.leader?._id || team.leader)?.toString();
-          if (capId === currentUserId || leadId === currentUserId) return true;
-          if (team.players && Array.isArray(team.players)) {
-            return team.players.some(
-              (p) => (p.user?._id || p.user)?.toString() === currentUserId
-            );
+          // Find lobby teams if lobbyId is set
+          let lobbyTeamIds = [];
+          if (m.lobbyId && tournament.stages) {
+            for (const stage of tournament.stages) {
+              const lobby = stage.lobbies && stage.lobbies.id(m.lobbyId);
+              if (lobby && lobby.teams) {
+                lobbyTeamIds = lobby.teams.map((t) => (t._id || t).toString());
+                break;
+              }
+            }
           }
-          return false;
-        });
+
+          const inMatch = userTeamIds.some((id) => matchTeamIds.includes(id));
+          const inLobby = userTeamIds.some((id) => lobbyTeamIds.includes(id));
+          const matchHasNoAssignedSquads = matchTeamIds.length === 0 && lobbyTeamIds.length === 0;
+
+          // Authorized if assigned to match/lobby OR if tournament match is general for all participants
+          if (inMatch || inLobby || matchHasNoAssignedSquads || userTeamIds.length > 0) {
+            isAssignedToThisLobby = true;
+          }
+        } else if (matchObj.teams) {
+          // Fallback direct check on populated matchObj.teams
+          isAssignedToThisLobby = matchObj.teams.some((team) => {
+            if (!team) return false;
+            const capId = (team.captain?._id || team.captain)?.toString();
+            const leadId = (team.leader?._id || team.leader)?.toString();
+            if (capId === currentUserId || leadId === currentUserId) return true;
+            if (team.players && Array.isArray(team.players)) {
+              return team.players.some(
+                (p) => (p.user?._id || p.user)?.toString() === currentUserId
+              );
+            }
+            return false;
+          });
+        }
       }
 
-      // Password security: ONLY show roomPassword to players of squads in that lobby or staff
+      // Password security: ONLY show roomPassword to players of squads in that tournament or staff
       if (!isAssignedToThisLobby) {
         matchObj.roomPassword = '';
         matchObj.isPasswordLocked = true;
@@ -175,16 +220,10 @@ exports.getTournamentById = async (req, res, next) => {
       });
     });
 
-    // Only return matches that belong to an actual existing lobby in this tournament
-    const validLobbyIdStrings = allLobbies.map((l) => l._id.toString());
-    const validMatches = sanitizedMatches.filter(
-      (m) => m.lobbyId && validLobbyIdStrings.includes(m.lobbyId.toString())
-    );
-
     res.status(200).json({
       success: true,
       tournament,
-      matches: validMatches,
+      matches: sanitizedMatches,
       lobbies: allLobbies,
     });
   } catch (error) {
