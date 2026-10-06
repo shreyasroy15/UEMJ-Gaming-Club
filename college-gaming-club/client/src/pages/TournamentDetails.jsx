@@ -115,9 +115,11 @@ const TournamentDetails = () => {
           try {
             const myRegs = await API.get('/registrations/my-tournaments');
             if (myRegs.data.success) {
-              const matched = (myRegs.data.registrations || []).find(
-                (r) => (r.tournament?._id || r.tournament) === (tRes.data.tournament._id || id)
-              );
+              const currentTourneyId = (tRes.data.tournament?._id || id)?.toString();
+              const matched = (myRegs.data.registrations || []).find((r) => {
+                const regTourneyId = (r.tournament?._id || r.tournament)?.toString();
+                return regTourneyId === currentTourneyId;
+              });
               setUserSquad(matched || null);
             } else {
               setUserSquad(null);
@@ -408,6 +410,10 @@ const TournamentDetails = () => {
     });
   }, [matches, activeLobbyFilter, lobbies]);
 
+  const activeMatchesWithCreds = useMemo(() => {
+    return (matches || []).filter((m) => Boolean(m.roomId && m.roomId.trim()));
+  }, [matches]);
+
   if (loading) return <Loading message="Loading tournament specifications..." />;
   if (!tournament) return <EmptyState title="Tournament Not Found" description="The requested tournament does not exist." />;
 
@@ -598,6 +604,140 @@ const TournamentDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Active Room Credentials Top Callout Banner */}
+      {activeMatchesWithCreds.length > 0 && (
+        <div className="rounded-2xl bg-gradient-to-r from-cyan-950/80 via-slate-900 to-indigo-950/80 border-2 border-cyan-500/50 p-4 sm:p-5 shadow-2xl space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/20 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <h3 className="text-sm sm:text-base font-black text-white font-mono uppercase tracking-wider flex items-center gap-2">
+                <Key className="w-4 h-4 text-cyan-400" />
+                Live Room Credentials Available ({activeMatchesWithCreds.length} Active {activeMatchesWithCreds.length === 1 ? 'Match' : 'Matches'})
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('matches');
+                setSearchParams({ tab: 'matches' });
+              }}
+              className="text-xs font-bold font-mono text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              View in Matches Tab →
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {activeMatchesWithCreds.map((m) => {
+              const canViewPass = Boolean(
+                isStaff ||
+                m.isAssignedToThisLobby ||
+                (m.roomPassword && m.roomPassword.trim()) ||
+                Boolean(userSquad)
+              );
+
+              return (
+                <div
+                  key={`quick-${m._id}`}
+                  className="p-3.5 rounded-xl bg-slate-950/90 border border-cyan-500/30 space-y-2.5 font-mono"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-white truncate">
+                      {m.stageName || m.round || 'Round'} • {m.lobbyName ? `${m.lobbyName} • ` : ''}Match #{m.matchNumber}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-cyan-950 text-cyan-300 border border-cyan-800">
+                      {m.map || 'Custom Room'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {/* Room ID */}
+                    <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-slate-400 text-[11px]">Room ID:</span>
+                        <span className="text-cyan-300 font-bold tracking-wider truncate select-all">
+                          {m.roomId}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(m.roomId, `quick-id-${m._id}`)}
+                        className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-cyan-300 transition-colors ml-2 shrink-0 cursor-pointer"
+                        title="Copy Room ID"
+                      >
+                        {copiedKey === `quick-id-${m._id}` ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Room Password */}
+                    {canViewPass ? (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 border border-amber-500/40">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-amber-400 font-bold text-[11px]">Pass:</span>
+                          <span className="text-amber-300 font-bold tracking-wider truncate">
+                            {showPasswords[m._id]
+                              ? m.roomPassword || 'None'
+                              : m.roomPassword
+                              ? '••••••••'
+                              : 'None'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2 shrink-0">
+                          {m.roomPassword && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowPasswords((prev) => ({
+                                  ...prev,
+                                  [m._id]: !prev[m._id],
+                                }))
+                              }
+                              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
+                              title={showPasswords[m._id] ? 'Hide Password' : 'Show Password'}
+                            >
+                              {showPasswords[m._id] ? (
+                                <EyeOff className="w-3.5 h-3.5" />
+                              ) : (
+                                <Eye className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
+                          {m.roomPassword && (
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(m.roomPassword, `quick-pass-${m._id}`)}
+                              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
+                              title="Copy Password"
+                            >
+                              {copiedKey === `quick-pass-${m._id}` ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400">
+                        <span className="truncate">🔒 Log in with squad to view pass</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="flex border-b border-slate-800 space-x-1.5 sm:space-x-2 overflow-x-auto scrollbar-none touch-pan-x pb-0.5 -mx-3.5 sm:mx-0 px-3.5 sm:px-0">
@@ -924,7 +1064,8 @@ const TournamentDetails = () => {
                   const isLobbyUser = Boolean(
                     isStaff ||
                     match.isAssignedToThisLobby ||
-                    (userSquad && (match.teams || []).some((t) => (t._id || t).toString() === userSquad._id?.toString())) ||
+                    (match.roomPassword && match.roomPassword.trim()) ||
+                    Boolean(userSquad) ||
                     (user && (match.teams || []).some((t) => {
                       const capId = (t.captain?._id || t.captain)?.toString();
                       const leadId = (t.leader?._id || t.leader)?.toString();
