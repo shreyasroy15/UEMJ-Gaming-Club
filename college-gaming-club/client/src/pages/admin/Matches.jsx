@@ -459,14 +459,6 @@ const AdminMatches = () => {
   // SELECTION HELPERS FOR REGISTERED TEAMS
   // ==========================================
   const toggleTeamSelection = (teamId) => {
-    const team = registeredTeams.find((t) => t._id.toString() === teamId.toString());
-    if (team?.assignedLobbyId) {
-      addToast(
-        `"${team.teamName}" is already assigned to ${team.assignedLobbyName}. A team cannot be placed in multiple lobbies.`,
-        'warning'
-      );
-      return;
-    }
     setSelectedTeamIds((prev) =>
       prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
     );
