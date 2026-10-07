@@ -95,6 +95,7 @@ const AdminTournaments = () => {
     { label: 'BGMI', url: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80' },
     { label: 'Free Fire', url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80' },
     { label: 'Valorant', url: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1200&q=80' },
+    { label: 'eFootball PES', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80' },
   ];
 
   useEffect(() => {
@@ -803,7 +804,15 @@ const AdminTournaments = () => {
               </label>
               <select
                 value={formData.game}
-                onChange={(e) => setFormData({ ...formData, game: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const isPes = val.toLowerCase().includes('pes') || val.toLowerCase().includes('efootball');
+                  setFormData({
+                    ...formData,
+                    game: val,
+                    ...(isPes ? { minTeamSize: 1, maxTeamSize: 1, allowSubstitutes: false, format: 'Single Elimination' } : {})
+                  });
+                }}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:bg-white focus:outline-none focus:border-sky-500"
               >
                 {games.map((g) => (
@@ -811,6 +820,9 @@ const AdminTournaments = () => {
                     {g.name}
                   </option>
                 ))}
+                {!games.some((g) => (g.name || '').toLowerCase().includes('pes') || (g.name || '').toLowerCase().includes('efootball')) && (
+                  <option value="eFootball PES">eFootball PES</option>
+                )}
               </select>
             </div>
 
@@ -1111,7 +1123,15 @@ const AdminTournaments = () => {
                 <button
                   key={p.label}
                   type="button"
-                  onClick={() => setFormData({ ...formData, banner: p.url, game: p.label })}
+                  onClick={() => {
+                    const isPes = p.label.toLowerCase().includes('pes') || p.label.toLowerCase().includes('efootball');
+                    setFormData({
+                      ...formData,
+                      banner: p.url,
+                      game: p.label,
+                      ...(isPes ? { minTeamSize: 1, maxTeamSize: 1, allowSubstitutes: false, format: 'Single Elimination' } : {}),
+                    });
+                  }}
                   className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[10px] font-mono text-slate-700 cursor-pointer transition-colors"
                 >
                   {p.label}

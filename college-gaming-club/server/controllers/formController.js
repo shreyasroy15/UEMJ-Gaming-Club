@@ -1,6 +1,10 @@
 const Tournament = require('../models/Tournament');
 const TournamentForm = require('../models/TournamentForm');
-const { getBgmiDefaultQuestions, getFreeFireDefaultQuestions } = require('../utils/defaultForms');
+const {
+  getBgmiDefaultQuestions,
+  getFreeFireDefaultQuestions,
+  getPesDefaultQuestions,
+} = require('../utils/defaultForms');
 
 // @desc    Get form schema for a tournament (auto-initializes default if not present)
 // @route   GET /api/tournaments/:id/form
@@ -25,12 +29,19 @@ exports.getTournamentForm = async (req, res, next) => {
       // Auto-generate appropriate default form based on game
       const isBgmi = tournament.game.toLowerCase().includes('bgmi') || tournament.name.toLowerCase().includes('bgmi');
       const isFreeFire = tournament.game.toLowerCase().includes('free fire') || tournament.name.toLowerCase().includes('free fire');
+      const isPes =
+        tournament.game.toLowerCase().includes('pes') ||
+        tournament.name.toLowerCase().includes('pes') ||
+        tournament.game.toLowerCase().includes('efootball') ||
+        tournament.name.toLowerCase().includes('efootball');
 
       let defaultQuestions = [];
-      if (isBgmi) {
-        defaultQuestions = getBgmiDefaultQuestions();
-      } else if (isFreeFire) {
+      if (isFreeFire) {
         defaultQuestions = getFreeFireDefaultQuestions();
+      } else if (isPes) {
+        defaultQuestions = getPesDefaultQuestions();
+      } else if (isBgmi) {
+        defaultQuestions = getBgmiDefaultQuestions();
       } else {
         defaultQuestions = getBgmiDefaultQuestions(); // universal fallback template
       }
@@ -204,7 +215,7 @@ exports.saveTournamentForm = async (req, res, next) => {
 // @access  Private (Admin / Staff)
 exports.applyFormPreset = async (req, res, next) => {
   try {
-    const { preset } = req.body; // 'bgmi' | 'free_fire'
+    const { preset } = req.body; // 'bgmi' | 'free_fire' | 'pes'
     const query = req.params.id.match(/^[0-9a-fA-F]{24}$/)
       ? { _id: req.params.id }
       : { slug: req.params.id };
@@ -220,6 +231,8 @@ exports.applyFormPreset = async (req, res, next) => {
     let questions = [];
     if (preset === 'free_fire') {
       questions = getFreeFireDefaultQuestions();
+    } else if (preset === 'pes' || preset === 'efootball') {
+      questions = getPesDefaultQuestions();
     } else {
       questions = getBgmiDefaultQuestions();
     }

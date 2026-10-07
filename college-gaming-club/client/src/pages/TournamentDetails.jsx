@@ -410,9 +410,26 @@ const TournamentDetails = () => {
     });
   }, [matches, activeLobbyFilter, lobbies]);
 
+  const userAssignedLobbies = useMemo(() => {
+    if (!userSquad || !lobbies) return [];
+    const myTeamId = (userSquad._id || userSquad).toString();
+    return lobbies.filter((l) =>
+      (l.teams || []).some((t) => (t._id || t).toString() === myTeamId)
+    );
+  }, [userSquad, lobbies]);
+
   const activeMatchesWithCreds = useMemo(() => {
-    return (matches || []).filter((m) => Boolean(m.roomId && m.roomId.trim()));
-  }, [matches]);
+    return (matches || []).filter((m) => {
+      const hasCreds = Boolean(m.roomId && m.roomId.trim());
+      if (!hasCreds) return false;
+      if (isStaff) return true;
+      // Normal participants: only show credentials banner if assigned to this match's lobby
+      if (userSquad) {
+        return Boolean(m.isAssignedToThisLobby);
+      }
+      return false;
+    });
+  }, [matches, isStaff, userSquad]);
 
   if (loading) return <Loading message="Loading tournament specifications..." />;
   if (!tournament) return <EmptyState title="Tournament Not Found" description="The requested tournament does not exist." />;
@@ -634,10 +651,7 @@ const TournamentDetails = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
             {activeMatchesWithCreds.map((m) => {
               const canViewPass = Boolean(
-                isStaff ||
-                m.isAssignedToThisLobby ||
-                (m.roomPassword && m.roomPassword.trim()) ||
-                Boolean(userSquad)
+                (isStaff || m.isAssignedToThisLobby) && m.roomPassword && m.roomPassword.trim()
               );
 
               return (
@@ -683,11 +697,11 @@ const TournamentDetails = () => {
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="text-amber-400 font-bold text-[11px]">Pass:</span>
                           <span className="text-amber-300 font-bold tracking-wider truncate">
-                            {showPasswords[m._id]
-                              ? m.roomPassword || 'None'
-                              : m.roomPassword
-                              ? '••••••••'
-                              : 'None'}
+                            {m.roomPassword
+                              ? showPasswords[m._id]
+                                ? m.roomPassword
+                                : '••••••••'
+                              : 'Awaiting Password'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1 ml-2 shrink-0">
@@ -728,7 +742,14 @@ const TournamentDetails = () => {
                       </div>
                     ) : (
                       <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400">
-                        <span className="truncate">🔒 Log in with squad to view pass</span>
+                        <span className="truncate flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-amber-500/70 shrink-0" />
+                          <span>
+                            {userSquad
+                              ? `Locked — Reserved for ${m.lobbyName || 'assigned'} players`
+                              : 'Log in with assigned squad to view pass'}
+                          </span>
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1064,8 +1085,11 @@ const TournamentDetails = () => {
                   const isLobbyUser = Boolean(
                     isStaff ||
                     match.isAssignedToThisLobby ||
-                    (match.roomPassword && match.roomPassword.trim()) ||
-                    Boolean(userSquad) ||
+                    (userSquad && (
+                      (match.teams || []).some((t) => (t._id || t).toString() === (userSquad._id || userSquad).toString()) ||
+                      ((match.teamA?._id || match.teamA)?.toString() === (userSquad._id || userSquad).toString()) ||
+                      ((match.teamB?._id || match.teamB)?.toString() === (userSquad._id || userSquad).toString())
+                    )) ||
                     (user && (match.teams || []).some((t) => {
                       const capId = (t.captain?._id || t.captain)?.toString();
                       const leadId = (t.leader?._id || t.leader)?.toString();
@@ -1247,11 +1271,11 @@ const TournamentDetails = () => {
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   <span className="text-amber-400 font-bold text-[11px]">Pass:</span>
                                   <span className="text-amber-300 font-bold tracking-wider truncate">
-                                    {showPasswords[match._id]
-                                      ? match.roomPassword || 'None'
-                                      : match.roomPassword
-                                      ? '••••••••'
-                                      : 'None'}
+                                    {match.roomPassword
+                                      ? showPasswords[match._id]
+                                        ? match.roomPassword
+                                        : '••••••••'
+                                      : 'Awaiting Password'}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1 ml-2 shrink-0">

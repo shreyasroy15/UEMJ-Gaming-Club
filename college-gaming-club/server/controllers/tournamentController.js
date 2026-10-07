@@ -3,7 +3,11 @@ const Team = require('../models/Team');
 const Match = require('../models/Match');
 const TournamentRegistration = require('../models/TournamentRegistration');
 const TournamentForm = require('../models/TournamentForm');
-const { getBgmiDefaultQuestions, getFreeFireDefaultQuestions } = require('../utils/defaultForms');
+const {
+  getBgmiDefaultQuestions,
+  getFreeFireDefaultQuestions,
+  getPesDefaultQuestions,
+} = require('../utils/defaultForms');
 const { deduplicateTournamentLobbyTeams } = require('./tournamentStageController');
 
 // Helper to slugify tournament name
@@ -152,6 +156,8 @@ exports.getTournamentById = async (req, res, next) => {
         // If user has a registered squad in this tournament
         if (userTeamIds.length > 0) {
           const matchTeamIds = (matchObj.teams || []).map((t) => (t._id || t).toString());
+          if (matchObj.teamA) matchTeamIds.push((matchObj.teamA._id || matchObj.teamA).toString());
+          if (matchObj.teamB) matchTeamIds.push((matchObj.teamB._id || matchObj.teamB).toString());
 
           // Find lobby teams if lobbyId is set
           let lobbyTeamIds = [];
@@ -167,15 +173,18 @@ exports.getTournamentById = async (req, res, next) => {
 
           const inMatch = userTeamIds.some((id) => matchTeamIds.includes(id));
           const inLobby = userTeamIds.some((id) => lobbyTeamIds.includes(id));
-          const matchHasNoAssignedSquads = matchTeamIds.length === 0 && lobbyTeamIds.length === 0;
 
-          // Authorized if assigned to match/lobby OR if tournament match is general for all participants
-          if (inMatch || inLobby || matchHasNoAssignedSquads || userTeamIds.length > 0) {
+          // STRICT AUTHORIZATION: Only players belonging to this match's lobby/squad can see credentials
+          if (inMatch || inLobby) {
             isAssignedToThisLobby = true;
           }
-        } else if (matchObj.teams) {
-          // Fallback direct check on populated matchObj.teams
-          isAssignedToThisLobby = matchObj.teams.some((team) => {
+        } else if (matchObj.teams || matchObj.teamA || matchObj.teamB) {
+          // Fallback direct check on populated matchObj.teams / teamA / teamB
+          const teamsToCheck = [...(matchObj.teams || [])];
+          if (matchObj.teamA) teamsToCheck.push(matchObj.teamA);
+          if (matchObj.teamB) teamsToCheck.push(matchObj.teamB);
+
+          isAssignedToThisLobby = teamsToCheck.some((team) => {
             if (!team) return false;
             const capId = (team.captain?._id || team.captain)?.toString();
             const leadId = (team.leader?._id || team.leader)?.toString();
@@ -190,7 +199,7 @@ exports.getTournamentById = async (req, res, next) => {
         }
       }
 
-      // Password security: ONLY show roomPassword to players of squads in that tournament or staff
+      // Password security: ONLY show roomPassword to players assigned to this lobby or staff
       if (!isAssignedToThisLobby) {
         matchObj.roomPassword = '';
         matchObj.isPasswordLocked = true;
@@ -307,12 +316,25 @@ exports.createTournament = async (req, res, next) => {
     try {
       const isBgmi = game.toLowerCase().includes('bgmi') || name.toLowerCase().includes('bgmi');
       const isFreeFire = game.toLowerCase().includes('free fire') || name.toLowerCase().includes('free fire');
-      const defaultQuestions = isFreeFire ? getFreeFireDefaultQuestions() : getBgmiDefaultQuestions();
+      const isPes =
+        game.toLowerCase().includes('pes') ||
+        name.toLowerCase().includes('pes') ||
+        game.toLowerCase().includes('efootball') ||
+        name.toLowerCase().includes('efootball');
+
+      let defaultQuestions = [];
+      if (isFreeFire) {
+        defaultQuestions = getFreeFireDefaultQuestions();
+      } else if (isPes) {
+        defaultQuestions = getPesDefaultQuestions();
+      } else {
+        defaultQuestions = getBgmiDefaultQuestions();
+      }
 
       const form = await TournamentForm.create({
         tournament: tournament._id,
         title: `${tournament.name} - Registration Form`,
-        description: `Official squad registration questionnaire for ${tournament.name}. Please complete all team and player fields accurately.`,
+        description: `Official registration questionnaire for ${tournament.name}. Please complete all fields accurately.`,
         isPublished: !req.body.isRegistrationClosed,
         questions: defaultQuestions,
       });
