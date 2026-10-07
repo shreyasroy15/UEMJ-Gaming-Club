@@ -219,7 +219,11 @@ const Home = () => {
 
   // Live or upcoming matches
   const activeMatches = useMemo(() => {
-    return matches.filter((m) => m.status === 'live' || m.status === 'scheduled');
+    return matches.filter((m) => {
+      if (m.status === 'completed' || m.status === 'finished' || m.status === 'cancelled') return false;
+      if (Array.isArray(m.results) && m.results.length > 0) return false;
+      return m.status === 'live' || m.status === 'scheduled';
+    });
   }, [matches]);
 
   // Active titles list

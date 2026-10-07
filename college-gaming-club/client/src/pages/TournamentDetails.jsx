@@ -419,17 +419,43 @@ const TournamentDetails = () => {
   }, [userSquad, lobbies]);
 
   const activeMatchesWithCreds = useMemo(() => {
+    // If the tournament itself is completed, finished or cancelled, no live credentials banner should ever appear!
+    if (
+      tournament?.status === 'completed' ||
+      tournament?.status === 'finished' ||
+      tournament?.status === 'cancelled'
+    ) {
+      return [];
+    }
+
     return (matches || []).filter((m) => {
+      // Completed, finished, or cancelled matches must NOT appear in live credentials banner
+      if (
+        m.status === 'completed' ||
+        m.status === 'finished' ||
+        m.status === 'cancelled'
+      ) {
+        return false;
+      }
+
+      // If match results are already recorded, the match has already ended!
+      if (Array.isArray(m.results) && m.results.length > 0) {
+        return false;
+      }
+
       const hasCreds = Boolean(m.roomId && m.roomId.trim());
       if (!hasCreds) return false;
+
+      // Staff can see all active matches with credentials
       if (isStaff) return true;
+
       // Normal participants: only show credentials banner if assigned to this match's lobby
       if (userSquad) {
         return Boolean(m.isAssignedToThisLobby);
       }
       return false;
     });
-  }, [matches, isStaff, userSquad]);
+  }, [matches, isStaff, userSquad, tournament?.status]);
 
   if (loading) return <Loading message="Loading tournament specifications..." />;
   if (!tournament) return <EmptyState title="Tournament Not Found" description="The requested tournament does not exist." />;
@@ -480,37 +506,37 @@ const TournamentDetails = () => {
               </span>
               <span
                 className={`px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider border font-mono ${
-                  tournament.isRegistrationClosed || tournament.status === 'registration-closed'
-                    ? 'bg-rose-950/80 text-rose-300 border-rose-500/50'
+                  tournament.status === 'completed'
+                    ? 'bg-purple-950/80 text-purple-300 border-purple-500/50'
+                    : tournament.status === 'cancelled'
+                    ? 'bg-red-950 text-red-400 border-red-800'
                     : tournament.status === 'live'
                     ? 'bg-rose-950 text-rose-300 border-rose-500 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.3)]'
                     : tournament.status === 'ongoing'
                     ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                     : tournament.status === 'on-hold'
                     ? 'bg-amber-950/90 text-amber-300 border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                    : tournament.isRegistrationClosed || tournament.status === 'registration-closed'
+                    ? 'bg-rose-950/80 text-rose-300 border-rose-500/50'
                     : tournament.status === 'registration-open'
                     ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                    : tournament.status === 'completed'
-                    ? 'bg-slate-800 text-slate-300 border-slate-700'
-                    : tournament.status === 'cancelled'
-                    ? 'bg-red-950 text-red-400 border-red-800'
                     : 'bg-slate-900 text-slate-300 border-slate-700'
                 }`}
               >
-                {tournament.isRegistrationClosed || tournament.status === 'registration-closed'
-                  ? 'Registration Closed'
+                {tournament.status === 'completed'
+                  ? 'Completed'
+                  : tournament.status === 'cancelled'
+                  ? 'Cancelled'
                   : tournament.status === 'live'
                   ? '● LIVE ARENA'
                   : tournament.status === 'ongoing'
                   ? '● RUNNING TOURNAMENT'
                   : tournament.status === 'on-hold'
                   ? '⏸️ TOURNAMENT ON HOLD'
+                  : tournament.isRegistrationClosed || tournament.status === 'registration-closed'
+                  ? 'Registration Closed'
                   : tournament.status === 'registration-open'
                   ? 'Registration Open'
-                  : tournament.status === 'completed'
-                  ? 'Completed'
-                  : tournament.status === 'cancelled'
-                  ? 'Cancelled'
                   : 'Upcoming'}
               </span>
               <span className="text-[10px] sm:text-xs text-slate-400">
@@ -1098,6 +1124,13 @@ const TournamentDetails = () => {
                     }))
                   );
 
+                  const isMatchCompleted = Boolean(
+                    match.status === 'completed' ||
+                    match.status === 'finished' ||
+                    (Array.isArray(match.results) && match.results.length > 0)
+                  );
+                  const isMatchLive = Boolean(!isMatchCompleted && match.status === 'live');
+
                   return (
                     <div
                       key={match._id}
@@ -1105,9 +1138,9 @@ const TournamentDetails = () => {
                       className={`p-4 rounded-2xl border transition-all space-y-3 ${
                         isStaff ? 'cursor-pointer hover:border-cyan-400' : ''
                       } ${
-                        match.status === 'live'
+                        isMatchLive
                           ? 'bg-rose-950/20 border-rose-500/60 shadow-lg shadow-rose-950/40'
-                          : match.status === 'completed'
+                          : isMatchCompleted
                           ? 'bg-slate-900/60 border-slate-800'
                           : 'bg-slate-900/40 border-slate-800/90'
                       }`}
@@ -1128,14 +1161,14 @@ const TournamentDetails = () => {
                           )}
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold font-mono ${
-                              match.status === 'live'
+                              isMatchLive
                                 ? 'bg-rose-500 text-slate-950 animate-pulse font-black'
-                                : match.status === 'completed'
-                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : isMatchCompleted
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                                 : 'bg-slate-800 text-slate-300 border border-slate-700'
                             }`}
                           >
-                            {match.status === 'live' ? '● LIVE NOW' : match.status}
+                            {isMatchLive ? '● LIVE NOW' : isMatchCompleted ? 'COMPLETED' : match.status || 'SCHEDULED'}
                           </span>
                         </div>
                       </div>
@@ -1227,7 +1260,11 @@ const TournamentDetails = () => {
                             <Key className="w-3.5 h-3.5 text-cyan-400" />
                             <span>Room / Lobby Credentials</span>
                           </div>
-                          {match.roomId ? (
+                          {isMatchCompleted ? (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-slate-900 text-slate-400 border border-slate-800">
+                              Match Concluded
+                            </span>
+                          ) : match.roomId ? (
                             <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-cyan-950 text-cyan-300 border border-cyan-800/60">
                               Credentials Active
                             </span>
