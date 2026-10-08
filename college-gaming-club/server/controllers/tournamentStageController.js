@@ -20,13 +20,36 @@ const findTournament = async (paramId) => {
  * Returns true if any modification was made to stage lobbies.
  */
 const deduplicateTournamentLobbyTeams = (stages = [], matches = []) => {
-  // Tournaments support multi-stage progression where qualified teams
+// Tournaments support multi-stage progression where qualified teams
   // advance from qualifier lobbies to finals lobbies while preserving match history.
   // Cross-lobby removal is intentionally disabled.
   return false;
 };
 
 exports.deduplicateTournamentLobbyTeams = deduplicateTournamentLobbyTeams;
+
+const deriveLineupFromRegistration = (reg) => {
+  if (!reg || !Array.isArray(reg.players)) return [];
+  return reg.players.map((p) => {
+    const responses = p.playerResponses || {};
+    const gameId = responses.game_uid || responses.efootball_id || responses.riot_id || responses.bgmi_id || '';
+    const gameIgn = responses.game_ign || responses.efootball_username || responses.riot_ign || responses.bgmi_ign || p.name || '';
+    const characterOrAgent = responses.preferred_character || responses.agent || '';
+    const skillOrRole = responses.preferred_skill || responses.role || '';
+    const platform = responses.game_platform || responses.platform || '';
+
+    return {
+      user: p.user || null,
+      name: p.name || 'Player',
+      gameId,
+      gameIgn,
+      characterOrAgent,
+      skillOrRole,
+      platform,
+      isSubstitute: false,
+    };
+  });
+};
 
 // @desc    Get complete dynamic structure of stages, lobbies, teams & matches
 // @route   GET /api/tournaments/:id/stages-structure
@@ -593,6 +616,14 @@ exports.createLobbyMatch = async (req, res, next) => {
       roomPassword,
       streamUrl,
       notes,
+      matchType,
+      gameMode,
+      teamA,
+      teamB,
+      scoreA,
+      scoreB,
+      sideA,
+      sideB,
     } = req.body;
 
     // Determine default match number
@@ -605,6 +636,29 @@ exports.createLobbyMatch = async (req, res, next) => {
     const rIndex = existingMatches.length + 1;
     const rName = (req.body.round && req.body.round.trim()) || `Round ${rIndex}`;
     const mTitle = (title && title.trim()) || `Match ${mNumber} - ${map || 'Erangel'}`;
+
+    // Normalize sideA and sideB
+    const normalizedSideA = sideA ? { ...sideA } : {};
+    const normalizedSideB = sideB ? { ...sideB } : {};
+
+    const finalTeamA = teamA || normalizedSideA.team || null;
+    const finalTeamB = teamB || normalizedSideB.team || null;
+    const finalScoreA = scoreA !== undefined ? Number(scoreA) : (normalizedSideA.score ?? 0);
+    const finalScoreB = scoreB !== undefined ? Number(scoreB) : (normalizedSideB.score ?? 0);
+
+    normalizedSideA.team = finalTeamA;
+    normalizedSideA.score = finalScoreA;
+    normalizedSideB.team = finalTeamB;
+    normalizedSideB.score = finalScoreB;
+
+    if (finalTeamA && (!normalizedSideA.lineup || normalizedSideA.lineup.length === 0)) {
+      const regA = await TournamentRegistration.findById(finalTeamA);
+      if (regA) normalizedSideA.lineup = deriveLineupFromRegistration(regA);
+    }
+    if (finalTeamB && (!normalizedSideB.lineup || normalizedSideB.lineup.length === 0)) {
+      const regB = await TournamentRegistration.findById(finalTeamB);
+      if (regB) normalizedSideB.lineup = deriveLineupFromRegistration(regB);
+    }
 
     const match = await Match.create({
       tournament: tournament._id,
@@ -624,12 +678,24 @@ exports.createLobbyMatch = async (req, res, next) => {
       streamUrl: streamUrl || '',
       notes: notes || '',
       teams: lobby.teams || [],
+      matchType: matchType || tournament.matchType || 'lobby',
+      gameMode: gameMode || tournament.gameMode || '',
+      teamA: finalTeamA,
+      teamB: finalTeamB,
+      scoreA: finalScoreA,
+      scoreB: finalScoreB,
+      sideA: normalizedSideA,
+      sideB: normalizedSideB,
     });
 
-    const populatedMatch = await Match.findById(match._id).populate(
-      'teams',
-      'teamName teamTag teamType captain'
-    );
+    const populatedMatch = await Match.findById(match._id)
+      .populate('teams', 'teamName teamTag teamType captain')
+      .populate('teamA', 'teamName teamTag players captain')
+      .populate('teamB', 'teamName teamTag players captain')
+      .populate('sideA.team', 'teamName teamTag players captain')
+      .populate('sideB.team', 'teamName teamTag players captain')
+      .populate('sideA.lineup.user', 'name username avatar')
+      .populate('sideB.lineup.user', 'name username avatar');
 
     res.status(201).json({
       success: true,
@@ -663,6 +729,14 @@ exports.updateLobbyMatch = async (req, res, next) => {
       streamUrl,
       notes,
       teams,
+      matchType,
+      gameMode,
+      teamA,
+      teamB,
+      scoreA,
+      scoreB,
+      sideA,
+      sideB,
     } = req.body;
 
     if (title !== undefined) match.title = title.trim();
@@ -676,6 +750,50 @@ exports.updateLobbyMatch = async (req, res, next) => {
     if (streamUrl !== undefined) match.streamUrl = streamUrl;
     if (notes !== undefined) match.notes = notes;
     if (teams !== undefined && Array.isArray(teams)) match.teams = teams;
+
+    if (matchType !== undefined) match.matchType = matchType;
+    if (gameMode !== undefined) match.gameMode = gameMode;
+    if (teamA !== undefined) {
+      match.teamA = teamA || null;
+      if (!match.sideA) match.sideA = {};
+      match.sideA.team = teamA || null;
+    }
+    if (teamB !== undefined) {
+      match.teamB = teamB || null;
+      if (!match.sideB) match.sideB = {};
+      match.sideB.team = teamB || null;
+    }
+    if (scoreA !== undefined) {
+      match.scoreA = Number(scoreA);
+      if (!match.sideA) match.sideA = {};
+      match.sideA.score = Number(scoreA);
+    }
+    if (scoreB !== undefined) {
+      match.scoreB = Number(scoreB);
+      if (!match.sideB) match.sideB = {};
+      match.sideB.score = Number(scoreB);
+    }
+    if (sideA !== undefined) {
+      const existingSideA = match.sideA?.toObject ? match.sideA.toObject() : match.sideA || {};
+      match.sideA = { ...existingSideA, ...sideA };
+      if (match.sideA.team) match.teamA = match.sideA.team;
+      if (match.sideA.score !== undefined) match.scoreA = Number(match.sideA.score);
+    }
+    if (sideB !== undefined) {
+      const existingSideB = match.sideB?.toObject ? match.sideB.toObject() : match.sideB || {};
+      match.sideB = { ...existingSideB, ...sideB };
+      if (match.sideB.team) match.teamB = match.sideB.team;
+      if (match.sideB.score !== undefined) match.scoreB = Number(match.sideB.score);
+    }
+
+    if (match.sideA?.team && (!match.sideA.lineup || match.sideA.lineup.length === 0)) {
+      const regA = await TournamentRegistration.findById(match.sideA.team);
+      if (regA) match.sideA.lineup = deriveLineupFromRegistration(regA);
+    }
+    if (match.sideB?.team && (!match.sideB.lineup || match.sideB.lineup.length === 0)) {
+      const regB = await TournamentRegistration.findById(match.sideB.team);
+      if (regB) match.sideB.lineup = deriveLineupFromRegistration(regB);
+    }
 
     // Automatic status logic: If Room ID & Password are provided, switch match to 'live' if scheduled
     const hasCredentials = Boolean(
@@ -715,6 +833,12 @@ exports.updateLobbyMatch = async (req, res, next) => {
 
     const populatedMatch = await Match.findById(match._id)
       .populate('teams', 'teamName teamTag teamType captain')
+      .populate('teamA', 'teamName teamTag players captain')
+      .populate('teamB', 'teamName teamTag players captain')
+      .populate('sideA.team', 'teamName teamTag players captain')
+      .populate('sideB.team', 'teamName teamTag players captain')
+      .populate('sideA.lineup.user', 'name username avatar')
+      .populate('sideB.lineup.user', 'name username avatar')
       .populate('winner', 'teamName teamTag');
 
     // Send notifications to participating squads
@@ -1078,6 +1202,14 @@ exports.createDirectLobbyMatch = async (req, res, next) => {
       roomPassword,
       streamUrl,
       notes,
+      matchType,
+      gameMode,
+      teamA,
+      teamB,
+      scoreA,
+      scoreB,
+      sideA,
+      sideB,
     } = req.body;
 
     const existingMatches = await Match.find({
@@ -1108,6 +1240,29 @@ exports.createDirectLobbyMatch = async (req, res, next) => {
       }
     }
 
+    // Normalize sideA and sideB
+    const normalizedSideA = sideA ? { ...sideA } : {};
+    const normalizedSideB = sideB ? { ...sideB } : {};
+
+    const finalTeamA = teamA || normalizedSideA.team || null;
+    const finalTeamB = teamB || normalizedSideB.team || null;
+    const finalScoreA = scoreA !== undefined ? Number(scoreA) : (normalizedSideA.score ?? 0);
+    const finalScoreB = scoreB !== undefined ? Number(scoreB) : (normalizedSideB.score ?? 0);
+
+    normalizedSideA.team = finalTeamA;
+    normalizedSideA.score = finalScoreA;
+    normalizedSideB.team = finalTeamB;
+    normalizedSideB.score = finalScoreB;
+
+    if (finalTeamA && (!normalizedSideA.lineup || normalizedSideA.lineup.length === 0)) {
+      const regA = await TournamentRegistration.findById(finalTeamA);
+      if (regA) normalizedSideA.lineup = deriveLineupFromRegistration(regA);
+    }
+    if (finalTeamB && (!normalizedSideB.lineup || normalizedSideB.lineup.length === 0)) {
+      const regB = await TournamentRegistration.findById(finalTeamB);
+      if (regB) normalizedSideB.lineup = deriveLineupFromRegistration(regB);
+    }
+
     const match = await Match.create({
       tournament: tournament._id,
       stageId: foundStage._id,
@@ -1126,12 +1281,24 @@ exports.createDirectLobbyMatch = async (req, res, next) => {
       streamUrl: streamUrl || '',
       notes: notes || '',
       teams: foundLobby.teams || [],
+      matchType: matchType || tournament.matchType || 'lobby',
+      gameMode: gameMode || tournament.gameMode || '',
+      teamA: finalTeamA,
+      teamB: finalTeamB,
+      scoreA: finalScoreA,
+      scoreB: finalScoreB,
+      sideA: normalizedSideA,
+      sideB: normalizedSideB,
     });
 
-    const populatedMatch = await Match.findById(match._id).populate(
-      'teams',
-      'teamName teamTag teamType captain'
-    );
+    const populatedMatch = await Match.findById(match._id)
+      .populate('teams', 'teamName teamTag teamType captain')
+      .populate('teamA', 'teamName teamTag players captain')
+      .populate('teamB', 'teamName teamTag players captain')
+      .populate('sideA.team', 'teamName teamTag players captain')
+      .populate('sideB.team', 'teamName teamTag players captain')
+      .populate('sideA.lineup.user', 'name username avatar')
+      .populate('sideB.lineup.user', 'name username avatar');
 
     sendMatchNotification({
       match: populatedMatch,

@@ -63,6 +63,15 @@ const matchSchema = new mongoose.Schema(
       enum: ['TournamentRegistration', 'Team'],
       default: 'TournamentRegistration',
     },
+    matchType: {
+      type: String,
+      enum: ['lobby', 'team_vs_team', 'solo_vs_solo'],
+      default: 'lobby',
+    },
+    gameMode: {
+      type: String,
+      default: '',
+    },
     teamA: {
       type: mongoose.Schema.Types.ObjectId,
       refPath: 'teamModel',
@@ -78,6 +87,56 @@ const matchSchema = new mongoose.Schema(
     scoreB: {
       type: Number,
       default: 0,
+    },
+    sideA: {
+      team: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'TournamentRegistration',
+      },
+      score: {
+        type: Number,
+        default: 0,
+      },
+      lineup: [
+        {
+          user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+          },
+          name: { type: String, default: '' },
+          gameId: { type: String, default: '' },
+          gameIgn: { type: String, default: '' },
+          characterOrAgent: { type: String, default: '' },
+          skillOrRole: { type: String, default: '' },
+          platform: { type: String, default: '' },
+          isSubstitute: { type: Boolean, default: false },
+        },
+      ],
+    },
+    sideB: {
+      team: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'TournamentRegistration',
+      },
+      score: {
+        type: Number,
+        default: 0,
+      },
+      lineup: [
+        {
+          user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+          },
+          name: { type: String, default: '' },
+          gameId: { type: String, default: '' },
+          gameIgn: { type: String, default: '' },
+          characterOrAgent: { type: String, default: '' },
+          skillOrRole: { type: String, default: '' },
+          platform: { type: String, default: '' },
+          isSubstitute: { type: Boolean, default: false },
+        },
+      ],
     },
     winner: {
       type: mongoose.Schema.Types.ObjectId,

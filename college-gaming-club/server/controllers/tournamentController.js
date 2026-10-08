@@ -104,8 +104,40 @@ exports.getTournamentById = async (req, res, next) => {
 
     // Also fetch matches for this tournament populated with teams and results
     const matches = await Match.find({ tournament: tournament._id })
-      .populate('teamA', 'name tag logo')
-      .populate('teamB', 'name tag logo')
+      .populate({
+        path: 'teamA',
+        select: 'name tag logo teamName teamTag teamLogo captain leader players',
+        populate: [
+          { path: 'captain', select: 'name username avatar' },
+          { path: 'players.user', select: 'name username avatar' },
+        ],
+      })
+      .populate({
+        path: 'teamB',
+        select: 'name tag logo teamName teamTag teamLogo captain leader players',
+        populate: [
+          { path: 'captain', select: 'name username avatar' },
+          { path: 'players.user', select: 'name username avatar' },
+        ],
+      })
+      .populate({
+        path: 'sideA.team',
+        select: 'name tag logo teamName teamTag teamLogo captain leader players',
+        populate: [
+          { path: 'captain', select: 'name username avatar' },
+          { path: 'players.user', select: 'name username avatar' },
+        ],
+      })
+      .populate({
+        path: 'sideB.team',
+        select: 'name tag logo teamName teamTag teamLogo captain leader players',
+        populate: [
+          { path: 'captain', select: 'name username avatar' },
+          { path: 'players.user', select: 'name username avatar' },
+        ],
+      })
+      .populate('sideA.lineup.user', 'name username avatar')
+      .populate('sideB.lineup.user', 'name username avatar')
       .populate({
         path: 'teams',
         select: 'teamName teamTag teamLogo captain leader players status isVerified identityProof points matchesPlayed',
@@ -151,6 +183,69 @@ exports.getTournamentById = async (req, res, next) => {
     const sanitizedMatches = matches.map((m) => {
       const matchObj = m.toObject();
 
+      // Ensure sideA and sideB are normalized
+      if (!matchObj.sideA) matchObj.sideA = {};
+      if (!matchObj.sideB) matchObj.sideB = {};
+
+      if (!matchObj.sideA.team && matchObj.teamA) {
+        matchObj.sideA.team = matchObj.teamA;
+        matchObj.sideA.score = matchObj.scoreA ?? 0;
+      }
+      if (!matchObj.sideB.team && matchObj.teamB) {
+        matchObj.sideB.team = matchObj.teamB;
+        matchObj.sideB.score = matchObj.scoreB ?? 0;
+      }
+      if (!matchObj.teamA && matchObj.sideA.team) {
+        matchObj.teamA = matchObj.sideA.team;
+        matchObj.scoreA = matchObj.sideA.score ?? 0;
+      }
+      if (!matchObj.teamB && matchObj.sideB.team) {
+        matchObj.teamB = matchObj.sideB.team;
+        matchObj.scoreB = matchObj.sideB.score ?? 0;
+      }
+
+      // Auto-extract lineup for Side A if not explicitly entered
+      const teamAObj = matchObj.sideA.team || matchObj.teamA;
+      if (teamAObj && (!matchObj.sideA.lineup || matchObj.sideA.lineup.length === 0)) {
+        if (Array.isArray(teamAObj.players) && teamAObj.players.length > 0) {
+          matchObj.sideA.lineup = teamAObj.players.map((p) => {
+            const resp = p.responses || {};
+            const getVal = (k) => (resp instanceof Map ? resp.get(k) : resp[k]) || '';
+            return {
+              user: p.user || null,
+              name: p.name || p.user?.name || '',
+              gameId: getVal('game_uid') || getVal('riot_id') || getVal('pes_id') || '',
+              gameIgn: p.inGameName || getVal('game_ign') || '',
+              characterOrAgent: getVal('preferred_character') || getVal('character') || getVal('agent') || '',
+              skillOrRole: getVal('preferred_skill') || getVal('skill') || getVal('role') || '',
+              platform: getVal('game_platform') || getVal('platform') || '',
+              isSubstitute: p.role === 'substitute',
+            };
+          });
+        }
+      }
+
+      // Auto-extract lineup for Side B if not explicitly entered
+      const teamBObj = matchObj.sideB.team || matchObj.teamB;
+      if (teamBObj && (!matchObj.sideB.lineup || matchObj.sideB.lineup.length === 0)) {
+        if (Array.isArray(teamBObj.players) && teamBObj.players.length > 0) {
+          matchObj.sideB.lineup = teamBObj.players.map((p) => {
+            const resp = p.responses || {};
+            const getVal = (k) => (resp instanceof Map ? resp.get(k) : resp[k]) || '';
+            return {
+              user: p.user || null,
+              name: p.name || p.user?.name || '',
+              gameId: getVal('game_uid') || getVal('riot_id') || getVal('pes_id') || '',
+              gameIgn: p.inGameName || getVal('game_ign') || '',
+              characterOrAgent: getVal('preferred_character') || getVal('character') || getVal('agent') || '',
+              skillOrRole: getVal('preferred_skill') || getVal('skill') || getVal('role') || '',
+              platform: getVal('game_platform') || getVal('platform') || '',
+              isSubstitute: p.role === 'substitute',
+            };
+          });
+        }
+      }
+
       let isAssignedToThisLobby = Boolean(isStaffUser);
       if (!isAssignedToThisLobby && currentUserId) {
         // If user has a registered squad in this tournament
@@ -158,6 +253,8 @@ exports.getTournamentById = async (req, res, next) => {
           const matchTeamIds = (matchObj.teams || []).map((t) => (t._id || t).toString());
           if (matchObj.teamA) matchTeamIds.push((matchObj.teamA._id || matchObj.teamA).toString());
           if (matchObj.teamB) matchTeamIds.push((matchObj.teamB._id || matchObj.teamB).toString());
+          if (matchObj.sideA?.team) matchTeamIds.push((matchObj.sideA.team._id || matchObj.sideA.team).toString());
+          if (matchObj.sideB?.team) matchTeamIds.push((matchObj.sideB.team._id || matchObj.sideB.team).toString());
 
           // Find lobby teams if lobbyId is set
           let lobbyTeamIds = [];
@@ -178,11 +275,13 @@ exports.getTournamentById = async (req, res, next) => {
           if (inMatch || inLobby) {
             isAssignedToThisLobby = true;
           }
-        } else if (matchObj.teams || matchObj.teamA || matchObj.teamB) {
-          // Fallback direct check on populated matchObj.teams / teamA / teamB
+        } else if (matchObj.teams || matchObj.teamA || matchObj.teamB || matchObj.sideA?.team || matchObj.sideB?.team) {
+          // Fallback direct check on populated matchObj.teams / teamA / teamB / sideA / sideB
           const teamsToCheck = [...(matchObj.teams || [])];
           if (matchObj.teamA) teamsToCheck.push(matchObj.teamA);
           if (matchObj.teamB) teamsToCheck.push(matchObj.teamB);
+          if (matchObj.sideA?.team) teamsToCheck.push(matchObj.sideA.team);
+          if (matchObj.sideB?.team) teamsToCheck.push(matchObj.sideB.team);
 
           isAssignedToThisLobby = teamsToCheck.some((team) => {
             if (!team) return false;
@@ -275,6 +374,9 @@ exports.createTournament = async (req, res, next) => {
       status,
       organizer,
       streamUrl,
+      matchType,
+      gameMode,
+      playersPerTeam,
     } = req.body;
 
     if (!name || !game || !banner || !description || !registrationDeadline || !startDate) {
@@ -283,6 +385,40 @@ exports.createTournament = async (req, res, next) => {
         message: 'Please provide all required tournament fields',
       });
     }
+
+    const isPesGame =
+      game.toLowerCase().includes('pes') ||
+      game.toLowerCase().includes('efootball') ||
+      name.toLowerCase().includes('pes') ||
+      name.toLowerCase().includes('efootball');
+
+    const isValorantGame =
+      game.toLowerCase().includes('valorant') || name.toLowerCase().includes('valorant');
+
+    const isClashSquad =
+      name.toLowerCase().includes('clash squad') || game.toLowerCase().includes('clash squad');
+
+    // Intelligent defaults for match configuration
+    const resolvedMatchType =
+      matchType ||
+      (isPesGame
+        ? 'solo_vs_solo'
+        : isValorantGame || isClashSquad
+        ? 'team_vs_team'
+        : 'lobby');
+
+    const resolvedGameMode =
+      gameMode ||
+      (isPesGame
+        ? '1v1'
+        : isValorantGame
+        ? '5v5'
+        : isClashSquad
+        ? 'Clash Squad (4v4)'
+        : 'Battle Royale');
+
+    const resolvedPlayersPerTeam =
+      Number(playersPerTeam) || (isPesGame ? 1 : isValorantGame ? 5 : 4);
 
     const slug = `${slugify(name)}-${Date.now().toString().slice(-4)}`;
 
@@ -294,13 +430,16 @@ exports.createTournament = async (req, res, next) => {
       description,
       rules: rules || undefined,
       format: format || 'Single Elimination',
+      matchType: resolvedMatchType,
+      gameMode: resolvedGameMode,
+      playersPerTeam: resolvedPlayersPerTeam,
       prizePool: prizePool || { total: 10000, currency: 'INR (₹)' },
       entryFee: entryFee || 0,
-      maxTeams: maxTeams || 16,
-      minTeamSize: minTeamSize || 4,
-      maxTeamSize: maxTeamSize || 5,
-      allowSubstitutes: allowSubstitutes !== false,
-      maxSubstitutes: maxSubstitutes !== undefined ? maxSubstitutes : 1,
+      maxTeams: maxTeams || (isPesGame ? 32 : 16),
+      minTeamSize: minTeamSize || (isPesGame ? 1 : isValorantGame ? 5 : 4),
+      maxTeamSize: maxTeamSize || (isPesGame ? 1 : isValorantGame ? 6 : 5),
+      allowSubstitutes: isPesGame ? false : allowSubstitutes !== false,
+      maxSubstitutes: maxSubstitutes !== undefined ? maxSubstitutes : (isPesGame ? 0 : 1),
       registrationDeadline,
       identityProofDeadline: identityProofDeadline || registrationDeadline,
       startDate,

@@ -39,6 +39,19 @@ const tournamentSchema = new mongoose.Schema(
       enum: ['Single Elimination', 'Double Elimination', 'Round Robin', 'Swiss'],
       default: 'Single Elimination',
     },
+    matchType: {
+      type: String,
+      enum: ['lobby', 'team_vs_team', 'solo_vs_solo'],
+      default: 'lobby',
+    },
+    gameMode: {
+      type: String,
+      default: '',
+    },
+    playersPerTeam: {
+      type: Number,
+      default: 4,
+    },
     prizePool: {
       total: { type: Number, required: true },
       currency: { type: String, default: 'INR (₹)' },

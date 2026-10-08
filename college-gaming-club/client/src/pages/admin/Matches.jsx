@@ -141,6 +141,11 @@ const AdminMatches = () => {
     streamUrl: '',
     notes: '',
     winner: '',
+    matchType: 'lobby',
+    teamA: '',
+    teamB: '',
+    scoreA: 0,
+    scoreB: 0,
   });
 
   // Match Results & Points Entry State
@@ -849,6 +854,11 @@ const AdminMatches = () => {
       streamUrl: '',
       notes: '',
       winner: '',
+      matchType: selectedTournament?.matchType || 'lobby',
+      teamA: '',
+      teamB: '',
+      scoreA: 0,
+      scoreB: 0,
     });
     setRoundModalOpen(true);
   };
@@ -884,6 +894,11 @@ const AdminMatches = () => {
       streamUrl: match.streamUrl || '',
       notes: match.notes || '',
       winner: match.winner?._id || match.winner || '',
+      matchType: match.matchType || selectedTournament?.matchType || 'lobby',
+      teamA: match.sideA?.team?._id || match.sideA?.team || match.teamA?._id || match.teamA || '',
+      teamB: match.sideB?.team?._id || match.sideB?.team || match.teamB?._id || match.teamB || '',
+      scoreA: match.sideA?.score ?? match.scoreA ?? 0,
+      scoreB: match.sideB?.score ?? match.scoreB ?? 0,
     });
     setRoundModalOpen(true);
   };
@@ -910,6 +925,19 @@ const AdminMatches = () => {
           streamUrl: roundFormData.streamUrl,
           notes: roundFormData.notes,
           winner: roundFormData.winner || null,
+          matchType: roundFormData.matchType,
+          teamA: roundFormData.teamA || null,
+          teamB: roundFormData.teamB || null,
+          scoreA: Number(roundFormData.scoreA || 0),
+          scoreB: Number(roundFormData.scoreB || 0),
+          sideA: {
+            team: roundFormData.teamA || null,
+            score: Number(roundFormData.scoreA || 0),
+          },
+          sideB: {
+            team: roundFormData.teamB || null,
+            score: Number(roundFormData.scoreB || 0),
+          },
         });
         addToast(
           hasCreds
@@ -930,6 +958,19 @@ const AdminMatches = () => {
             roomPassword: roundFormData.roomPassword,
             streamUrl: roundFormData.streamUrl,
             notes: roundFormData.notes,
+            matchType: roundFormData.matchType,
+            teamA: roundFormData.teamA || null,
+            teamB: roundFormData.teamB || null,
+            scoreA: Number(roundFormData.scoreA || 0),
+            scoreB: Number(roundFormData.scoreB || 0),
+            sideA: {
+              team: roundFormData.teamA || null,
+              score: Number(roundFormData.scoreA || 0),
+            },
+            sideB: {
+              team: roundFormData.teamB || null,
+              score: Number(roundFormData.scoreB || 0),
+            },
           }
         );
         addToast(
@@ -3008,6 +3049,102 @@ const AdminMatches = () => {
                 <option value="completed">Completed</option>
               </select>
             </div>
+          </div>
+
+          {/* Match Format & Head-to-Head Lineup (Optional) */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Swords className="w-3.5 h-3.5 text-cyan-600" />
+                Match Format & Head-to-Head (Optional)
+              </h5>
+              <span className="text-[10px] font-mono text-slate-500">
+                1v1 / Clash Squad / Custom Sides
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-slate-600 mb-1 font-semibold">Match Format</label>
+              <select
+                value={roundFormData.matchType}
+                onChange={(e) => setRoundFormData({ ...roundFormData, matchType: e.target.value })}
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-cyan-500 font-medium cursor-pointer"
+              >
+                <option value="lobby">Lobby Based (Battle Royale - Multi-Team)</option>
+                <option value="team_vs_team">Team vs Team (Clash Squad, Valorant, BGMI TDM)</option>
+                <option value="solo_vs_solo">Solo vs Solo (PES / eFootball 1v1)</option>
+              </select>
+            </div>
+
+            {(roundFormData.matchType === 'team_vs_team' || roundFormData.matchType === 'solo_vs_solo' || roundFormData.teamA || roundFormData.teamB) && (
+              <div className="pt-2 space-y-3 border-t border-slate-200/60">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-slate-600 mb-1 font-semibold">
+                      Side A / Team 1
+                    </label>
+                    <select
+                      value={roundFormData.teamA}
+                      onChange={(e) => setRoundFormData({ ...roundFormData, teamA: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-cyan-500 font-medium cursor-pointer"
+                    >
+                      <option value="">Select Side A...</option>
+                      {(structure.allRegistrations || []).map((t) => (
+                        <option key={t._id} value={t._id}>
+                          {t.teamName || t.name || 'Team'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-600 mb-1 font-semibold">
+                      Side B / Team 2
+                    </label>
+                    <select
+                      value={roundFormData.teamB}
+                      onChange={(e) => setRoundFormData({ ...roundFormData, teamB: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-cyan-500 font-medium cursor-pointer"
+                    >
+                      <option value="">Select Side B...</option>
+                      {(structure.allRegistrations || []).map((t) => (
+                        <option key={t._id} value={t._id}>
+                          {t.teamName || t.name || 'Team'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-slate-600 mb-1 font-semibold">
+                      Side A Score
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={roundFormData.scoreA}
+                      onChange={(e) => setRoundFormData({ ...roundFormData, scoreA: Number(e.target.value) })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-600 mb-1 font-semibold">
+                      Side B Score
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={roundFormData.scoreB}
+                      onChange={(e) => setRoundFormData({ ...roundFormData, scoreB: Number(e.target.value) })}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">

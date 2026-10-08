@@ -1113,15 +1113,21 @@ const TournamentDetails = () => {
                     match.isAssignedToThisLobby ||
                     (userSquad && (
                       (match.teams || []).some((t) => (t._id || t).toString() === (userSquad._id || userSquad).toString()) ||
-                      ((match.teamA?._id || match.teamA)?.toString() === (userSquad._id || userSquad).toString()) ||
-                      ((match.teamB?._id || match.teamB)?.toString() === (userSquad._id || userSquad).toString())
+                      ((match.sideA?.team?._id || match.sideA?.team || match.teamA?._id || match.teamA)?.toString() === (userSquad._id || userSquad).toString()) ||
+                      ((match.sideB?.team?._id || match.sideB?.team || match.teamB?._id || match.teamB)?.toString() === (userSquad._id || userSquad).toString())
                     )) ||
-                    (user && (match.teams || []).some((t) => {
-                      const capId = (t.captain?._id || t.captain)?.toString();
-                      const leadId = (t.leader?._id || t.leader)?.toString();
-                      if (capId === user._id?.toString() || leadId === user._id?.toString()) return true;
-                      return (t.players || []).some((p) => (p.user?._id || p.user)?.toString() === user._id?.toString());
-                    }))
+                    (user && (
+                      (match.teams || []).some((t) => {
+                        const capId = (t.captain?._id || t.captain)?.toString();
+                        const leadId = (t.leader?._id || t.leader)?.toString();
+                        if (capId === user._id?.toString() || leadId === user._id?.toString()) return true;
+                        return (t.players || []).some((p) => (p.user?._id || p.user)?.toString() === user._id?.toString());
+                      }) ||
+                      (match.sideA?.lineup || []).some((p) => (p.user?._id || p.user)?.toString() === user._id?.toString()) ||
+                      (match.sideB?.lineup || []).some((p) => (p.user?._id || p.user)?.toString() === user._id?.toString()) ||
+                      ((match.sideA?.team?.players || match.teamA?.players || []).some((p) => (p.user?._id || p.user)?.toString() === user._id?.toString())) ||
+                      ((match.sideB?.team?.players || match.teamB?.players || []).some((p) => (p.user?._id || p.user)?.toString() === user._id?.toString()))
+                    ))
                   );
 
                   const isMatchCompleted = Boolean(
@@ -1193,27 +1199,30 @@ const TournamentDetails = () => {
                       </div>
 
                       {/* Head-to-Head 2-Team Matchup (Valorant / 1v1 Team Clash) */}
-                      {(match.teamA || match.teamB) && (
+                      {/* Head-to-Head 2-Team Matchup (Valorant / 1v1 Team Clash / PES / Clash Squad) */}
+                      {(match.teamA || match.teamB || match.sideA?.team || match.sideB?.team) && (
                         <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-cyan-950/50 via-slate-950 to-indigo-950/50 border border-slate-800 shadow-md">
                           <div className="flex items-center justify-between gap-2 sm:gap-4">
-                            {/* Team A */}
+                            {/* Team A / Side A */}
                             <div className="flex-1 flex items-center gap-2.5 min-w-0">
                               <img
                                 src={
+                                  match.sideA?.team?.teamLogo ||
+                                  match.sideA?.team?.logo ||
                                   match.teamA?.teamLogo ||
                                   match.teamA?.logo ||
                                   'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'
                                 }
-                                alt={match.teamA?.teamName || match.teamA?.name || 'Team A'}
+                                alt={match.sideA?.team?.teamName || match.sideA?.team?.name || match.teamA?.teamName || match.teamA?.name || 'Side A'}
                                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-cyan-500/40 shrink-0 bg-slate-900"
                               />
                               <div className="min-w-0">
                                 <p className="text-xs sm:text-sm font-bold text-white font-mono truncate">
-                                  {match.teamA?.teamName || match.teamA?.name || 'TBD (Team A)'}
+                                  {match.sideA?.team?.teamName || match.sideA?.team?.name || match.teamA?.teamName || match.teamA?.name || 'TBD (Side A)'}
                                 </p>
                                 <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
                                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block"></span>
-                                  Opponent A
+                                  Side A
                                 </span>
                               </div>
                             </div>
@@ -1221,35 +1230,127 @@ const TournamentDetails = () => {
                             {/* Versus & Score Center Badge */}
                             <div className="shrink-0 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-center shadow-lg">
                               <div className="text-sm sm:text-base font-black font-mono text-amber-400 tracking-wider">
-                                {match.scoreA ?? 0} : {match.scoreB ?? 0}
+                                {match.sideA?.score ?? match.scoreA ?? 0} : {match.sideB?.score ?? match.scoreB ?? 0}
                               </div>
                               <span className="text-[9px] uppercase font-mono font-bold text-slate-400">
                                 {match.status === 'completed' ? 'FINAL' : 'VS'}
                               </span>
                             </div>
 
-                            {/* Team B */}
+                            {/* Team B / Side B */}
                             <div className="flex-1 flex items-center justify-end gap-2.5 min-w-0 text-right">
                               <div className="min-w-0">
                                 <p className="text-xs sm:text-sm font-bold text-white font-mono truncate">
-                                  {match.teamB?.teamName || match.teamB?.name || 'TBD (Team B)'}
+                                  {match.sideB?.team?.teamName || match.sideB?.team?.name || match.teamB?.teamName || match.teamB?.name || 'TBD (Side B)'}
                                 </p>
                                 <span className="text-[10px] text-indigo-400 font-mono flex items-center justify-end gap-1">
-                                  Opponent B
+                                  Side B
                                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 inline-block"></span>
                                 </span>
                               </div>
                               <img
                                 src={
+                                  match.sideB?.team?.teamLogo ||
+                                  match.sideB?.team?.logo ||
                                   match.teamB?.teamLogo ||
                                   match.teamB?.logo ||
                                   'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=100&q=80'
                                 }
-                                alt={match.teamB?.teamName || match.teamB?.name || 'Team B'}
+                                alt={match.sideB?.team?.teamName || match.sideB?.team?.name || match.teamB?.teamName || match.teamB?.name || 'Side B'}
                                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-indigo-500/40 shrink-0 bg-slate-900"
                               />
                             </div>
                           </div>
+
+                          {/* Lineup / Player Rosters */}
+                          {((match.sideA?.lineup && match.sideA.lineup.length > 0) ||
+                            (match.sideB?.lineup && match.sideB.lineup.length > 0)) && (
+                            <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {/* Side A Roster */}
+                              <div className="space-y-1.5">
+                                <div className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider flex items-center justify-between">
+                                  <span>{match.sideA?.team?.teamName || match.sideA?.team?.name || match.teamA?.teamName || 'Side A'} Lineup</span>
+                                  <span className="text-slate-500">{match.sideA?.lineup?.length || 0} Players</span>
+                                </div>
+                                <div className="space-y-1">
+                                  {(match.sideA?.lineup || []).map((player, pIdx) => (
+                                    <div
+                                      key={pIdx}
+                                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800/60 text-xs"
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="w-4 h-4 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 text-[9px] flex items-center justify-center font-bold shrink-0">
+                                          {pIdx + 1}
+                                        </span>
+                                        <div className="min-w-0">
+                                          <p className="font-semibold text-slate-200 truncate">{player.name}</p>
+                                          {(player.gameIgn || player.gameId) && (
+                                            <p className="text-[10px] text-slate-400 font-mono truncate">
+                                              {player.gameIgn} {player.gameId ? `(${player.gameId})` : ''}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0 flex items-center gap-1">
+                                        {player.characterOrAgent && (
+                                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-cyan-950/80 text-cyan-300 border border-cyan-800/60">
+                                            {player.characterOrAgent} {player.skillOrRole ? `• ${player.skillOrRole}` : ''}
+                                          </span>
+                                        )}
+                                        {player.platform && (
+                                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300">
+                                            {player.platform}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Side B Roster */}
+                              <div className="space-y-1.5">
+                                <div className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-wider flex items-center justify-between">
+                                  <span>{match.sideB?.team?.teamName || match.sideB?.team?.name || match.teamB?.teamName || 'Side B'} Lineup</span>
+                                  <span className="text-slate-500">{match.sideB?.lineup?.length || 0} Players</span>
+                                </div>
+                                <div className="space-y-1">
+                                  {(match.sideB?.lineup || []).map((player, pIdx) => (
+                                    <div
+                                      key={pIdx}
+                                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800/60 text-xs"
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="w-4 h-4 rounded-full bg-indigo-950 text-indigo-400 border border-indigo-800 text-[9px] flex items-center justify-center font-bold shrink-0">
+                                          {pIdx + 1}
+                                        </span>
+                                        <div className="min-w-0">
+                                          <p className="font-semibold text-slate-200 truncate">{player.name}</p>
+                                          {(player.gameIgn || player.gameId) && (
+                                            <p className="text-[10px] text-slate-400 font-mono truncate">
+                                              {player.gameIgn} {player.gameId ? `(${player.gameId})` : ''}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0 flex items-center gap-1">
+                                        {player.characterOrAgent && (
+                                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-950/80 text-indigo-300 border border-indigo-800/60">
+                                            {player.characterOrAgent} {player.skillOrRole ? `• ${player.skillOrRole}` : ''}
+                                          </span>
+                                        )}
+                                        {player.platform && (
+                                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300">
+                                            {player.platform}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
